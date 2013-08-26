@@ -1,0 +1,290 @@
+/*
+ * The MIT License (MIT)
+ *
+ * Copyright (C) 2013 Dennis Möhlmann <mail@dennismoehlmann.de>
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of
+ * this software and associated documentation files (the "Software"), to deal in
+ * the Software without restriction, including without limitation the rights to
+ * use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of
+ * the Software, and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
+ * 
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ * 
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+ * FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+ * COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
+ * IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+ * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ */
+var assert = require('assert');
+var Enum = require('../../util').Enum;
+
+var Type = Enum([ 'NONE', 'BLOCK', 'JUMP', 'RETURN' ]);
+
+/**
+ * Parser.Definition.Node constructor
+ *
+ * creates a new node for use in a definition block
+ */
+var Node = function Node() {
+    this.children = [ ];
+};
+
+Node.prototype.children = null;
+Node.prototype.tokenType = 0;
+Node.prototype.match = '';
+Node.prototype.type = 0;
+Node.prototype.name = '';
+Node.prototype.capture = '';
+Node.prototype.label = '';
+Node.prototype.description = '';
+
+/*
+ * subclassing
+ */
+Node.Type = Type;
+
+Node.prototype.hasChild = function(node) {
+
+    var children = this.children;
+
+    for (var id in children) {
+
+        if (children[id] === node) {
+            return true;
+        }
+    }
+
+    return false;
+};
+
+/**
+ * adds a node to the list of childnodes, ensuring that the exit node is always last
+ *
+ * @param node a definition node
+ */
+Node.prototype.add = function(node) {
+
+    assert(node instanceof Node);
+
+if (this.hasChild(node)) return; //!todo shouldn't be required
+
+    var children = this.children;
+
+    if (node.type & Type.RETURN) {
+
+        // return-nodes need to be last because entry -> exit always matches, so no other child would be considered after exit
+
+        children.push(node);
+        return node;
+
+    } else {
+
+        // normal nodes are to be added at the end - unless the last node is an exit node
+
+        var lastId = children.length -1;
+
+        if (lastId >= 0) {
+
+            var lastChild = children[lastId];
+
+            // if the last node is a return node, insert new node just before the return node
+
+            if (lastChild.type & Type.RETURN) {
+
+                children[lastId] = node;
+                children.push(lastChild);
+                return node;
+            }
+        }
+    }
+
+    // no exit node as direct child found, just append to the list
+
+    children.push(node);
+
+    return node;
+};
+
+/**
+ * creates a node and adds it to the end of the child nodes
+ *
+ * @param Tokenizer.Token.Type tokenType required to achive match
+ * @param string match regex
+ * @param string capture name to log capture under
+ * @param string description text to use during error generation
+ * @return Parser.Definition.Node the new node
+ */
+Node.prototype.createAndAdd = function(tokenType, match, capture, description) {
+
+    var node = new Node();
+    node.capture        = capture;
+    node.tokenType      = tokenType;
+    node.match          = match;
+    node.description    = (description !== undefined ? description : (capture !== undefined ? capture : match));
+
+    return this.add(node);
+};
+
+/**
+ * tests if the node matches given token directly
+ *
+ * @param token
+ * @return boolean
+ */
+Node.prototype.matches = function(token) {
+
+    // types have to overlap
+
+    if ((token.type & this.tokenType) === 0) {
+        return false;
+    }
+
+    // compare the string or regex match
+
+    if (this.match === '') {
+        return true;
+    } else if (typeof this.match === 'string') {
+        return token.data === this.match;
+    } else {
+        return this.match.test(token.data);
+    }
+};
+
+var checkCondition = function(condition, stack) {
+//!todo move to LanguageParser so it can be handled by specialized parser
+    throw Error('NYI');
+};
+
+function StackItem(node, token) {
+    this.node = node;
+    this.token = token;
+}
+
+/**
+ * yields matches for given token recusively from node children
+ *
+ * @param token to match
+ */
+Node.prototype.filter = function*(parser, token, stack) {
+
+    var children = this.children;
+    var child, blockRoot, generator, result;
+
+    if (stack.length > 500) {
+        var message = parser.parseError(token, this, stack);
+        throw new Error('recursion too deep. last error:\n' + message);
+    }
+
+    for (var id = 0, len = children.length; id < len; id++) {
+
+        child = children[id];
+
+        if (child.type === Type.JUMP) {
+
+            // if this is a conditional jump, check if condition is met
+
+            if (child.condition !== '' && checkCondition(child.condition, stack) === false) {
+                continue;
+            }
+
+            // push current child onto stack before recursing into another block and forward-yield its matches
+
+            blockRoot = parser.definition.getBlock(child.match);
+            generator = blockRoot.filter(parser, token, stack.concat(new StackItem(child, token)));
+
+            while ((result = generator.next()).done === false) {
+                yield result.value;
+            }
+
+        } else if (child.type === Type.RETURN) {
+
+            // there was an error, nothing to yield
+
+            if (stack.length === 0) {
+                throw new Error('nothing to yield');
+            }
+
+            // return to previous node on stack
+
+            var top = stack[stack.length -1].node;
+            generator = top.filter(parser, token, stack.slice(0, -1));
+
+            while ((result = generator.next()).done === false) {
+                result.value.minStack = Math.min(result.value.minStack, stack.length -1);
+                yield result.value;
+            }
+
+        } else if (child.matches(token)) {
+
+            // yield direct match
+
+            yield { node: child, stack: stack, minStack: stack.length };
+        }
+
+    }
+};
+
+/**
+ * returns expected tokens for this node and its children
+ *
+ * @param Parser owner the parser this node belongs to. used for definition lookups
+ * @param HashSet<string>? known @internal, if specified function returns empty string and fills known with expected tokens
+ * @return string comma-separated list of expected tokens
+ */
+Node.prototype.toString = function(owner, known) {
+
+    var data;
+
+    if (known === undefined) {
+        data = { };
+    } else {
+        data = known;
+    }
+
+    for (var childId in this.children) {
+
+        var child = this.children[childId];
+
+        if ((child.type & Type.RETURN) === 0) {
+
+            if (child.type === Type.JUMP && owner !== undefined) {
+                try {
+                    owner.definition.getBlock(child.match).toString(owner, data);
+                } catch (e) { }
+            } else {
+                data[child.description != "" ? child.description : (child.capture != "" ? child.capture : "\"" + child.match + "\"")] = true;
+            }
+        }
+    }
+
+    // skip result if not root call
+
+    if (known !== undefined) {
+        return "";
+    }
+
+    // original call, generate result string from gathered data
+
+    var result = this.type === Type.JUMP ? '[' + this.match + '] ' : '';
+
+    for (var item in data) {
+
+        if (result != "") {
+            result += ", ";
+        }
+
+        result += item;
+    }
+
+    return result;
+};
+
+/*
+ * export
+ */
+module.exports = Node;

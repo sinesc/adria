@@ -1,0 +1,107 @@
+
+/*
+ * object literal
+ */
+
+object_literal_item {
+    entry -> ident:key -> ":"
+    entry -> string:key -> ":"
+    ":" -> literal_expression:value -> return
+}
+
+object_literal {
+    entry -> "{" -> "}" -> return
+    "{" -> object_literal_item:item -> "}"
+    object_literal_item:item -> ","[any] -> object_literal_item:item
+
+    // allow comma behind last item
+
+    object_literal_item:item -> ","[last] -> "}"
+}
+
+/*
+ * array literal
+ */
+
+array_literal {
+    entry -> "[" -> "]" -> return
+    "[" -> literal_expression:item -> "]"
+    literal_expression:item -> ","[any] -> literal_expression:item
+
+    // allow comma behind last literal item
+
+    literal_expression:item -> ","[last] -> "]"
+}
+
+/*
+ * function literal
+ */
+
+function_literal {
+    entry -> "function" -> "(" -> ")" -> scope:body -> return
+    "function" -> ident:name -> "("
+    "(" -> function_param_list:param_list -> ")"
+}
+
+function_param {
+    entry -> ident:name -> return
+}
+
+function_param_default {
+    entry -> ident:name -> "=" -> literal:value -> return
+}
+
+function_param_list {
+
+    // standard params:  a, b, c ....
+
+    entry -> function_param:item -> return
+    function_param:item -> ","[type_standard] -> function_param:item
+
+    // defaulted params:  d = 1, e = 2, f = 3 ....
+
+    entry -> function_param_default:item -> return
+    function_param_default:item -> ","[type_defaulted] -> function_param_default:item
+
+    // defaulted params following standard params:  a, b, c, d = 1, e = 2, f = 3
+    // note: commas are named to prevent the defintion-parser from linking them and thus
+    // creating a backlink from defaulted parameters to standard parameters
+
+    function_param:item -> ","[one_way_bridge] -> function_param_default:item
+}
+
+/*
+ * require literal
+ */
+
+require_literal {
+    // this is really just a function, but it has to be evaluable at compilation time
+    entry -> "require" -> "(" -> const_literal:file -> ")" -> return
+}
+
+/*
+ * literal groups
+ */
+
+const_literal {
+    entry -> numeric:numeric -> return
+    entry -> string:string -> return
+    entry -> regexp:regexp -> return
+}
+
+base_literal {
+    // usable in expressions
+    entry -> const_literal -> return
+    entry -> ident:ident -> return
+    entry -> require_literal:require -> return
+    entry -> object_literal:object -> return
+    entry -> array_literal:array -> return
+    entry -> "(":brace -> function_literal:function -> ")":brace -> return
+    entry -> "(":brace -> proto_literal:proto -> ")":brace -> return
+}
+
+literal {
+    entry -> base_literal:base -> return
+    entry -> function_literal:function -> return
+    entry -> proto_literal:proto -> return
+}

@@ -1,0 +1,209 @@
+
+literal_expression {
+    entry -> function_literal:function -> return
+    entry -> proto_literal:proto -> return
+    entry -> expression:expression -> return
+}
+
+expression {
+    // a  and  a()
+    entry -> base_literal:item -> return
+    base_literal:item -> invoke_operation:call -> return
+
+    // a && b
+    base_literal:item -> binary_operation -> return
+    invoke_operation:call -> binary_operation
+
+    // a.b   a->b().c || ...
+    base_literal:item -> access_operation -> return
+    invoke_operation:call -> access_operation -> binary_operation
+    access_operation -> ternary_operation -> return
+
+    // a?b:c
+    base_literal:item -> ternary_operation
+    invoke_operation:call -> ternary_operation
+
+    // a = b   or   a++
+    entry -> ident:ident -> assignment_operation -> return
+    assignment_operation -> binary_operation
+
+    entry -> prefix_operation -> return
+    entry -> unary_operation -> return
+
+    // (a || b).c   (a || b)()
+
+    entry -> brace_operation -> return
+    brace_operation -> invoke_operation:call
+    brace_operation -> access_operation
+
+    // ()()
+
+    invoke_operation:call -> invoke_operation:call
+}
+
+brace_operation {
+    // braced expression, continues with binary or access operation
+    entry -> "(":brace_op -> expression:item -> ")":brace_op -> return
+    ")":brace_op -> binary_operation -> return
+    ")":brace_op -> access_operation -> return
+    ")":brace_op -> invoke_operation:call -> return
+    invoke_operation:call -> binary_operation
+    invoke_operation:call -> access_operation
+    invoke_operation:call -> invoke_operation:call
+}
+
+unary_operation {
+    entry -> unary_operator -> expression:item -> return
+}
+
+binary_operation {
+    entry -> binary_operator -> expression:item -> return
+}
+
+ternary_operation {
+    entry -> "?":ternary_op -> expression:true_expression -> ":":ternary_op -> expression:false_expression -> return
+}
+
+assignment_operation {
+    entry -> assignment_operator -> literal_expression:value -> return
+    entry -> xfix_operator -> return
+}
+
+prefix_operation {
+    // ++expression.assignable
+    entry -> xfix_operator -> ident:ident -> return
+    xfix_operator -> expression:item -> access_operation_types_assignable -> return
+}
+
+property_assignment_operation {
+    // a::b = property...
+    entry -> "=":passignment_op -> proto_body_property:value -> return
+    entry -> ":=":passignment_op -> literal_expression:value -> return
+}
+
+access_operation {
+    // degraded from generic expression to member access, cannot go back to generic, i.e. (a || b).c.d::e ...
+    entry -> access_operation_types -> return
+    access_operation_types -> invoke_operation:call -> return
+    access_operation_types -> access_operation -> return
+    invoke_operation:call -> access_operation
+
+    entry -> access_operation_types_assignable -> property_assignment_operation -> return
+    entry -> access_operation_types_assignable -> assignment_operation -> return
+
+    invoke_operation:call -> invoke_operation:call
+}
+
+invoke_operation {
+    entry -> "(" -> ")" -> return
+    "(" -> invoke_param_list -> ")"
+}
+
+/*
+ * ary ops
+ */
+
+unary_operator {
+    entry -> "+":unary_op -> return
+    entry -> "-":unary_op -> return
+    entry -> "!":unary_op -> return
+    entry -> "new":unary_op -> return
+    entry -> "typeof":unary_op -> return
+    entry -> "delete":unary_op -> return
+}
+
+binary_operator {
+    entry -> "+":binary_op -> return
+    entry -> "-":binary_op -> return
+    entry -> "*":binary_op -> return
+    entry -> "/":binary_op -> return
+    entry -> "%":binary_op -> return
+
+    entry -> "==":binary_op -> return
+    entry -> "===":binary_op -> return
+    entry -> "!=":binary_op -> return
+    entry -> "!==":binary_op -> return
+    entry -> "<":binary_op -> return
+    entry -> ">":binary_op -> return
+    entry -> "<=":binary_op -> return
+    entry -> ">=":binary_op -> return
+    entry -> "&&":binary_op -> return
+    entry -> "||":binary_op -> return
+
+    entry -> "&":binary_op -> return
+    entry -> "|":binary_op -> return
+    entry -> "^":binary_op -> return
+    entry -> "<<":binary_op -> return
+    entry -> ">>":binary_op -> return
+    entry -> "instanceof":binary_op -> return
+    entry -> "in":binary_op -> return
+}
+
+/*
+ * access ops
+ */
+access_operation_types_assignable {
+    entry -> access_operation_member:member -> return
+    entry -> access_operation_index:index -> return
+    entry -> access_operation_proto:proto -> return
+}
+
+access_operation_types {
+    entry -> access_operation_types_assignable -> return
+    entry -> access_operation_protocall:pcall -> return
+}
+
+access_operation_member {
+    entry -> "." -> name:item -> return
+}
+
+access_operation_index {
+    entry -> "[" -> expression:item -> "]" -> return
+}
+
+access_operation_proto {
+    entry -> "::" -> name:item -> return
+}
+
+access_operation_protocall {
+    entry -> "->" -> name:item -> invoke_operation:call -> return
+    //invoke_operation:call -> invoke_operation:call
+}
+
+/*
+ * invoke op
+ */
+
+invoke_param_list {
+    entry -> literal_expression:param -> return
+    literal_expression:param -> "," -> literal_expression:param
+}
+
+/*
+ * assignment ops
+ */
+
+assignment_operator {
+    entry -> "=":assignment_op -> return
+
+    entry -> "+=":assignment_op -> return
+    entry -> "-=":assignment_op -> return
+    entry -> "*=":assignment_op -> return
+    entry -> "/=":assignment_op -> return
+    entry -> "%=":assignment_op -> return
+
+    entry -> "&&=":assignment_op -> return
+    entry -> "||=":assignment_op -> return
+    entry -> "^^=":assignment_op -> return
+
+    entry -> "&=":assignment_op -> return
+    entry -> "|=":assignment_op -> return
+    entry -> "^=":assignment_op -> return
+    entry -> "<<=":assignment_op -> return
+    entry -> ">>=":assignment_op -> return
+}
+
+xfix_operator {
+    entry -> "++":xfix_op -> return
+    entry -> "--":xfix_op -> return
+}

@@ -1,0 +1,148 @@
+
+/*
+ * multipurpose code block
+ */
+
+scope {
+    entry -> block -> return
+}
+
+block {
+    entry -> "{" -> "}" -> return
+    "{" -> statement:statement -> "}"
+    statement:statement -> statement:statement
+}
+
+block_stripped { //!todo remove
+    entry -> return
+    entry -> statement:statement -> return
+    statement:statement -> statement:statement
+}
+
+interruptible_block {
+    entry -> "{" -> "}" -> return
+    "{" -> interruptible_statement:statement -> "}"
+    interruptible_statement:statement -> interruptible_statement:statement
+}
+
+/*
+ * break/return/continue
+ */
+
+return_statement {
+    entry -> "return":type -> return
+    "return":type -> literal_expression:value -> return
+}
+
+flow_statement {
+    entry -> "break":type -> t -> return
+    entry -> "continue":type -> t -> return
+}
+
+/*
+ * if else block
+ * "elseif" is achieved by else followed by a new if-block
+ */
+
+if_statement {
+    entry -> "if" -> "(" -> expression:condition -> ")" -> block:if_body -> return
+    block:if_body -> "else" -> if_statement:else_if -> return
+    block:if_body -> "else" -> block:else_body -> return
+}
+
+/*
+ * while
+ */
+
+do_while {
+    entry -> "do" -> interruptible_block:body -> "while" -> "(" -> expression:test -> ")" -> return
+}
+
+while_statement {
+    entry -> "while" -> "(" -> expression:condition -> ")" -> interruptible_block:body -> return
+}
+
+/*
+ * for
+ */
+
+for_count_init {
+    entry -> var_def:init -> return
+    entry -> expression:init -> return
+}
+
+for_count_statement {
+    entry -> "for" -> "(" -> for_count_init -> t -> expression:test[full] -> t -> expression:cond_op -> ")" -> interruptible_block:body -> return
+    "(" -> expression:test[short] -> ")"
+}
+
+/*
+ * for ([var] key[, value] in source) { ... }
+ */
+
+for_in_statement {
+    entry -> "for" -> "(" -> ident:key -> "in" -> expression:source -> ")" -> interruptible_block:body -> return
+    "(" -> "var":var -> ident:key
+    ident:key -> "," -> ident:value -> "in"
+}
+
+/*
+ * switch statement
+ */
+
+switch_case {
+    entry -> "case" -> expression:match -> ":" -> switch_block:body -> return
+    ":" -> return
+}
+
+switch_default {
+    entry -> "default" -> ":" -> switch_block:body -> return
+}
+
+switch_block {
+    entry -> statement:statement -> return
+    statement:statement -> statement:statement
+}
+
+switch_statement {
+    entry -> "switch" -> "(" -> expression:value -> ")" -> "{"
+    "{" -> switch_case:case -> "}"
+    switch_case:case -> switch_case:case
+    switch_case:case -> switch_default:default -> "}"
+    "}" -> return
+}
+
+/*
+ * throw try catch finally
+ */
+
+throw {
+    entry -> "throw" -> expression:exception -> return
+}
+
+catch_all {
+    entry -> "catch" -> "(" -> ident:value -> ")" -> block:body -> return
+}
+
+catch_specific {
+    entry -> "catch" -> "(" -> expression:type -> ident:value -> ")" -> block:body -> return
+}
+
+finally {
+    entry -> "finally" -> block:body -> return
+}
+
+catch_specifics {
+    entry -> catch_specific:specific -> return
+    catch_specific:specific -> catch_specific:specific
+    catch_specific:specific -> catch_all:catch -> return
+}
+
+try_catch_finally_statement {
+    entry -> "try" -> block:body -> catch_all:all -> return
+    block:body -> catch_specifics:specifics -> return
+
+    block:body -> finally:finally -> return
+    catch_all:all -> finally:finally
+    catch_specifics:specifics -> finally:finally
+}

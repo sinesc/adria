@@ -1,0 +1,55 @@
+
+proto_literal {
+
+    // proto [ name ] [ ( [ parent ] ) ] body
+
+    entry -> "proto" -> "(" -> expression:parent -> ")" -> proto_body:body -> return
+    "proto" -> ident:name -> "("
+    ident:name -> proto_body:body
+    "(" -> ")"
+    "proto" -> proto_body:body
+}
+
+proto_body {
+    entry -> "{" -> "}" -> return
+    "{" -> proto_body_item:item -> "}"
+    proto_body_item:item -> ","[any] -> proto_body_item:item
+
+    // allow comma behind last literal item
+
+    proto_body_item:item -> ","[last] -> "}"
+}
+
+proto_body_item {
+    entry -> ident:key -> ":"
+    entry -> string:key -> ":"
+    ":" -> literal:value -> return
+    ":" -> proto_body_property:value -> return
+}
+
+proto_body_property {
+    entry -> "property" -> "{" -> proto_body_property_item:item -> "}" -> return
+    proto_body_property_item:item -> ","[any] -> proto_body_property_item:item
+    proto_body_property_item:item -> ","[last] -> "}"
+}
+//!todo this does not prevent mixing these
+proto_body_property_accessor {
+    entry -> "get":key -> ":"
+    entry -> "set":key -> ":"
+    entry -> "configurable":key -> ":"
+    entry -> "enumerable":key -> ":"
+    ":" -> literal:value -> return
+}
+
+proto_body_property_data {
+    entry -> "value":key -> ":"
+    entry -> "writable":key -> ":"
+    entry -> "configurable":key -> ":"
+    entry -> "enumerable":key -> ":"
+    ":" -> literal:value -> return
+}
+
+proto_body_property_item {
+    entry -> proto_body_property_accessor -> return
+    entry -> proto_body_property_data -> return
+}

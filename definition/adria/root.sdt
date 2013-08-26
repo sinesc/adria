@@ -1,0 +1,42 @@
+/*
+ * defined in DefinitionParser
+ *
+ * blockname {                  define a new definition block "blockname" containing textual representations of language definition nodes
+ *     ->                       connects two nodes (can be chained)
+ *     match:capture[unique]    matches "match" and captures it in the output syntax tree as "capture"
+ *                              any nodes with the same match and capture represent the same definition node unless "unique" differs
+ *                              capture and unique are optional
+ * }
+ *
+ * defined in LanguageParser
+ *
+ * entry        a node that attaches itself to the block root (required)
+ * return       valid exitpoint for current block. it needs to be reached during parsing or the parsed document
+ *              fragment doesn't match the block
+ * string       matches a string "string" or 'string'
+ * numeric      matches a number [0-9\.]+ (exponential representation !todo)
+ * "word"       matches "word" literally
+ * '[a-z]+'     matches via regex [a-z]+
+ * blockname    jump to definition block "blockname"
+ *
+ * follow up with :capture to capture the exact match as a node in the output syntax tree
+ *
+ * defined in AdriaParser::createNode
+ *
+ * ident        matches identifier of the format [a-zA-Z_\\$][a-zA-Z0-9_\\$]* except for defined keywords (see AdriaParser::trainSelf)
+ * name         matches everything ident matches as well as keywords (see AdriaParser::trainSelf)
+ * regexp       matches JavaScript regular expression literals
+ */
+
+ /*
+  * the root node for the definition tree (as defined by Parser.initialBlock)
+  */
+
+root {
+    entry -> module:module -> return
+}
+
+module {
+    entry -> statement:statement -> return
+    statement:statement -> statement:statement
+}
