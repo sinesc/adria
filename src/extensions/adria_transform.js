@@ -9,10 +9,10 @@
  * use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of
  * the Software, and to permit persons to whom the Software is furnished to do so,
  * subject to the following conditions:
- * 
+ *
  * The above copyright notice and this permission notice shall be included in all
  * copies or substantial portions of the Software.
- * 
+ *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
  * FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
@@ -50,6 +50,7 @@ var AdriaTransform = Transform.derive(function(piped) {
 
     options.nolink = (options.nolink === undefined ? false : options.nolink);
     options.nomap = (options.nomap === undefined ? false : options.nomap);
+    options.fileExt = (options.fileExt === undefined ? '.adria' : options.fileExt);
 });
 
 /**
@@ -60,7 +61,17 @@ AdriaTransform.prototype.requires = null;
 AdriaTransform.prototype.requiresDone = null;
 AdriaTransform.prototype.modules = null;
 AdriaTransform.prototype.protoParser = null;
-AdriaTransform.prototype.fileExt = '.js';
+
+AdriaTransform.prototype.initOptions = function() {
+
+    Transform.prototype.initOptions.call(this);
+
+    this.defineOptions({
+        'file-extension': function(extension) {
+            this.fileExt = '.' + extension;
+        }
+    });
+};
 
 /**
  * returns the full filename of given module
@@ -73,7 +84,7 @@ AdriaTransform.prototype.resolveModule = function(moduleName) {
     var slash = moduleName.lastIndexOf('/');
     var baseName = slash > 0 ? moduleName.slice(slash) : moduleName;
 
-    var filename = (baseName.indexOf('.') > -1 ? moduleName : moduleName + this.fileExt);
+    var filename = (baseName.indexOf('.') > -1 ? moduleName : moduleName + this.options.fileExt);
     var fullname = this.options.basePath + filename;
     var current = fullname;
 
@@ -114,7 +125,7 @@ AdriaTransform.prototype.buildModule = function(moduleName, data) {
     if (data === undefined) {
         parser.loadSource(this.resolveModule(moduleName));
     } else {
-        parser.setSource(moduleName + this.fileExt, data);
+        parser.setSource(moduleName + this.options.fileExt, data);
     }
 
     // generate result
@@ -190,7 +201,7 @@ AdriaTransform.prototype.process = function() {
     var files = this.options.files;
 
     for (var id in files) {
-        this.buildModule(files[id].stripPostfix(this.fileExt));
+        this.buildModule(files[id].stripPostfix(this.options.fileExt));
     }
 
     // result

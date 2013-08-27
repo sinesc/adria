@@ -9,10 +9,10 @@
  * use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of
  * the Software, and to permit persons to whom the Software is furnished to do so,
  * subject to the following conditions:
- * 
+ *
  * The above copyright notice and this permission notice shall be included in all
  * copies or substantial portions of the Software.
- * 
+ *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
  * FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
@@ -30,7 +30,7 @@ var Cache = function() {
     this.checkBaseDir();
 };
 
-Cache.prototype.baseDir = '/var/cache/nca/';
+Cache.prototype.baseDir = util.home() + '/.adria/cache/';
 
 var isFile = function(path) {
     var stat = fs.statSync(path);
@@ -89,13 +89,18 @@ Cache.prototype.fetch = function(file, variants) {
 
             for (var id in variants) {
                 if (variants[id] === 'base') {
-                    resultData['base'] = fs.readFileSync(cacheFile, 'UTF-8');
+                    util.log('Cache', 'reading from ' + cacheFile, 0);
+                    resultData['base'] = JSON.parse(fs.readFileSync(cacheFile, 'UTF-8'));
                 } else {
-                    resultData[variants[id]] = fs.readFileSync(cacheFile + '.' + variants[id], 'UTF-8');
+                    resultData[variants[id]] = JSON.parse(fs.readFileSync(cacheFile + '.' + variants[id], 'UTF-8'));
                 }
             }
 
             return resultData;
+
+        } else {
+
+            util.log('Cache', 'cache miss for ' + file, 0);
         }
     }
 
@@ -120,10 +125,11 @@ Cache.prototype.insert = function(file, variants) {
     for (var ext in variants) {
 
         if (ext === 'base') {
-            fs.writeFileSync(cacheFile, variants[ext]);
+            util.log('Cache', 'writing to ' + cacheFile, 0);
+            fs.writeFileSync(cacheFile, JSON.stringify(variants[ext]));
             fs.utimesSync(cacheFile, inputStat.atime, inputStat.mtime);
         } else {
-            fs.writeFileSync(cacheFile + '.' + ext, variants[ext]);
+            fs.writeFileSync(cacheFile + '.' + ext, JSON.stringify(variants[ext]));
         }
     }
 };

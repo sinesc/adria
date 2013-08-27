@@ -46,22 +46,22 @@ var run = function(pipeData) {
 
     var transform;
 
-    //try {
+    try {
 
         if (target === 'adria') {
             transform = new AdriaTransform(pipeData);
         } else if (target === 'adriadebug') {
             transform = new AdriaDebugTransform(pipeData);
         } else {
-            throw new Error('unsupported taget "' + target+ '"');
+            throw new Error('Unsupported target "' + target+ '".');
         }
 
         transform.process();
 
-    //} catch (e) {
+    } catch (e) {
 
-     //   console.log(e.message);
-    //}
+        console.log(e.message);
+    }
 };
 
 // process stdin or run directly

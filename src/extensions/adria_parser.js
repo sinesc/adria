@@ -9,10 +9,10 @@
  * use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of
  * the Software, and to permit persons to whom the Software is furnished to do so,
  * subject to the following conditions:
- * 
+ *
  * The above copyright notice and this permission notice shall be included in all
  * copies or substantial portions of the Software.
- * 
+ *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
  * FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
@@ -20,6 +20,7 @@
  * IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
+var fs = require('fs');
 var XRegExp = require('../xregexp');
 var util = require('../util');
 var Parser = require('../parser');
@@ -43,26 +44,6 @@ var AdriaParser = LanguageParser.derive(function(transform) {
 
 AdriaParser.prototype.moduleName = '';
 AdriaParser.prototype.indent = 0;
-
-/**
- * serialize resultData for cache writing
- */
-AdriaParser.prototype.serializeData = function() {
-
-    return JSON.stringify(this.resultData);
-};
-
-/**
- * unserialize resultData when loading result from cache
- */
-AdriaParser.prototype.unserializeData = function(resultData) {
-
-    var result = JSON.parse(resultData);
-
-    this.resultData.globals.data = result.globals.data;
-    this.resultData.requires.data = result.requires.data;
-    return this.resultData;
-};
 
 /**
  * initialize a tokenizer, load definition files into a trainer and call parent's trainself, which
@@ -162,6 +143,17 @@ AdriaParser.prototype.createNode = function(name, capture, label, condition) {
     }
 
     return node;
+};
+
+AdriaParser.prototype.loadSourceFromCache = function(resource) {
+
+    LanguageParser.prototype.loadSourceFromCache.call(this, resource);
+
+    // if sourcemapping is enabled, we also need the sourcecode
+
+    if (this.cacheData !== null && this.transform.options.nomap !== true) {
+        this.sourceCode = fs.readFileSync(resource, 'UTF-8').replace('\r\n', '\n');
+    }
 };
 
 AdriaParser.prototype.postprocess = function(raw) {

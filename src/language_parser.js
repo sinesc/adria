@@ -9,10 +9,10 @@
  * use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of
  * the Software, and to permit persons to whom the Software is furnished to do so,
  * subject to the following conditions:
- * 
+ *
  * The above copyright notice and this permission notice shall be included in all
  * copies or substantial portions of the Software.
- * 
+ *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
  * FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
@@ -44,6 +44,9 @@ var LanguageParser = Parser.derive(function(transform) {
     this.resultData = { };
 });
 
+CaptureNode.LanguageParser = LanguageParser; //!ugly, find better way to avoid circular require
+LanguageParser.CaptureNode = CaptureNode;
+
 /**
  * @var DefinitionParser trainer secondary parser that will be used to train this one
  */
@@ -73,12 +76,6 @@ LanguageParser.prototype.cacheData = null;
  * @var String method used for output generation
  */
 LanguageParser.prototype.outputMethod = 'toSourceNode';
-
-/*
- * subclassing
- */
-CaptureNode.LanguageParser = LanguageParser; //!ugly, find better way to avoid circular require
-LanguageParser.CaptureNode = CaptureNode;
 
 /**
  * constructs new instance referencing source's definition and
@@ -124,6 +121,7 @@ LanguageParser.prototype.loadDefinition = function(resource) {
     }
 
     util.log('LanguageParser', 'processing definition', 2);
+    this.trainer.file = resource;
     this.trainer.parse(file_contents);
     util.log('LanguageParser', 'done', -2);
 };
@@ -247,9 +245,10 @@ LanguageParser.prototype.integrateNodePair = function(pair, blockName) {
 };
 
 /**
- * load source file and process it to a CaptureNode tree
+ * set source data and process it to a CaptureNode tree
  *
- * @param string resource name
+ * @param string resource name (for display)
+ * @param string data contents
  */
 LanguageParser.prototype.setSource = function(resource, data) {
 
@@ -257,32 +256,32 @@ LanguageParser.prototype.setSource = function(resource, data) {
 
     this.captureTree = null;
     this.file = resource;
-    this.sourceCode = data;
+    this.sourceCode = data.replace('\r\n', '\n');
 
     // parse file contents
 
-    util.log('LanguageParser', 'processing source' + resource, 2);
-    var captures = this.parse(data);
+    util.log('LanguageParser', 'processing source ' + resource, 2);
+    var captures = this.parse(this.sourceCode);
     util.log('LanguageParser', 'done', -2);
 
-    this.captureTree = CaptureNode.prototype.fromResults(captures, this.mapType.bind(this));
+    this.captureTree = CaptureNode.fromResults(captures, this.mapType.bind(this));
     this.captureTree.parent = this;
 };
 
 /**
- * serialize resultData for cache writing
+ * try to load sourcefile from cache
  *
- * @return string
+ * @param resource
  */
-LanguageParser.prototype.serializeData = function() {
-    return JSON.stringify(this.resultData);
-};
+LanguageParser.prototype.loadSourceFromCache = function(resource) {
 
-/**
- * unserialize resultData when loading result from cache
- */
-LanguageParser.prototype.unserializeData = function(resultData) {
-    return JSON.parse(resultData);
+    this.cacheData = this.transform.cache.fetch(resource, [ 'base'/*, 'resultData'*/ ]);
+
+    if (this.cacheData !== null) {
+        this.file = resource;
+        this.captureTree = CaptureNode.fromJSON(this.cacheData['base'], this, this.mapType.bind(this));
+        //this.resultData = this.unserializeData(this.cacheData['resultData']);
+    }
 };
 
 /**
@@ -292,21 +291,16 @@ LanguageParser.prototype.unserializeData = function(resultData) {
  */
 LanguageParser.prototype.loadSource = function(resource) {
 
+    // try to load from cache
+
     if (this.transform.options.nocache !== true && this.cacheData === null) {
-
-        this.cacheData = this.transform.cache.fetch(resource, [ 'base', 'resultData' ]);
-
-        if (this.cacheData !== null) {
-            this.resultData = this.unserializeData(this.cacheData['resultData']);
-        }
+        this.loadSourceFromCache(resource);
     }
 
     // check if now available from cache, if not, parse
 
     if (this.cacheData === null) {
-
-        var fileContents = fs.readFileSync(resource, 'UTF-8').replace('\r\n', '\n');
-        this.setSource(resource, fileContents);
+        this.setSource(resource, fs.readFileSync(resource, 'UTF-8'));
     }
 };
 
@@ -319,25 +313,18 @@ LanguageParser.prototype.output = function() {
 
     var result;
 
-    // generate data unless it's already in the cache
+    // generate result
 
-    if (this.cacheData === null) {
-
-        var InitialType = this.mapType('', this.definition.initialBlock);
-        result = InitialType.prototype[this.outputMethod].call(this.captureTree);
-
-    } else {
-
-        result = this.cacheData['base'];
-    }
+    var InitialType = this.mapType('', this.definition.initialBlock);
+    result = InitialType.prototype[this.outputMethod].call(this.captureTree);
 
     // write new data to cache (don't write it again if it just came from the cache)
 
     if (this.transform.options.nocache !== true && this.cacheData === null && fs.existsSync(this.file)) {
 
         this.transform.cache.insert(this.file, {
-            base: result,
-            resultData: this.serializeData()
+            base        : this.captureTree.toJSON(),
+            //resultData  : this.serializeData(this.resultData)
         });
     }
 

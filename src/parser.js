@@ -9,10 +9,10 @@
  * use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of
  * the Software, and to permit persons to whom the Software is furnished to do so,
  * subject to the following conditions:
- * 
+ *
  * The above copyright notice and this permission notice shall be included in all
  * copies or substantial portions of the Software.
- * 
+ *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
  * FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
@@ -24,8 +24,8 @@ var assert = require('assert');
 var path = require('path');
 var XRegExp = require('./xregexp');
 var util = require('./util');
-var Definition = require('./parser/definition.js');
-var GeneratorState = require('./parser/generator_state.js');
+var Definition = require('./parser/definition');
+var GeneratorState = require('./parser/generator_state');
 
 /**
  * Abstract parsing base class. The class uses groups of trees of match-nodes. During parsing, input tokens are tested
@@ -41,9 +41,6 @@ var Parser = function() {
     this.file       = 'unnamed';
 };
 
-/*
- * subclassing
- */
 Parser.Definition = Definition;
 
 /**
@@ -113,37 +110,36 @@ Parser.prototype.parseError = function(token, node, stack) {
  */
 Parser.prototype.parse = function(source) {
 
-    // process tokens and find entry node for the initial definition block
+    // create tokens from input string
 
     util.log('Parser', 'tokenizing', 2);
     var tokens = this.tokenizer.process(source, this.file);
     util.log('Parser', 'done', -2);
 
-    var token;
     var node = this.definition.getInitialBlock();
     var stack = [];
-
-    // create a result array
-
     var len = tokens.length();
     var id = len;
     var maxId = 0
     var maxStack = [];
     var maxNode = node;
     var results = new Array(len);
-    var result;
+    var success = false;
+    var result, token;
 
+    // create a GeneratorState for each token
+    
     while (id--) {
         results[id] = new GeneratorState();
     }
+    
+    id = 0;
 
     // process tokens
 
     util.log('Parser', 'processing ' + tokens.length() + ' tokens according to currrent language definition');
 
-    id = 0;
-
-    while (id < len && id >= 0) {
+    do {
 
         result = results[id];
 
@@ -166,22 +162,33 @@ Parser.prototype.parse = function(source) {
             }
         }
 
-        if (result.done && id < len) {
+        // remember deepest positive match for error reporting
+
+        if (result.done === false && id > maxId) {
+            maxId = id;
+            maxStack = result.stack.slice(0);
+            maxNode = result.node;
+        }               
+        
+        if (result.done) {
 
             // no more matches, discard this generator and go back one token
 
             result.setGenerator(null);
             id--;
 
-        } else {
+        } else if (id === len -1) {
 
-            // remember deepest positive match for error reporting
+            // last token, cannot advance further, either reach exit or try next match for same token
 
-            if (id > maxId) {
-                maxId = id;
-                maxStack = result.stack.slice(0);
-                maxNode = result.node;
+            if (result.node.reachesExit(result.stack)) {
+                success = true;
+                break;
+            } else {
+                continue;
             }
+
+        } else {
 
             // a(nother) match was found, update node and go to next token
 
@@ -189,12 +196,17 @@ Parser.prototype.parse = function(source) {
             stack = result.stack.slice(0);
             id++;
         }
-    }
+
+    } while (id >= 0);
 
     // check result
 
-    if (id !== len) {
-        throw new Error(this.parseError(tokens.get(maxId+1), maxNode, maxStack));
+    if (success === false) {
+        if (maxId +1 === len) {
+            throw new Error(path.normalize(this.file) + ': Unexpected end of file.');
+        } else {    
+            throw new Error(this.parseError(tokens.get(maxId +1), maxNode, maxStack));
+        }
     }
 
     return results;

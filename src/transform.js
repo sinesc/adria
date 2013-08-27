@@ -9,10 +9,10 @@
  * use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of
  * the Software, and to permit persons to whom the Software is furnished to do so,
  * subject to the following conditions:
- * 
+ *
  * The above copyright notice and this permission notice shall be included in all
  * copies or substantial portions of the Software.
- * 
+ *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
  * FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
@@ -33,14 +33,13 @@ var Cache = require('./cache');
  */
 var Transform = function(piped) {
 
-    this.options            = { basePath: '', paths: [ ], files: [ ], outFile: null };
-    this.optionsDefinition  = { };
+    this.options            = { basePath: '', paths: [ ], files: [ ], outFile: null }; // merge these agains possible defined ones (by sub)
     this.piped              = piped;
     this.root_scope         = null;
     this.unresolved_symbols = null;
     this.symbol_pass        = 0;
 
-    this.addDefaultOptions();
+    this.initOptions();
     this.processOptions();
 
     if (this.options.nocache !== true) {
@@ -55,9 +54,14 @@ var Transform = function(piped) {
 Transform.UnresolvedSymbol = UnresolvedSymbol;
 Transform.Scope = Scope;
 
-Transform.prototype.addDefaultOptions = function() {
+Transform.prototype.optionsDefinition = null;
 
-    this.addOptions({
+/**
+ * initialize options definition, extend with own options
+ */
+Transform.prototype.initOptions = function() {
+
+    this.defineOptions({
         '_default': function(file) {
             this['files'].push(file);
         },
@@ -87,7 +91,11 @@ Transform.prototype.addDefaultOptions = function() {
  *
  * @param optionsDefinition object of handler functions
  */
-Transform.prototype.addOptions = function(optionsDefinition) {
+Transform.prototype.defineOptions = function(optionsDefinition) {
+
+    if (this.optionsDefinition === null) {
+        this.optionsDefinition = { };
+    }
 
     for (var id in optionsDefinition) {
         this.optionsDefinition[id] = optionsDefinition[id];

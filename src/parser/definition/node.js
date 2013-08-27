@@ -9,10 +9,10 @@
  * use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of
  * the Software, and to permit persons to whom the Software is furnished to do so,
  * subject to the following conditions:
- * 
+ *
  * The above copyright notice and this permission notice shall be included in all
  * copies or substantial portions of the Software.
- * 
+ *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
  * FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
@@ -34,6 +34,8 @@ var Node = function Node() {
     this.children = [ ];
 };
 
+Node.Type = Type;
+
 Node.prototype.children = null;
 Node.prototype.tokenType = 0;
 Node.prototype.match = '';
@@ -42,11 +44,6 @@ Node.prototype.name = '';
 Node.prototype.capture = '';
 Node.prototype.label = '';
 Node.prototype.description = '';
-
-/*
- * subclassing
- */
-Node.Type = Type;
 
 Node.prototype.hasChild = function(node) {
 
@@ -164,6 +161,31 @@ function StackItem(node, token) {
     this.node = node;
     this.token = token;
 }
+
+/**
+ * returns true if the current node can directly reach the root
+ * exit without having to match any more tokens
+ *
+ * @param stack current stack
+ */
+Node.prototype.reachesExit = function(stack) {
+
+    var children = this.children;
+    var lastChild = children.length -1;
+
+    // exit nodes always come last, so just look if the last node is an exit node
+
+    if (children[lastChild].type === Type.RETURN) {
+
+        if (stack.length === 0) {
+            return true;
+        } else {
+            return stack[stack.length -1].node.reachesExit(stack.slice(0, -1));
+        }
+    }
+
+    return false;
+};
 
 /**
  * yields matches for given token recusively from node children

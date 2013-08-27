@@ -398,6 +398,10 @@ var processOptions = function(context, handlers) {
     }
 };
 
+var home = function() {
+    return process.env[(process.platform == 'win32') ? 'USERPROFILE' : 'HOME'];
+};
+
 var md5 = function(input) {
 
     var md5sum = crypto.createHash('md5');
@@ -412,3 +416,4 @@ exports.Enum = Enum;
 exports.Set = Set;
 exports.processOptions = processOptions;
 exports.md5 = md5;
+exports.home = home;

@@ -9,10 +9,10 @@
  * use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of
  * the Software, and to permit persons to whom the Software is furnished to do so,
  * subject to the following conditions:
- * 
+ *
  * The above copyright notice and this permission notice shall be included in all
  * copies or substantial portions of the Software.
- * 
+ *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
  * FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
@@ -40,11 +40,67 @@ var CaptureNode = function(key, value) {
 };
 
 /**
+ * typename, required since current approach does not set constructor.name. this will change with self-hosting and have to be refactored then
+ */
+CaptureNode.prototype.typeName = 'CaptureNode';
+
+/**
  * dummy returned by some functions as a convenience
  */
 CaptureNode.prototype.dummy = new CaptureNode('', '');
 CaptureNode.prototype.dummy.row = -1;
 CaptureNode.prototype.dummy.col = -1;
+
+/**
+ * convert to JSON, loses parent
+ */
+CaptureNode.prototype.toJSON = function() {
+
+    // recursively include all children
+
+    var children = [];
+
+    for (var id in this.children) {
+        children.push(this.children[id].toJSON());
+    }
+
+    // try to keep it small
+
+    return {
+        _: this.typeName,
+        s: children,
+        k: this.key,
+        v: this.value,
+        t: this.tpl,
+        r: this.row,
+        c: this.col
+    };
+};
+
+/**
+ * create from JSON, restores parent
+ */
+CaptureNode.fromJSON = function(json, parent, typeMapper) {
+
+    var Type = typeMapper(null, json._);
+    
+    var result = new Type(json.k, json.v);
+    result.parent = parent;
+    result.tpl = json.t;
+    result.row = json.r;
+    result.col = json.c;
+    result.children = [ ];
+
+    var jsonChildren = json.s;
+    var resultChildren = result.children;
+
+    for (var id in jsonChildren) {
+        resultChildren.push(CaptureNode.fromJSON(jsonChildren[id], result, typeMapper));
+    }
+
+    return result;
+};
+
 
 /**
  * compares two stacks and returns number of parent-acends and list of capture desends to get from
@@ -104,7 +160,7 @@ var stackDiff = function(stack, lastStack, minStackLen) {
  * @param results array of GeneratorState
  * @return CaptureNode root node of the capture tree
  */
-CaptureNode.prototype.fromResults = function(results, typeMapper) {
+CaptureNode.fromResults = function(results, typeMapper) {
 
     var root = new CaptureNode();
     var current = root;

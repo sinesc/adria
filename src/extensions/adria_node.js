@@ -9,10 +9,10 @@
  * use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of
  * the Software, and to permit persons to whom the Software is furnished to do so,
  * subject to the following conditions:
- * 
+ *
  * The above copyright notice and this permission notice shall be included in all
  * copies or substantial portions of the Software.
- * 
+ *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
  * FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
@@ -24,7 +24,7 @@ var assert = require('assert');
 var SourceNode = require('source-map').SourceNode;
 var LanguageParser = require('../language_parser');
 var CaptureNode = LanguageParser.CaptureNode;
-var Transform = require('../transform.js');
+var Transform = require('../transform');
 var util = require('../util');
 var Set = util.Set;
 
@@ -40,6 +40,7 @@ var AdriaNode = function(definitionName, constructor) {
     AdriaNode[definitionName] = (typeof constructor === 'function' ? constructor : function(key, value) { CaptureNode.call(this, key, value); });
     AdriaNode[definitionName].prototype = Object.create(CaptureNode.prototype);
     AdriaNode[definitionName].prototype.constructor = AdriaNode[definitionName];
+    AdriaNode[definitionName].prototype.typeName = definitionName; // remove with selfhosting
     return AdriaNode[definitionName];
 };
 

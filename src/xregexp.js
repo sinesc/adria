@@ -9,10 +9,10 @@
  * use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of
  * the Software, and to permit persons to whom the Software is furnished to do so,
  * subject to the following conditions:
- * 
+ *
  * The above copyright notice and this permission notice shall be included in all
  * copies or substantial portions of the Software.
- * 
+ *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
  * FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
@@ -29,8 +29,8 @@ if (parseInt(XRegExp.version) < 3) {
     console.log('If it is not yet available in NPM, get it here');
     console.log('   https://github.com/slevithan/xregexp');
     console.log('and either replace xregexp-all.js in node_modules/xregexp');
-    console.log('or copy/rename it to nca/src/xregexp.js (replace this file)');
-    console.log('Comment/remove process.exit(); in nca/src/xregexp.js to proceed');
+    console.log('or copy/rename it to adria/src/xregexp.js (replace this file)');
+    console.log('Comment/remove process.exit(); in adria/src/xregexp.js to proceed');
     console.log('anyway (tokenizing will be about 15-20 times slower)');
     process.exit();
 }
