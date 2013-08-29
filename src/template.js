@@ -62,9 +62,9 @@ Template.prototype.parse = function(input) {
     var lastTail    = '';
 
     var delim       = this.delimiter;
-    var regex       = XRegExp(' (?<head>  [\\ \\t]*) \
-              ' + delim.open + '(?<ident> /?[a-z_][a-z0-9_\\[\\]\\.]+) \\s* (?<params>.*?)' + delim.close + ' \
-                                (?<tail>  \\n){0,1}', 'xis');
+    var regex       = XRegExp(' (?<head>  [\\ \\t]*)' +
+                  delim.open + '(?<ident> /?[a-z_][a-z0-9_\\[\\]\\.]+) \\s* (?<params>.*?)' + delim.close +
+                               '(?<tail>  \\n){0,1}', 'xis');
 
     // convert to linux format
 

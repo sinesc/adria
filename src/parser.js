@@ -120,7 +120,7 @@ Parser.prototype.parse = function(source) {
     var stack = [];
     var len = tokens.length();
     var id = len;
-    var maxId = 0
+    var maxId = 0;
     var maxStack = [];
     var maxNode = node;
     var results = new Array(len);
@@ -128,11 +128,11 @@ Parser.prototype.parse = function(source) {
     var result, token;
 
     // create a GeneratorState for each token
-    
+
     while (id--) {
         results[id] = new GeneratorState();
     }
-    
+
     id = 0;
 
     // process tokens
@@ -168,8 +168,8 @@ Parser.prototype.parse = function(source) {
             maxId = id;
             maxStack = result.stack.slice(0);
             maxNode = result.node;
-        }               
-        
+        }
+
         if (result.done) {
 
             // no more matches, discard this generator and go back one token
@@ -204,7 +204,7 @@ Parser.prototype.parse = function(source) {
     if (success === false) {
         if (maxId +1 === len) {
             throw new Error(path.normalize(this.file) + ': Unexpected end of file.');
-        } else {    
+        } else {
             throw new Error(this.parseError(tokens.get(maxId +1), maxNode, maxStack));
         }
     }

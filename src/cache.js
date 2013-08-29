@@ -55,7 +55,7 @@ Cache.prototype.checkBaseDir = function() {
                 throw new Error(path + ' is a file');
             }
         } else {
-            fs.mkdirSync(path, (parseInt(id) === parts.length -1 ? 0777 : 0755));
+            fs.mkdirSync(path, (parseInt(id) === parts.length -1 ? 511 /*0777*/ : 493 /*0755*/));
         }
         path += '/';
     }

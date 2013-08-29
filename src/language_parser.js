@@ -300,7 +300,7 @@ LanguageParser.prototype.loadSource = function(resource) {
     // check if now available from cache, if not, parse
 
     if (this.cacheData === null) {
-        this.setSource(resource, fs.readFileSync(resource, 'UTF-8'));
+        this.setSource(resource, fs.readFileSync(resource, 'UTF-8').replace("var assert = require('assert');", '')); //!todo temporary hack for node sources
     }
 };
 

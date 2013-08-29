@@ -51,6 +51,8 @@ var AdriaTransform = Transform.derive(function(piped) {
     options.nolink = (options.nolink === undefined ? false : options.nolink);
     options.nomap = (options.nomap === undefined ? false : options.nomap);
     options.fileExt = (options.fileExt === undefined ? '.adria' : options.fileExt);
+    options.platform = (options.platform === undefined ? 'web' : options.platform);
+    options['tweak-exports'] = (options['tweak-exports'] === undefined ? false : options['tweak-exports']);
 });
 
 /**
@@ -69,6 +71,9 @@ AdriaTransform.prototype.initOptions = function() {
     this.defineOptions({
         'file-extension': function(extension) {
             this.fileExt = '.' + extension;
+        },
+        'platform': function(platform) {
+            this.platform = platform;
         }
     });
 };
@@ -167,7 +172,7 @@ AdriaTransform.prototype.generateOutputTree = function() {
     // wrap with application and merge
 
     var fwNode, moduleNode;
-    var fw = tpl.fetchFile('adria/framework.web.tpl');
+    var fw = tpl.fetchFile('adria/framework.' + this.options.platform + '.tpl');
 
     node.add('(function() {\n"use strict";\n');
 

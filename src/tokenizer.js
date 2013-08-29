@@ -9,10 +9,10 @@
  * use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of
  * the Software, and to permit persons to whom the Software is furnished to do so,
  * subject to the following conditions:
- * 
+ *
  * The above copyright notice and this permission notice shall be included in all
  * copies or substantial portions of the Software.
- * 
+ *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
  * FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
@@ -87,6 +87,7 @@ Tokenizer.prototype.process = function(data, filename) {
 
         // try each parser until one matches
 
+//console.log(data.substr(startPos).split(/\r?\n/)[0]);
         for (var defId in definition) {
 
             processor = definition[defId];
@@ -100,9 +101,10 @@ Tokenizer.prototype.process = function(data, filename) {
 
                 row += match.containedRows;
                 col = (match.containedRows === 0 ? col + match.lastRowLen : match.lastRowLen + 1);
-
                 found = true;
-                startPos = match.endPosition;
+                startPos += match.data.length;
+//console.log(match.name, match.data, row, col);
+//console.log('');
                 break;
             }
         }
@@ -122,12 +124,11 @@ Tokenizer.prototype.process = function(data, filename) {
  * predefined tokenizer functions
  */
 Tokenizer.prefab = new (function() {
-
     var regexFunc = function(name, regex, callback) {
         return {
             name: name,
             func: function(data, start) {
-                var result = XRegExp.exec(data, regex, start, 'sticky');
+                var result = regex.exec(data.substr(start)); // XRegExp.exec(data, regex, start, 'sticky');
 
                 if (result !== null) {
                     var rows = result[0].occurances('\n');
@@ -148,12 +149,16 @@ Tokenizer.prefab = new (function() {
         };
     };
 
+    var regexEscape = function(regexString) {
+        return XRegExp.escape(regexString).replace('/', '\\/');
+    };
+
     this.breaker = function() {
-        return regexFunc(null, /\s+/);
+        return regexFunc(null, /^(\s+)/);
     };
 
     this.number = function(name) {
-        return regexFunc(name, /\-?[0-9]+(\.[0-9]+)?(e\-?[0-9]+)?/);
+        return regexFunc(name, /^(\-?[0-9]+(\.[0-9]+)?(e\-?[0-9]+)?)/);
     };
 
     this.delimited = function(name, start, end) {
@@ -161,8 +166,7 @@ Tokenizer.prefab = new (function() {
         start   = start || '"';
         end     = end || start;
 
-        var regex = XRegExp(XRegExp.escape(start) + '.*?' + XRegExp.escape(end), 's');
-
+        var regex = new RegExp('^(' + regexEscape(start) + '[\\s\\S]*?' + regexEscape(end) + ')');
         return regexFunc(name, regex);
     };
 
@@ -190,10 +194,10 @@ Tokenizer.prefab = new (function() {
         var escaped = [ ];
 
         for (var id in matches) {
-            escaped.push(XRegExp.escape(matches[id]));
+            escaped.push(regexEscape(matches[id]));
         }
 
-        var regex = XRegExp(escaped.join('|'), 's');
+        var regex = new RegExp('^(' + escaped.join('|') + ')');
 
         return regexFunc(name, regex);
     };
@@ -203,16 +207,16 @@ Tokenizer.prefab = new (function() {
         var escaped = [ ];
 
         for (var id in matches) {
-            escaped.push(XRegExp.escape(matches[id]));
+            escaped.push(regexEscape(matches[id]));
         }
 
-        var regex = XRegExp('[' + escaped.join() + ']+', 's');
+        var regex = new RegExp('^(' + '[' + escaped.join() + ']+)');
 
         return regexFunc(name, regex);
     };
 
     this.any = function(name) {
-        return regexFunc(name, /[^\s]*/);
+        return regexFunc(name, /^[^\s]*/);
     };
 
 })();

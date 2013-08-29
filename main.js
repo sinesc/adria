@@ -35,8 +35,10 @@ util.processOptions(null, {
     'target': function(type) {
         target = type;
     },
-    'pipe': function() {
-        piped = true;
+    '_switch': function(param) {
+        if (param === 'pipe') {
+            piped = true;
+        }
     }
 });
 

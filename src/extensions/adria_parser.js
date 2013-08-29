@@ -73,14 +73,17 @@ AdriaParser.prototype.trainSelf = function() {
 
     this.tokenizer = new Tokenizer([
         Tokenizer.prefab.delimited(null, '/*', '*/'),
-        Tokenizer.prefab.regex(null, /\/\/.*$/m),
+        Tokenizer.prefab.regex(null, /^\/\/.*/),
         Tokenizer.prefab.breaker(),
-        Tokenizer.prefab.regex('REGEXP', /\/(\S|\\\ )*?[^\\]\/[a-z]*/),
+
+        Tokenizer.prefab.regex('REGEXP', /^\/([^\/]*?(?:[^\n\\]|\\\\)+?)+?\/[a-z]*/),
+
+        //Tokenizer.prefab.regex('REGEXP', /\/(\S|\\\ )*?[^\\]\/[a-z]*/),
         Tokenizer.prefab.set('DELIM', [ ';', '.', ',', '(', ')', '[', ']', '{', '}', '!==', '!=', '!', '++', '--' ]),
         Tokenizer.prefab.group('DELIM', [ '=', '&', '|', '<', '>', ':', '?', '+', '-', '*', '/', '%' ]),
-        Tokenizer.prefab.regex('IDENT', /[a-zA-Z_\$][a-zA-Z0-9_\$]*/, matchKeywords),
+        Tokenizer.prefab.regex('IDENT', /^[a-zA-Z_\$][a-zA-Z0-9_\$]*/, matchKeywords),
         Tokenizer.prefab.number('NUMERIC'),
-        Tokenizer.prefab.regex('STRING', /(["'])(?:(?=(\\?))\2.)*?\1/),
+        Tokenizer.prefab.regex('STRING', /^(["'])(?:(?=(\\?))\2[\s\S])*?\1/),
     ], [ 'KEYWORD' ]);
 
     util.log('AdriaParser', 'trainer processing adria .sdt-files', 2);
@@ -145,11 +148,15 @@ AdriaParser.prototype.createNode = function(name, capture, label, condition) {
     return node;
 };
 
+/**
+ * change loadSourceFromCache behaviour to also load the original source,
+ * if source-mapping is enabled
+ *
+ * @see LanguageParser::loadSourceFromCache
+ */
 AdriaParser.prototype.loadSourceFromCache = function(resource) {
 
     LanguageParser.prototype.loadSourceFromCache.call(this, resource);
-
-    // if sourcemapping is enabled, we also need the sourcecode
 
     if (this.cacheData !== null && this.transform.options.nomap !== true) {
         this.sourceCode = fs.readFileSync(resource, 'UTF-8').replace('\r\n', '\n');

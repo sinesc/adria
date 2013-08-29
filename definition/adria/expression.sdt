@@ -1,6 +1,7 @@
 
 literal_expression {
     entry -> function_literal:function -> return
+    entry -> generator_literal:generator -> return
     entry -> proto_literal:proto -> return
     entry -> expression:expression -> return
 }
@@ -61,7 +62,7 @@ binary_operation {
 }
 
 ternary_operation {
-    entry -> "?":ternary_op -> expression:true_expression -> ":":ternary_op -> expression:false_expression -> return
+    entry -> "?":ternary_op -> literal_expression:true_expression -> ":":ternary_op -> literal_expression:false_expression -> return
 }
 
 assignment_operation {

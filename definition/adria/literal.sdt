@@ -37,6 +37,12 @@ array_literal {
  * function literal
  */
 
+generator_literal {
+    entry -> "function" -> "*":generator -> "(" -> ")" -> yielding_scope:body -> return
+    "*" -> ident:name -> "("
+    "(" -> function_param_list:param_list -> ")"
+}
+
 function_literal {
     entry -> "function" -> "(" -> ")" -> scope:body -> return
     "function" -> ident:name -> "("
@@ -98,10 +104,12 @@ base_literal {
     entry -> array_literal:array -> return
     entry -> "(":brace -> function_literal:function -> ")":brace -> return
     entry -> "(":brace -> proto_literal:proto -> ")":brace -> return
+    entry -> "(":brace -> generator_literal:function -> ")":brace -> return
 }
 
 literal {
     entry -> base_literal:base -> return
     entry -> function_literal:function -> return
     entry -> proto_literal:proto -> return
+    entry -> generator_literal:generator -> return
 }

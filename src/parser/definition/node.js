@@ -68,7 +68,7 @@ Node.prototype.add = function(node) {
 
     assert(node instanceof Node);
 
-if (this.hasChild(node)) return; //!todo shouldn't be required
+if (this.hasChild(node)) { return; } //!todo shouldn't be required
 
     var children = this.children;
 

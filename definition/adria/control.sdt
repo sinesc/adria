@@ -13,10 +13,14 @@ block {
     statement:statement -> statement:statement
 }
 
-block_stripped { //!todo remove
-    entry -> return
-    entry -> statement:statement -> return
-    statement:statement -> statement:statement
+yielding_scope {
+    entry -> yielding_block -> return
+}
+
+yielding_block {
+    entry -> "{" -> "}" -> return
+    "{" -> yielding_statement:statement -> "}"
+    yielding_statement:statement -> yielding_statement:statement
 }
 
 interruptible_block {
@@ -32,11 +36,18 @@ interruptible_block {
 return_statement {
     entry -> "return":type -> return
     "return":type -> literal_expression:value -> return
+
+    entry -> "yield":type -> return //!todo temp
+    "yield":type -> literal_expression:value -> return
 }
 
 flow_statement {
     entry -> "break":type -> t -> return
     entry -> "continue":type -> t -> return
+}
+
+yield_statement {
+    entry -> "yield":type -> t -> return
 }
 
 /*
@@ -54,8 +65,8 @@ if_statement {
  * while
  */
 
-do_while {
-    entry -> "do" -> interruptible_block:body -> "while" -> "(" -> expression:test -> ")" -> return
+do_while_statement {
+    entry -> "do" -> interruptible_block:body -> "while" -> "(" -> expression:condition -> ")" -> return
 }
 
 while_statement {
@@ -116,7 +127,7 @@ switch_statement {
  * throw try catch finally
  */
 
-throw {
+throw_statement {
     entry -> "throw" -> expression:exception -> return
 }
 

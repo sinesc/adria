@@ -9,10 +9,10 @@
  * use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of
  * the Software, and to permit persons to whom the Software is furnished to do so,
  * subject to the following conditions:
- * 
+ *
  * The above copyright notice and this permission notice shall be included in all
  * copies or substantial portions of the Software.
- * 
+ *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
  * FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
@@ -37,14 +37,13 @@ var DefinitionParser = Parser.derive(function() {
     Parser.call(this);
 
     this.tokenizer = new Tokenizer([
-        Tokenizer.prefab.breaker(),
-        Tokenizer.prefab.regex('WORD', /[a-z_]+/i),
-        Tokenizer.prefab.set('DELIM', [ '->', '.', ':', '[', ']', '{', '}', '?' ]),
-        Tokenizer.prefab.delimited('STRING', '"'),
-        Tokenizer.prefab.delimited('STRING', '\''),
-        Tokenizer.prefab.number('NUMERIC'),
         Tokenizer.prefab.delimited(null, '/*', '*/'),
-        Tokenizer.prefab.regex(null, /\/\/.*$/m)
+        Tokenizer.prefab.regex(null, /^\/\/.*/),
+        Tokenizer.prefab.breaker(),
+        Tokenizer.prefab.regex('WORD', /^[a-z_]+/i),
+        Tokenizer.prefab.set('DELIM', [ '->', '.', ':', '[', ']', '{', '}', '?' ]),
+        Tokenizer.prefab.regex('STRING', /^(["'])(?:(?=(\\?))\2[\s\S])*?\1/),
+        Tokenizer.prefab.number('NUMERIC'),
     ]);
 
     // create a definition for the parser definition language
