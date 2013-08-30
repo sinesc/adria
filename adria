@@ -1,0 +1,4 @@
+#!/bin/bash
+COMPILE_ROOT=`pwd`
+cd /root/dev/adria/
+node --harmony compiled2.js --base $COMPILE_ROOT "$@"

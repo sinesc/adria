@@ -131,7 +131,7 @@ Module.prototype.toSourceNode = function() {
     // tweak: commonJS module.exports shortcut
 
     if (parser.transform.options['tweak-exports']) {
-        result.add('var exports = module.exports;\n');
+        result.add('var exports = module.exports;' + this.nl());
     }
 
     if (locals.length > 0) {
@@ -686,7 +686,7 @@ ProtoLiteral.prototype.toSourceNode = function() {
         result.add(') {' + this.nl(1));
 
         for (var id in this.constructorDefaults) {
-            result.add(this.constructorDefaults);
+            result.add(this.constructorDefaults[id]);
             result.add(';' + this.nl());
         }
 

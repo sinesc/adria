@@ -53,6 +53,7 @@ var AdriaTransform = Transform.derive(function(piped) {
     options.fileExt = (options.fileExt === undefined ? '.adria' : options.fileExt);
     options.platform = (options.platform === undefined ? 'web' : options.platform);
     options['tweak-exports'] = (options['tweak-exports'] === undefined ? false : options['tweak-exports']);
+    options['tweak-nostrict'] = (options['tweak-nostrict'] === undefined ? false : options['tweak-nostrict']);
 });
 
 /**
@@ -174,7 +175,13 @@ AdriaTransform.prototype.generateOutputTree = function() {
     var fwNode, moduleNode;
     var fw = tpl.fetchFile('adria/framework.' + this.options.platform + '.tpl');
 
-    node.add('(function() {\n"use strict";\n');
+    node.add('(function() {\n');
+
+    // nostrict tweak
+
+    if (this.options['tweak-nostrict'] !== true) {
+        node.add('"use strict";\n');
+    }
 
     fwNode = node.add(new SourceNode(1, 0, 'adria-framework.js', fw));
     fwNode.setSourceContent('adria-framework.js', fw);

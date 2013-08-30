@@ -23,7 +23,7 @@ proto_body {
 proto_body_item {
     entry -> ident:key -> ":"
     entry -> string:key -> ":"
-    ":" -> literal:value -> return
+    ":" -> literal_expression:value -> return // todo verify
     ":" -> proto_body_property:value -> return
 }
 

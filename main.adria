@@ -20,8 +20,8 @@
  * IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-require('./src/prototype.js');
-var util = require('./src/util.js');
+require('./src/prototype');
+var util = require('./src/util');
 
 var AdriaTransform = require('./src/extensions/adria_transform');
 var AdriaDebugTransform = require('./src/extensions/adriadebug_transform');
@@ -48,7 +48,7 @@ var run = function(pipeData) {
 
     var transform;
 
-    try {
+    //try {
 
         if (target === 'adria') {
             transform = new AdriaTransform(pipeData);
@@ -60,10 +60,10 @@ var run = function(pipeData) {
 
         transform.process();
 
-    } catch (e) {
+    //} catch (e) {
 
-        console.log(e.message);
-    }
+    //    console.log(e.message);
+    //}
 };
 
 // process stdin or run directly
