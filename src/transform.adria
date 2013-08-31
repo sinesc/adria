@@ -21,9 +21,10 @@
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 var util = require('./util');
-var Scope = require('./transform/scope');
-var UnresolvedSymbol = require('./transform/unresolved_symbol');
 var Cache = require('./cache');
+
+export Scope = require('./transform/scope');
+export UnresolvedSymbol = require('./transform/unresolved_symbol');
 
 /**
  * Base for language transformation file handling. Transforms a set of input
@@ -31,96 +32,108 @@ var Cache = require('./cache');
  *
  * @param String piped piped data, if any
  */
-var Transform = function(piped) {
+module Transform = proto {
 
-    this.options            = { basePath: '', paths: [ ], files: [ ], outFile: null }; // merge these agains possible defined ones (by sub)
-    this.piped              = piped;
-    this.root_scope         = null;
-    this.unresolved_symbols = null;
-    this.symbol_pass        = 0;
+    /**
+     * command line options handlers
+     */
+    optionsDefinition: null,
 
-    this.initOptions();
-    this.processOptions();
+    /**
+     * set command line options
+     */
+    options: null,
 
-    if (this.options.nocache !== true) {
-        this.cache = new Cache();
-    }
+    /**
+     * data received via stdin
+     */
+    piped: null,
 
-    if (this.options.debug) {
-        util.log.enable();
-    }
-};
+    /**
+     * output cache
+     */
+    cache: null,
 
-Transform.UnresolvedSymbol = UnresolvedSymbol;
-Transform.Scope = Scope;
+    /**
+     * constructor
+     *
+     * @param piped data received via stdin
+     */
+    constructor: function(piped) {
 
-Transform.prototype.optionsDefinition = null;
+        this.options    = { basePath: '', paths: [ ], files: [ ], outFile: null };
+        this.piped      = piped;
+        //this.rootScope          = null;
+        //this.unresolvedSymbols  = null;
+        //this.symbolPass         = 0;
 
-/**
- * initialize options definition, extend with own options
- */
-Transform.prototype.initOptions = function() {
+        this.initOptions();
+        this.processOptions();
 
-    this.defineOptions({
-        '_default': function(file) {
-            this['files'].push(file);
-        },
-        '_switch': function(param) {
-            this[param] = true;
-        },
-        'base': function(path) {
-            this['basePath'] = (path.hasPostfix('/') ? path : path + '/');
-        },
-        'path': function(path) {
-            if (this['paths'] === undefined) {
-                this['paths'] = [];
-            }
-            this['paths'].push((path.hasPostfix('/') ? path : path + '/'));
-        },
-        'out': function(file) {
-            this['outFile'] = file;
-        },
-        'target': function(target) {
-            this['target'] = target;
+        if (this.options.nocache !== true) {
+            this.cache = new Cache();
         }
-    });
+
+        if (this.options.debug) {
+            util.log.enable();
+        }
+    },
+
+    /**
+     * initialize options definition, extend with own options
+     */
+    initOptions: function() {
+
+        this.defineOptions({
+            '_default': function(file) {
+                this['files'].push(file);
+            },
+            '_switch': function(param) {
+                this[param] = true;
+            },
+            'base': function(path) {
+                this['basePath'] = (path.hasPostfix('/') ? path : path + '/');
+            },
+            'path': function(path) {
+                if (this['paths'] === undefined) {
+                    this['paths'] = [];
+                }
+                this['paths'].push((path.hasPostfix('/') ? path : path + '/'));
+            },
+            'out': function(file) {
+                this['outFile'] = file;
+            },
+            'target': function(target) {
+                this['target'] = target;
+            }
+        });
+    },
+
+    /**
+     * adds a set of options to the command line options handler
+     *
+     * @param optionsDefinition object of handler functions
+     */
+    defineOptions: function(optionsDefinition) {
+
+        if (this.optionsDefinition === null) {
+            this.optionsDefinition = { };
+        }
+
+        for (var id in optionsDefinition) {
+            this.optionsDefinition[id] = optionsDefinition[id];
+        }
+    },
+
+    /**
+     * processes options definition into options
+     */
+    processOptions: function() {
+        util.processOptions(this.options, this.optionsDefinition);
+    },
+
+    /**
+     * entry point, run transformation
+     */
+    run: function() { },
 };
-
-/**
- * adds a set of options to the command line options handler
- *
- * @param optionsDefinition object of handler functions
- */
-Transform.prototype.defineOptions = function(optionsDefinition) {
-
-    if (this.optionsDefinition === null) {
-        this.optionsDefinition = { };
-    }
-
-    for (var id in optionsDefinition) {
-        this.optionsDefinition[id] = optionsDefinition[id];
-    }
-};
-
-/**
- * processes options definition into options
- */
-Transform.prototype.processOptions = function() {
-
-    util.processOptions(this.options, this.optionsDefinition);
-};
-
-/**
- * output cache
- */
-Transform.prototype.cache = null;
-
-/**
- * entry point, run transformation
- */
-Transform.prototype.process = function() { };
-
-/*
- * export
- */
-module.exports = Transform;

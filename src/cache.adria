@@ -92,12 +92,12 @@ module Cache = proto {
 
                 var resultData = { };
 
-                for (var id in variants) {
-                    if (variants[id] === 'base') {
+                for (var id, variant in variants) {
+                    if (variant === 'base') {
                         util.log('Cache', 'reading from ' + cacheFile, 0);
                         resultData['base'] = JSON.parse(fs.readFileSync(cacheFile, 'UTF-8'));
                     } else {
-                        resultData[variants[id]] = JSON.parse(fs.readFileSync(cacheFile + '.' + variants[id], 'UTF-8'));
+                        resultData[variant] = JSON.parse(fs.readFileSync(cacheFile + '.' + variant, 'UTF-8'));
                     }
                 }
 

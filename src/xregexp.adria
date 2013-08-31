@@ -20,7 +20,7 @@
  * IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-var XRegExp = require('xregexp').XRegExp;
+module XRegExp = require('xregexp').XRegExp;
 
 // check XRegExp version since anything below 3.0.0 pre has serious performance problems with our specific use-case
 
@@ -34,7 +34,3 @@ if (parseInt(XRegExp.version) < 3) {
     console.log('anyway (tokenizing will be about 15-20 times slower)');
     process.exit();
 }
-
-// v3 exposed XRegExp directly as module, do the same
-
-module.exports = XRegExp;

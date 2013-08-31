@@ -34,218 +34,221 @@ var util = require('../util');
  *
  * @see Transform
  */
-var AdriaTransform = Transform.derive(function(piped) {
+module AdriaTransform = proto (Transform) {
 
-    Transform.call(this, piped);
+    /**
+     * populated by globals node, names of application-wide globals
+     */
+    globals: null,
 
-    this.globals        = new util.Set();
-    this.requires       = new util.Set();
-    this.requiresDone   = new util.Set();
-    this.modules        = [ ];
-    this.sourceCode     = { };
+    requires: null,
+    requiresDone: null,
+    modules: null,
+    sourceCode: null,
+    protoParser: null,
 
-    // defaults
+    constructor: function(piped) {
 
-    var options = this.options;
+        Transform->constructor(piped);
 
-    options.nolink = (options.nolink === undefined ? false : options.nolink);
-    options.nomap = (options.nomap === undefined ? false : options.nomap);
-    options.fileExt = (options.fileExt === undefined ? '.adria' : options.fileExt);
-    options.platform = (options.platform === undefined ? 'web' : options.platform);
-    options['tweak-exports'] = (options['tweak-exports'] === undefined ? false : options['tweak-exports']);
-    options['tweak-nostrict'] = (options['tweak-nostrict'] === undefined ? false : options['tweak-nostrict']);
-});
+        this.globals        = new util.Set();
+        this.requires       = new util.Set();
+        this.requiresDone   = new util.Set();
+        this.modules        = [ ];
+        this.sourceCode     = { };
 
-/**
- * populated by globals node, names of application-wide globals
- */
-AdriaTransform.prototype.globals = null;
-AdriaTransform.prototype.requires = null;
-AdriaTransform.prototype.requiresDone = null;
-AdriaTransform.prototype.modules = null;
-AdriaTransform.prototype.protoParser = null;
+        // defaults
 
-AdriaTransform.prototype.initOptions = function() {
+        var options = this.options;
 
-    Transform.prototype.initOptions.call(this);
+        options.nolink = (options.nolink === undefined ? false : options.nolink);
+        options.nomap = (options.nomap === undefined ? false : options.nomap);
+        options.fileExt = (options.fileExt === undefined ? '.adria' : options.fileExt);
+        options.platform = (options.platform === undefined ? 'web' : options.platform);
+        options['tweak-exports'] = (options['tweak-exports'] === undefined ? false : options['tweak-exports']);
+        options['tweak-nostrict'] = (options['tweak-nostrict'] === undefined ? false : options['tweak-nostrict']);
+    },
 
-    this.defineOptions({
-        'file-extension': function(extension) {
-            this.fileExt = '.' + extension;
-        },
-        'platform': function(platform) {
-            this.platform = platform;
-        }
-    });
-};
+    initOptions: function() {
 
-/**
- * returns the full filename of given module
- *
- * @param moduleName
- * @return absolute path (including filename) to module
- */
-AdriaTransform.prototype.resolveModule = function(moduleName) {
+        Transform->initOptions(this);
 
-    var slash = moduleName.lastIndexOf('/');
-    var baseName = slash > 0 ? moduleName.slice(slash) : moduleName;
+        this.defineOptions({
+            'file-extension': function(extension) {
+                this.fileExt = '.' + extension;
+            },
+            'platform': function(platform) {
+                this.platform = platform;
+            }
+        });
+    },
 
-    var filename = (baseName.indexOf('.') > -1 ? moduleName : moduleName + this.options.fileExt);
-    var fullname = this.options.basePath + filename;
-    var current = fullname;
+    /**
+     * returns the full filename of given module
+     *
+     * @param moduleName
+     * @return absolute path (including filename) to module
+     */
+    resolveModule: function(moduleName) {
 
-    // check if file exists, if not scan path
+        var slash = moduleName.lastIndexOf('/');
+        var baseName = slash > 0 ? moduleName.slice(slash) : moduleName;
 
-    if (fs.existsSync(fullname) !== true) {
+        var filename = (baseName.indexOf('.') > -1 ? moduleName : moduleName + this.options.fileExt);
+        var fullname = this.options.basePath + filename;
+        var current = fullname;
 
-        var paths = this.options.paths;
+        // check if file exists, if not scan path
 
-        for (var id in paths) {
+        if (fs.existsSync(fullname) !== true) {
 
-            current = this.options.basePath + paths[id] + filename;
+            var paths = this.options.paths;
 
-            if (fs.existsSync(current)) {
-                fullname = current;
-                break;
+            for (var id in paths) {
+
+                current = this.options.basePath + paths[id] + filename;
+
+                if (fs.existsSync(current)) {
+                    fullname = current;
+                    break;
+                }
             }
         }
-    }
 
-    return path.normalize(fullname);
-};
+        return path.normalize(fullname);
+    },
 
-/**
- * build a module and its dependencies recursively and push the
- * result onto AdriaTransform::modules
- *
- * @param moduleName name of the module
- * @param data module source code
- */
-AdriaTransform.prototype.buildModule = function(moduleName, data) {
+    /**
+     * build a module and its dependencies recursively and push the
+     * result onto AdriaTransform::modules
+     *
+     * @param moduleName name of the module
+     * @param data module source code
+     */
+    buildModule: function(moduleName, data) {
 
-    // create parser from proto-parser
+        // create parser from proto-parser
 
-    var parser = AdriaParser.prototype.clone(this.protoParser);
-    parser.moduleName = moduleName;
+        var parser = this.protoParser.clone();
+        parser.moduleName = moduleName;
 
-    if (data === undefined) {
-        parser.loadSource(this.resolveModule(moduleName));
-    } else {
-        parser.setSource(moduleName + this.options.fileExt, data);
-    }
-
-    // generate result
-
-    var result = parser.output();
-
-    // add globals and requires to transform
-
-    var requires = parser.resultData.requires;
-
-    this.requiresDone.add(moduleName);
-
-    for (var name in requires.data) {
-        if (this.requiresDone.has(name) === false) {
-            this.buildModule(name);
+        if (data === undefined) {
+            parser.loadSource(this.resolveModule(moduleName));
+        } else {
+            parser.setSource(moduleName + this.options.fileExt, data);
         }
-    }
 
-    // these are used in the template
+        // generate result
 
-    this.requires = this.requires.merge(parser.resultData.requires);
-    this.globals = this.globals.merge(parser.resultData.globals);
+        var result = parser.output();
 
-    // push module after all dependencies have been resolved
+        // add globals and requires to transform
 
-    this.modules.push({ filename: parser.file, sourceCode: parser.sourceCode, result: result });
-};
+        var requires = parser.resultData.requires;
 
-/**
- * generate JavaScript SourceNode output tree from built modules
- */
-AdriaTransform.prototype.generateOutputTree = function() {
+        this.requiresDone.add(moduleName);
 
-    var node = new SourceNode(null, null);
-    var tpl = new Template();
-    tpl.assign('globals', this.globals.toArray());
-    tpl.assign('enableAssert', this.options.assert);
+        for (var name in requires.data) {
+            if (this.requiresDone.has(name) === false) {
+                this.buildModule(name);
+            }
+        }
 
-    // wrap with application and merge
+        // these are used in the template
 
-    var fwNode, moduleNode;
-    var fw = tpl.fetchFile('adria/framework.' + this.options.platform + '.tpl');
+        this.requires = this.requires.merge(parser.resultData.requires);
+        this.globals = this.globals.merge(parser.resultData.globals);
 
-    node.add('(function() {\n');
+        // push module after all dependencies have been resolved
 
-    // nostrict tweak
+        this.modules.push({ filename: parser.file, sourceCode: parser.sourceCode, result: result });
+    },
 
-    if (this.options['tweak-nostrict'] !== true) {
-        node.add('"use strict";\n');
-    }
+    /**
+     * generate JavaScript SourceNode output tree from built modules
+     */
+    generateOutputTree: function() {
 
-    fwNode = node.add(new SourceNode(1, 0, 'adria-framework.js', fw));
-    fwNode.setSourceContent('adria-framework.js', fw);
+        var node = new SourceNode(null, null);
+        var tpl = new Template();
+        tpl.assign('globals', this.globals.toArray());
+        tpl.assign('enableAssert', this.options.assert);
 
-    for (var id in this.modules) {
-        var module = this.modules[id];
+        // wrap with application and merge
 
-        moduleNode = node.add(new SourceNode(null, null, module.filename, module.result));
-        moduleNode.setSourceContent(module.filename, module.sourceCode);
-    }
+        var fwNode, moduleNode;
+        var fw = tpl.fetchFile('adria/framework.' + this.options.platform + '.tpl');
 
-    node.add('\n})();');
-    return node;
-};
+        node.add('(function() {\n');
 
-AdriaTransform.prototype.process = function() {
+        // nostrict tweak
 
-    // create a prototype parser to clone from (to avoid training overhead)
+        if (this.options['tweak-nostrict'] !== true) {
+            node.add('"use strict";\n');
+        }
 
-    this.protoParser = new AdriaParser(this);
-    this.protoParser.trainSelf();
+        fwNode = node.add(new SourceNode(1, 0, 'adria-framework.js', fw));
+        fwNode.setSourceContent('adria-framework.js', fw);
 
-    // process piped data and initial files
+        for (var id in this.modules) {
+            var module = this.modules[id];
 
-    if (this.piped !== undefined) {
-        this.buildModule('main', this.piped);
-    }
+            moduleNode = node.add(new SourceNode(null, null, module.filename, module.result));
+            moduleNode.setSourceContent(module.filename, module.sourceCode);
+        }
 
-    var files = this.options.files;
+        node.add('\n})();');
+        return node;
+    },
 
-    for (var id in files) {
-        this.buildModule(files[id].stripPostfix(this.options.fileExt));
-    }
+    /**
+     * entry point, run transformation
+     */
+    run: function() {
 
-    // result
+        // create a prototype parser to clone from (to avoid training overhead)
 
-    var node = this.generateOutputTree();
-    var options = this.options;
+        this.protoParser = new AdriaParser(this);
+        this.protoParser.trainSelf();
 
-    if (options.outFile !== null) {
+        // process piped data and initial files
 
-        var jsFile = options.basePath + options.outFile;
-        var mapFile = jsFile.stripPostfix('.js') + '.map';
+        if (this.piped !== undefined) {
+            this.buildModule('main', this.piped);
+        }
 
-        if (options.nomap !== true) {
+        var files = this.options.files;
 
-            var result = node.toStringWithSourceMap({ file: options.outFile });
-            var mapLink = '\n//@ sourceMappingURL=' + path.relative(options.basePath, mapFile);
+        for (var id in files) {
+            this.buildModule(files[id].stripPostfix(this.options.fileExt));
+        }
 
-            fs.writeFileSync(jsFile, result.code + (options.nolink ? '' : mapLink));
-            fs.writeFileSync(mapFile, result.map);
+        // result
+
+        var node = this.generateOutputTree();
+        var options = this.options;
+
+        if (options.outFile !== null) {
+
+            var jsFile = options.basePath + options.outFile;
+            var mapFile = jsFile.stripPostfix('.js') + '.map';
+
+            if (options.nomap !== true) {
+
+                var result = node.toStringWithSourceMap({ file: options.outFile });
+                var mapLink = '\n//@ sourceMappingURL=' + path.relative(options.basePath, mapFile);
+
+                fs.writeFileSync(jsFile, result.code + (options.nolink ? '' : mapLink));
+                fs.writeFileSync(mapFile, result.map);
+
+            } else {
+
+                fs.writeFileSync(jsFile, node.toString());
+            }
 
         } else {
 
-            fs.writeFileSync(jsFile, node.toString());
+            process.stdout.write(node.toString());
         }
-
-    } else {
-
-        process.stdout.write(node.toString());
-    }
+    },
 };
-
-/*
- * export
- */
-module.exports = AdriaTransform;

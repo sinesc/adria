@@ -29,47 +29,48 @@ var AdriaDebugParser = require('./adriadebug_parser');
  *
  * @see Transform
  */
-var AdriaDebugTransform = AdriaTransform.derive(function(piped) {
+module AdriaDebugTransform = proto(AdriaTransform) {
 
-    AdriaTransform.call(this, piped);
+    constructor: function(piped) {
 
-    this.options.nocache = true;
-});
+        AdriaTransform->constructor(piped);
 
-AdriaDebugTransform.prototype.process = function() {
+        this.options.nocache = true;
+    },
 
-    // create a prototype parser to clone from (to avoid training overhead)
+    process: function() {
 
-    this.protoParser = new AdriaDebugParser(this);
-    this.protoParser.trainSelf();
+        // create a prototype parser to clone from (to avoid training overhead)
 
-    // process piped data and initial files
+        this.protoParser = new AdriaDebugParser(this);
+        this.protoParser.trainSelf();
 
-    if (this.piped !== undefined) {
-        this.buildModule('main', this.piped);
-    }
+        // process piped data and initial files
 
-    var files = this.options.files;
+        if (this.piped !== undefined) {
+            this.buildModule('main', this.piped);
+        }
 
-    for (var id in files) {
-        this.buildModule(files[id].stripPostfix(this.options.fileExt));
-    }
+        var files = this.options.files;
 
-    // extract result for join
+        for (var id in files) {
+            this.buildModule(files[id].stripPostfix(this.options.fileExt));
+        }
 
-    var result = [];
+        // extract result for join
 
-    for (var id in this.modules) {
-        result.push(this.modules[id].result);
-    }
+        var result = [];
 
-    // merge and return
+        for (var id, mod in this.modules) {
+            result.push(mod.result);
+        }
 
-    if (this.options['outFile'] !== null) {
-        fs.writeFileSync(this.options['outFile'], result.join('\n'));
-    } else {
-        process.stdout.write(result.join('\n'));
-    }
+        // merge and return
+
+        if (this.options['outFile'] !== null) {
+            fs.writeFileSync(this.options['outFile'], result.join('\n'));
+        } else {
+            process.stdout.write(result.join('\n'));
+        }
+    },
 };
-
-module.exports = AdriaDebugTransform;

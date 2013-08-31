@@ -58,7 +58,7 @@ var run = function(pipeData) {
             throw new Error('Unsupported target "' + target+ '".');
         }
 
-        transform.process();
+        transform.run();
 
     //} catch (e) {
 

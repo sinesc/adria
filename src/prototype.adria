@@ -9,10 +9,10 @@
  * use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of
  * the Software, and to permit persons to whom the Software is furnished to do so,
  * subject to the following conditions:
- * 
+ *
  * The above copyright notice and this permission notice shall be included in all
  * copies or substantial portions of the Software.
- * 
+ *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
  * FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
@@ -21,13 +21,26 @@
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
+var firstToUpper = function(match1) {
+    return match1.replace('_', '').toUpperCase();
+};
+
+String::snakeToCamel = function(upperFirst) {
+
+    if (upperFirst) {
+        return this.replace(/((?:^|\_)[a-z])/g, firstToUpper);
+    } else {
+        return this.replace(/(\_[a-z])/g, firstToUpper);
+    }
+};
+
 /*
  * string format
  */
 
-String.prototype.format = function() {
+String::format = function() {
 
-    var args = Array.prototype.slice.call(arguments);
+    var args = Array::slice.call(arguments);
 
     // if first argument is array or object, use only that
 
@@ -54,7 +67,7 @@ String.prototype.format = function() {
  * repeat string
  */
 
-String.prototype.repeat = function(count) {
+String::repeat = function(count) {
 
     if (count < 1) {
         return '';
@@ -90,7 +103,7 @@ String.repeat = function(count, string) {
     return string.repeat(count);
 };
 
-String.prototype.occurances = function(search) {
+String::occurances = function(search) {
 
     var count = 0;
     var index = this.indexOf(search);
@@ -107,13 +120,13 @@ String.prototype.occurances = function(search) {
  * pad string
  */
 
-String.prototype.padLeft = function(paddedLength, padChar) {
+String::padLeft = function(paddedLength, padChar) {
 
     padChar = (padChar !== undefined ? padChar : ' ');
     return padChar.repeat(paddedLength - this.length) + this.valueOf();
 };
 
-String.prototype.padRight = function(paddedLength, padChar) {
+String::padRight = function(paddedLength, padChar) {
 
     padChar = (padChar !== undefined ? padChar : ' ');
     return this.valueOf() + padChar.repeat(paddedLength - this.length);
@@ -138,7 +151,7 @@ String.random = function(length, chars) {
     return result;
 };
 
-String.prototype.stripPostfix = function(postfix) {
+String::stripPostfix = function(postfix) {
 
     var len;
 
@@ -160,7 +173,7 @@ String.prototype.stripPostfix = function(postfix) {
     return (this.substr(-len) === postfix ? this.substr(0, this.length - len) : this.valueOf());
 };
 
-String.prototype.hasPostfix = function(postfix) {
+String::hasPostfix = function(postfix) {
 
     return (this.substr(-postfix.length) === postfix);
 };
@@ -169,11 +182,11 @@ String.prototype.hasPostfix = function(postfix) {
  * Constructor, chain to parent prototype
  */
 
-Function.prototype.derive = function(constructor) {
+Function::derive = function(constructor) {
 
     var Surrogate = function() { };
     Surrogate.prototype = this.prototype;
     constructor.prototype = new Surrogate();
-    constructor.prototype.constructor = constructor;
+    constructor::constructor = constructor;
     return constructor;
 };

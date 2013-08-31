@@ -140,11 +140,8 @@ module DefinitionParser = proto (Parser) {
         // call parent
 
         var results = Parser.prototype.parse.call(this, source);
-        var result;
 
-        for (var id in results) {
-
-            result = results[id];
+        for (var id, result in results) {
 
             if (result.node.capture != '') {
                 this.capture(result.node.capture, result.token.data);

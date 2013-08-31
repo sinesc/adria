@@ -9,10 +9,10 @@
  * use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of
  * the Software, and to permit persons to whom the Software is furnished to do so,
  * subject to the following conditions:
- * 
+ *
  * The above copyright notice and this permission notice shall be included in all
  * copies or substantial portions of the Software.
- * 
+ *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
  * FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
@@ -28,32 +28,28 @@ var CaptureNode = require('../language_parser/capture_node');
  *
  * @see CaptureNode
  */
-var XMLNode = function(key, value) {
-    CaptureNode.call(this, key, value);
-};
+var XMLNode = proto(CaptureNode) {
 
-XMLNode.prototype = Object.create(CaptureNode.prototype);
-XMLNode.prototype.constructor = XMLNode;
+    toString: function() {
 
-XMLNode.prototype.toString = function() {
+        var indent = String.repeat(this.depth() * 4, ' ');
+        var result = "";
 
-    var indent = String.repeat(this.depth() * 4, ' ');
-    var result = "";
+        for (var childId in this.children) {
 
-    for (var childId in this.children) {
+            var node = this.children[childId];
 
-        var node = this.children[childId];
-
-        if (node.isLeaf()) {
-            result += indent + "<" + node.key + " value=\"" + node.value.replace(/\"/g, '\\"') + "\" />\n";
-        } else {
-            result += indent + "<" + node.key + " value=\"" + node.value.replace(/\"/g, '\\"') + "\">\n";
-            result += node.toString();
-            result += indent + "</" + node.key + ">\n";
+            if (node.isLeaf()) {
+                result += indent + "<" + node.key + " value=\"" + node.value.replace(/\"/g, '\\"') + "\" />\n";
+            } else {
+                result += indent + "<" + node.key + " value=\"" + node.value.replace(/\"/g, '\\"') + "\">\n";
+                result += node.toString();
+                result += indent + "</" + node.key + ">\n";
+            }
         }
-    }
 
-    return result;
+        return result;
+    },
 };
 
 /**
@@ -61,15 +57,11 @@ XMLNode.prototype.toString = function() {
  *
  * @see AdriaParser
  */
-var AdriaDebugParser = AdriaParser.derive(function(transform) {
-    AdriaParser.call(this, transform);
-});
+module AdriaDebugParser = proto(AdriaParser) {
 
-AdriaDebugParser.prototype.outputMethod = 'toString';
+    outputMethod: 'toString',
 
-AdriaDebugParser.prototype.mapType = function(capture_name, block_name) {
-
-    return XMLNode;
+    mapType: function(capture_name, block_name) {
+        return XMLNode;
+    },
 };
-
-module.exports = AdriaDebugParser;

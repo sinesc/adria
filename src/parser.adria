@@ -24,195 +24,226 @@ var assert = require('assert');
 var path = require('path');
 var XRegExp = require('./xregexp');
 var util = require('./util');
-var Definition = require('./parser/definition');
 var GeneratorState = require('./parser/generator_state');
 
+export Definition = require('./parser/definition');
+
 /**
- * Abstract parsing base class. The class uses groups of trees of match-nodes. During parsing, input tokens are tested
+ * Abstract parser. The parser uses groups of trees of match-nodes. During parsing, input tokens are tested
  * against the node tree. If a token matches, the following token has to be matched by a child of the current node.
  * This continues until a leaf is reached (in which case the token sequence is valid) or until a token does not match
  * any child, in which case processing continues with the remaining children of the current node-parent recursively
  * going down the tree.
  */
-var Parser = function() {
+module Parser = proto {
 
-    this.definition = new Definition('root');
-    this.tokenizer  = null;
-    this.file       = 'unnamed';
-};
+    /**
+     * the definition for the input language
+     */
+    definition: null,
 
-Parser.Definition = Definition;
+    /**
+     * a language-specific tokenizer instance
+     */
+    tokenizer: null,
 
-/**
- * constructs new instance referencing source's definition
- */
-Parser.prototype.clone = function(source) {
+    /**
+     * name of the file being processed, for informational purposes only
+     */
+    file: 'unnamed',
 
-    var OwnType = Object.getPrototypeOf(source).constructor;
-    var parser = new OwnType();
+    /**
+     * construct parser and set up new definition
+     */
+    constructor: function() {
+        this.definition = new Definition('root');
+    },
 
-    assert(parser instanceof Parser);
+    /**
+     * constructs new instance referencing source's definition
+     */
+    clone: function() {
 
-    parser.definition    = source.definition;
-    parser.tokenizer     = source.tokenizer;
+        var OwnType = Object.getPrototypeOf(this).constructor;
+        var parser = new OwnType();
 
-    return parser;
-};
+        assert(parser instanceof Parser);
 
-Parser.prototype.parseError = function(token, node, stack) {
+        parser.definition = this.definition;
+        parser.tokenizer = this.tokenizer;
 
-    // for output simplicy, add current node to stack
+        return parser;
+    },
 
-    stack = stack.slice();
-    stack.push({ node: node, token: token });
+    /**
+     * returns an error message based on current token, node and state of the stack
+     *
+     * @param token token where the error occured
+     * @param node last node to actually match the token
+     * @param stack stack at the time of the match
+     * @return string error
+     */
+    errorMessage: function(token, node, stack) {
 
-    // stacktrace (debugging)
+        // for output simplicy, add current node to stack
 
-    var id = stack.length -1;
-    var trace = '';
-    var done = 0;
-    var levelNode, levelToken;
+        stack = stack.slice();
+        stack.push({ node: node, token: token });
 
-    while (id--) {
-        levelNode = stack[id].node;
-        levelToken = stack[id].token;
+        // stacktrace (debugging)
 
-        if (levelNode instanceof Object) {
-            trace += (id + 1) + '. ' + levelNode.name + (levelNode.capture !== '' ? ':' + levelNode.capture : '') + (levelNode.label !== '' ? '[' + levelNode.label + ']' : '');
-        } else {
-            trace += 'null entry on stack';
-        }
+        var id = stack.length -1;
+        var trace = '';
+        var done = 0;
+        var levelNode, levelToken;
 
-        trace += ' at ' + levelToken.pos.toString() + ': ' + levelToken.data + '\n';
+        while (id--) {
+            levelNode = stack[id].node;
+            levelToken = stack[id].token;
 
-        // if after 15 items there are still more than 15 items on the stack, skip ahead to item 15
-
-        if (done++ > 15 && id > 15) {
-            id = 15;
-            trace += '...\n';
-        }
-    }
-
-    return '$file: Unexpected token "$tokenData" $position. Expected: $validNodes\n\nTrace:\n$trace'.format({
-        file        : path.normalize(this.file),
-        tokenData   : token.data,
-        position    : token.pos.toString(),
-        validNodes  : node.toString(this),
-        trace       : trace
-    });
-};
-
-
-/**
- * process language string according to given definition
- *
- * @param string source input string to process
- */
-Parser.prototype.parse = function(source) {
-
-    // create tokens from input string
-
-    util.log('Parser', 'tokenizing', 2);
-    var tokens = this.tokenizer.process(source, this.file);
-    util.log('Parser', 'done', -2);
-
-    var node = this.definition.getInitialBlock();
-    var stack = [];
-    var len = tokens.length();
-    var id = len;
-    var maxId = 0;
-    var maxStack = [];
-    var maxNode = node;
-    var results = new Array(len);
-    var success = false;
-    var result, token;
-
-    // create a GeneratorState for each token
-
-    while (id--) {
-        results[id] = new GeneratorState();
-    }
-
-    id = 0;
-
-    // process tokens
-
-    util.log('Parser', 'processing ' + tokens.length() + ' tokens according to currrent language definition');
-
-    do {
-
-        result = results[id];
-
-        // on first token visit, generate matching nodes
-
-        if (result.generator === null) {
-            token = tokens.get(id);
-            result.setGenerator(node.filter(this, token, stack), token);
-        }
-
-        // check for matches and store current matching node in result.node
-
-        try {
-            result.next();
-        } catch (e) {
-            if (e.message === 'nothing to yield') {
-                break;
+            if (levelNode instanceof Object) {
+                trace += (id + 1) + '. ' + levelNode.name + (levelNode.capture !== '' ? ':' + levelNode.capture : '') + (levelNode.label !== '' ? '[' + levelNode.label + ']' : '');
             } else {
-                throw e;
+                trace += 'null entry on stack';
+            }
+
+            trace += ' at ' + levelToken.pos.toString() + ': ' + levelToken.data + '\n';
+
+            // if after 15 items there are still more than 15 items on the stack, skip ahead to item 15
+
+            if (done++ > 15 && id > 15) {
+                id = 15;
+                trace += '...\n';
             }
         }
 
-        // remember deepest positive match for error reporting
+        return '$file: Unexpected token "$tokenData" $position. Expected: $validNodes\n\nTrace:\n$trace'.format({
+            file        : path.normalize(this.file),
+            tokenData   : token.data,
+            position    : token.pos.toString(),
+            validNodes  : node.toString(this),
+            trace       : trace
+        });
+    },
 
-        if (result.done === false && id > maxId) {
-            maxId = id;
-            maxStack = result.stack.slice(0);
-            maxNode = result.node;
+    /**
+     * override to implement node match condition checking
+     *
+     * @param condition string
+     * @param stack current node stack
+     */
+    checkCondition: function(condition, stack) {
+
+        throw Error('NYI: parser::checkCondition');
+    },
+
+    /**
+     * process language string according to given definition
+     *
+     * @param string source input string to process
+     */
+    parse: function(source) {
+
+        // create tokens from input string
+
+        util.log('Parser', 'tokenizing', 2);
+        var tokens = this.tokenizer.process(source, this.file);
+        util.log('Parser', 'done', -2);
+
+        var node = this.definition.getInitialBlock();
+        var stack = [];
+        var len = tokens.length;
+        var id = len;
+        var maxId = 0;
+        var maxStack = [];
+        var maxNode = node;
+        var results = new Array(len);
+        var success = false;
+        var result, token;
+
+        // create a GeneratorState for each token
+
+        while (id--) {
+            results[id] = new GeneratorState();
         }
 
-        if (result.done) {
+        id = 0;
 
-            // no more matches, discard this generator and go back one token
+        // process tokens
 
-            result.setGenerator(null);
-            id--;
+        util.log('Parser', 'processing ' + len + ' tokens according to currrent language definition');
 
-        } else if (id === len -1) {
+        do {
 
-            // last token, cannot advance further, either reach exit or try next match for same token
+            result = results[id];
 
-            if (result.node.reachesExit(result.stack)) {
-                success = true;
-                break;
-            } else {
-                continue;
+            // on first token visit, generate matching nodes
+
+            if (result.generator === null) {
+                token = tokens.get(id);
+                result.setGenerator(node.filter(this, token, stack), token);
             }
 
-        } else {
+            // check for matches and store current matching node in result.node
 
-            // a(nother) match was found, update node and go to next token
+            try {
+                result.next();
+            } catch (e) {
+                if (e.message === 'nothing to yield') {
+                    break;
+                } else {
+                    throw e;
+                }
+            }
 
-            node = result.node;
-            stack = result.stack.slice(0);
-            id++;
+            // remember deepest positive match for error reporting
+
+            if (result.done === false && id > maxId) {
+                maxId = id;
+                maxStack = result.stack.slice(0);
+                maxNode = result.node;
+            }
+
+            if (result.done) {
+
+                // no more matches, discard this generator and go back one token
+
+                result.setGenerator(null);
+                id--;
+
+            } else if (id === len -1) {
+
+                // last token, cannot advance further, either reach exit or try next match for same token
+
+                if (result.node.reachesExit(result.stack)) {
+                    success = true;
+                    break;
+                } else {
+                    continue;
+                }
+
+            } else {
+
+                // a(nother) match was found, update node and go to next token
+
+                node = result.node;
+                stack = result.stack.slice(0);
+                id++;
+            }
+
+        } while (id >= 0);
+
+        // check result
+
+        if (success === false) {
+            if (maxId +1 === len) {
+                throw new Error(path.normalize(this.file) + ': Unexpected end of file.');
+            } else {
+                throw new Error(this.errorMessage(tokens.get(maxId +1), maxNode, maxStack));
+            }
         }
 
-    } while (id >= 0);
+        return results;
+    },
 
-    // check result
-
-    if (success === false) {
-        if (maxId +1 === len) {
-            throw new Error(path.normalize(this.file) + ': Unexpected end of file.');
-        } else {
-            throw new Error(this.parseError(tokens.get(maxId +1), maxNode, maxStack));
-        }
-    }
-
-    return results;
 };
-
-/*
- * export
- */
-module.exports = Parser;

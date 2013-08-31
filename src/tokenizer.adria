@@ -22,7 +22,8 @@
  */
 var XRegExp = require('./xregexp');
 var Enum    = require('./util').Enum;
-var Result  = require('./tokenizer/result');
+
+export Result = require('./tokenizer/result');
 
 /**
  * Splits strings into configurable types of tokens
@@ -30,29 +31,92 @@ var Result  = require('./tokenizer/result');
  * @param definition array of parser functions to use for token identification
  * @param extra array of additional token types to register with Type enum
  */
-var Tokenizer = function(definition, extra) {
+module Tokenizer = proto {
 
-    this.definition = definition;
+    /**
+     * constructor
+     *
+     * @param definition array of parser functions to use for token identification
+     * @param extra array of additional token types to register with Type enum
+     */
+    constructor: function(definition, extra) {
 
-    // build type legend
+        this.definition = definition;
 
-    var legend = [];
+        // build type legend
 
-    for (var id in definition) {
-        legend.push(definition[id].name);
-    }
+        var legend = [];
 
-    if (extra instanceof Array) {
-        for (var id in extra) {
-            legend.push(extra);
+        for (var id in definition) {
+            legend.push(definition[id].name);
         }
-    }
 
-    this.Type = Enum(legend);
+        if (extra instanceof Array) {
+            for (var id in extra) {
+                legend.push(extra);
+            }
+        }
+
+        this.Type = Enum(legend);
+    },
+
+    /**
+     * process a string to an array of tokens
+     *
+     * @param data input string
+     * @param filename used in error output
+     * @return array of tokens
+     */
+    process: function(data, filename = 'unnamed') {
+
+        var startPos = 0;
+        var result = new Result(this);
+        var col = 1;
+        var row = 1;
+        var definition = this.definition;
+        var match, found;
+
+        // tokenize string
+
+        while (startPos < data.length) {
+
+            found = false;
+
+            // try each parser until one matches
+
+            for (var id, processor in this.definition) {
+
+                match = processor.func(data, startPos);
+
+                if (match !== null) {
+
+                    if (match.data !== null && match.name !== null) {
+                        result.add(match.data, this.Type[match.name], startPos, col, row);
+                    }
+
+                    row += match.containedRows;
+                    col = (match.containedRows === 0 ? col + match.lastRowLen : match.lastRowLen + 1);
+                    found = true;
+                    startPos += match.data.length;
+                    break;
+                }
+            }
+
+            // none of the parsers were able to match the next token, error out
+
+            if (found !== true) {
+                throw new Error(filename + ': no match found at row ' + row + ', column ' + col + ': "' + data.substr(startPos).split(/\r?\n/)[0] + '"');
+                return result;
+            }
+        }
+
+        return result;
+    },
 };
 
-Tokenizer.Result = Result;
-
+/**
+ * represents a single token match
+ */
 function Match(name, data, endPosition, containedRows, lastRowLen) {
     this.name = name;
     this.data = data;
@@ -60,65 +124,6 @@ function Match(name, data, endPosition, containedRows, lastRowLen) {
     this.containedRows = containedRows;
     this.lastRowLen = lastRowLen;
 }
-
-/**
- * process a string to an array of tokens
- *
- * @param data input string
- * @param filename used in error output
- * @return array of tokens
- */
-Tokenizer.prototype.process = function(data, filename) {
-
-    var startPos = 0;
-    var result = new Result(this);
-    var col = 1;
-    var row = 1;
-    var definition = this.definition;
-    var match, found, processor;
-
-    filename = filename === undefined ? 'unnamed' : filename;
-
-    // tokenize string
-
-    while (startPos < data.length) {
-
-        found = false;
-
-        // try each parser until one matches
-
-//console.log(data.substr(startPos).split(/\r?\n/)[0]);
-        for (var defId in definition) {
-
-            processor = definition[defId];
-            match = processor.func(data, startPos);
-
-            if (match !== null) {
-
-                if (match.data !== null && match.name !== null) {
-                    result.add(match.data, match.name, startPos, col, row);
-                }
-
-                row += match.containedRows;
-                col = (match.containedRows === 0 ? col + match.lastRowLen : match.lastRowLen + 1);
-                found = true;
-                startPos += match.data.length;
-//console.log(match.name, match.data, row, col);
-//console.log('');
-                break;
-            }
-        }
-
-        // none of the parsers were able to match the next token, error out
-
-        if (found !== true) {
-            throw new Error(filename + ': no match found at row ' + row + ', column ' + col + ': "' + data.substr(startPos).split(/\r?\n/)[0] + '"');
-            return result;
-        }
-    }
-
-    return result;
-};
 
 /*
  * predefined tokenizer functions
@@ -220,8 +225,3 @@ Tokenizer.prefab = new (function() {
     };
 
 })();
-
-/*
- * export
- */
-module.exports = Tokenizer;
