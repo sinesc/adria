@@ -129,13 +129,6 @@ module LanguageParser = proto(Parser) {
     },
 
     /**
-     * build symbol table hierarchy
-     */
-    /*scanSymbols: function()  {
-        return this.captureTree.scanSymbols(this, this.transform.rootScope);
-    },*/
-
-    /**
      * called during capture list to tree conversion process to select an appropriate node-type
      */
     mapType: function(capture_name, block_name) {

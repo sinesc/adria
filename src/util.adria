@@ -20,38 +20,39 @@
  * IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-//!todo this file needs lots of cleanup
 var sysutil = require('util');
 var crypto = require('crypto');
 var assert = require('assert');
 
 /**
- * DebugLog constructor
+ * timed debug log
  */
-var DebugLog = function(resetEach) {
+proto DebugLog {
 
-    this.start  = Date.now();
-    this.last   = this.start;
+    constructor: function() {
 
-    console.log('=============================: Log started');
-};
+        this.start  = Date.now();
+        this.last   = this.start;
+        console.log('=============================: Log started');
+    },
 
-DebugLog.prototype.print = function(source, message, indent) {
+    print: function(source, message, indent) {
 
-    var now         = Date.now();
-    var diffStart   = now - this.start;
-    var diffLast    = now - this.last;
+        var now         = Date.now();
+        var diffStart   = now - this.start;
+        var diffLast    = now - this.last;
 
-    this.last = now;
+        this.last = now;
 
-    console.log(('+' + diffLast + '/' + diffStart).padLeft(10) + 'ms: ' + source.padLeft(15) + ': ' + ' '.repeat(indent) + message);
-};
+        console.log(('+' + diffLast + '/' + diffStart).padLeft(10) + 'ms: ' + source.padLeft(15) + ': ' + ' '.repeat(indent) + message);
+    },
+}
 
 var debugLog = null;
 var indent = 0;
 var enabled = false;
 
-var log = function(source, message, offset) {
+export log = function(source, message, offset) {
 
     if (enabled !== true) {
         return;
@@ -83,7 +84,14 @@ log.disable = function() {
 };
 
 
-var dump = function(obj, depth, showHidden) {
+/**
+ * output an object with given recursion depth
+ *
+ * @param obj the object to output
+ * @param depth recursion depth
+ * @param showHidden also show hidden properties
+ */
+export dump = function(obj, depth, showHidden) {
 
     depth = (depth === undefined ? 2 : depth);
     showHidden = (showHidden === undefined ? false : showHidden);
@@ -92,31 +100,7 @@ var dump = function(obj, depth, showHidden) {
 };
 
 
-var tree = function(object, structure) {
-
-    // object to work with is required. structure may be dot-separated string or array
-
-    assert(object instanceof Object);
-    structure = (structure instanceof Array ? structure : structure.split('.'));
-
-    var current = object;
-
-    structure.forEach(function(name) {
-
-        if (name.substr(-2) !== '[]') {
-            current[name] = current[name] || { };
-        } else {
-            name = name.substr(0, name.length -2);
-            current[name] = current[name] || [ ];
-        }
-
-        current = current[name];
-    });
-
-    return current;
-};
-
-/*
+/**
  * enum type
  */
 var Enumeration = function(options) {
@@ -136,221 +120,221 @@ var Enumeration = function(options) {
     return Object.freeze(this);
 };
 
-var Enum = function(options) {
+export Enum = function(options) {
     return new Enumeration(options);
 };
 
 
-/*
+/**
  * set type
  */
-var Set = function(value) {
+export Set = proto {
 
-    this.data = { };
+    constructor: function(value) {
 
-    if (value !== undefined) {
-        this.add(value);
-    }
-};
+        this.data = { };
 
-/**
- * merge one or more sets with current and return result
- * does not modify this set
- *
- * @param Set, ... sets to merge
- * @return Set resulting Set
- */
-Set.prototype.merge = function() {
+        if (value !== undefined) {
+            this.add(value);
+        }
+    },
 
-    var args    = Array.prototype.slice.call(arguments, 0);
-    var result  = new Set();
+    /**
+     * merge one or more sets with current and return result
+     * does not modify this set
+     *
+     * @param Set, ... sets to merge
+     * @return Set resulting Set
+     */
+    merge: function() {
 
-    for (var key in this.data) {
-        result.data[key] = true;
-    }
+        var args    = Array.prototype.slice.call(arguments, 0);
+        var result  = new Set();
 
-    for (var id in args) {
-        for (var key in args[id].data) {
+        for (var key in this.data) {
             result.data[key] = true;
         }
-    }
 
-    return result;
-};
-
-/**
- * add element, array of elements or Set to this Set
- *
- * @param value
- */
-Set.prototype.add = function(value) {
-
-    var data = this.data;
-
-    if (value instanceof Array) {
-
-        value.forEach(function(element) {
-            data[element] = true;
-        });
-
-    } else if (value instanceof Set) {
-
-        for (var element in value.data) {
-            data[element] = true;
+        for (var id in args) {
+            for (var key in args[id].data) {
+                result.data[key] = true;
+            }
         }
 
-    } else {
+        return result;
+    },
 
-        data[value] = true;
-    }
+    /**
+     * add element, array of elements or Set to this Set
+     *
+     * @param value
+     */
+    add: function(value) {
 
-    return this;
-};
+        var data = this.data;
 
-/**
- * remove element, array of elements or Set from this Set
- *
- * @param value
- */
-Set.prototype.remove = function(value) {
+        if (value instanceof Array) {
 
-    var data = this.data;
+            value.forEach(function(element) {
+                data[element] = true;
+            });
 
-    if (value instanceof Array) {
+        } else if (value instanceof Set) {
 
-        value.forEach(function(element) {
-            delete data[element];
-        });
+            for (var element in value.data) {
+                data[element] = true;
+            }
 
-    } else if (value instanceof Set) {
+        } else {
 
-        for (var element in value.data) {
-            delete data[element];
+            data[value] = true;
         }
 
-    } else {
-        delete data[value];
-    }
+        return this;
+    },
 
-    return this;
-};
+    /**
+     * remove element, array of elements or Set from this Set
+     *
+     * @param value
+     */
+    remove: function(value) {
 
-/**
- * check if set has single value, all values of array or set
- *
- * @param value
- * @return boolean
- */
-Set.prototype.has = function(value) {
+        var data = this.data;
 
-    var data = this.data;
+        if (value instanceof Array) {
 
-    if (value instanceof Array) {
+            value.forEach(function(element) {
+                delete data[element];
+            });
 
-        for (var id in value) {
-            if (data.hasOwnProperty(value[id]) !== true) {
+        } else if (value instanceof Set) {
+
+            for (var element in value.data) {
+                delete data[element];
+            }
+
+        } else {
+            delete data[value];
+        }
+
+        return this;
+    },
+
+    /**
+     * check if set has single value, all values of array or set
+     *
+     * @param value
+     * @return boolean
+     */
+    has: function(value) {
+
+        var data = this.data;
+
+        if (value instanceof Array) {
+
+            for (var id in value) {
+                if (data.hasOwnProperty(value[id]) !== true) {
+                    return false;
+                }
+            }
+
+            return true;
+
+        } else if (value instanceof Set) {
+
+            var other = value.data;
+
+            for (var key in other) {
+                if (data.hasOwnProperty(key) !== true) {
+                    return false;
+                }
+            }
+
+            return true;
+
+        } else {
+
+            return (data.hasOwnProperty(value));
+        }
+    },
+
+    /**
+     * returns key missing in this set to equal another set or array
+     *
+     * @param value
+     * @return boolean
+     */
+    missing: function(value) {
+
+        var result = new Set();
+        var data = this.data;
+
+        if (value instanceof Array) {
+
+            for (var id in value) {
+                if (data[value[id]] !== true) {
+                    result.add(value[id]);
+                }
+            }
+
+        } else if (value instanceof Set) {
+
+            var other = value.data;
+
+            for (var key in other) {
+                if (data[key] !== true) {
+                    result.add(key);
+                }
+            }
+
+        } else {
+
+            throw new Error('invalid argument');
+        }
+
+        return result;
+    },
+
+    /**
+     * return set values as array
+     *
+     * @return Array
+     */
+    toArray: function() {
+        return Object.keys(this.data);
+    },
+
+    /**
+     * check if the set is empty
+     *
+     * @return boolean
+     */
+    empty: property {
+        get : function() {
+            for (var dummy in this.data) {
                 return false;
             }
-        }
-
-        return true;
-
-    } else if (value instanceof Set) {
-
-        var other = value.data;
-
-        for (var key in other) {
-            if (data.hasOwnProperty(key) !== true) {
-                return false;
-            }
-        }
-
-        return true;
-
-    } else {
-
-        return (data.hasOwnProperty(value));
-    }
-};
-
-/**
- * returns key missing in this set to equal another set or array
- *
- * @param value
- * @return boolean
- */
-Set.prototype.missing = function(value) {
-
-    var result = new Set();
-    var data = this.data;
-
-    if (value instanceof Array) {
-
-        for (var id in value) {
-            if (data[value[id]] !== true) {
-                result.add(value[id]);
-            }
-        }
-
-    } else if (value instanceof Set) {
-
-        var other = value.data;
-
-        for (var key in other) {
-            if (data[key] !== true) {
-                result.add(key);
-            }
-        }
-
-    } else {
-
-        throw new Error('invalid argument');
-    }
-
-    return result;
-};
-
-/**
- * return set values as array
- *
- * @return Array
- */
-Set.prototype.toArray = function() {
-    return Object.keys(this.data);
-};
-
-/**
- * check if the set is empty
- *
- * @return boolean
- */
-Object.defineProperty(Set.prototype, 'empty', {
-    get : function() {
-        for (var dummy in this.data) {
-            return false;
-        }
-        return true;
+            return true;
+        },
     },
-    enumerable : true,
-    configurable : true
-});
 
-/**
- * number of elements in set
- *
- * @return integer
- */
-Object.defineProperty(Set.prototype, 'length', {
-    get : function() {
-        var len = 0;
-        for (var dummy in this.data) {
-            len++;
-        }
-        return len;
+    /**
+     * number of elements in set
+     *
+     * @return integer
+     */
+    length: property {
+        get : function() {
+            var len = 0;
+            for (var dummy in this.data) {
+                len++;
+            }
+            return len;
+        },
     },
-    enumerable : true,
-    configurable : true
-});
+
+};
 
 /**
  * simple command line processor
@@ -361,7 +345,7 @@ Object.defineProperty(Set.prototype, 'length', {
  * @param context execution context for given handlers
  * @param handlers object of handler functions
  */
-var processOptions = function(context, handlers) {
+export processOptions = function(context, handlers) {
 
     var next = '_default';
 
@@ -398,22 +382,24 @@ var processOptions = function(context, handlers) {
     }
 };
 
-var home = function() {
+/**
+ * returns user home directory
+ *
+ * @return string
+ */
+export home = function() {
     return process.env[process.platform == 'win32' ? 'USERPROFILE' : 'HOME'];
 };
 
-var md5 = function(input) {
+/**
+ * returns hexadecimal md5 hash for given input
+ *
+ * @param inpunt string
+ * @return string
+ */
+export md5 = function(input) {
 
     var md5sum = crypto.createHash('md5');
     md5sum.update(input);
     return md5sum.digest('hex');
 };
-
-exports.log = log;
-exports.dump = dump;
-exports.tree = tree;
-exports.Enum = Enum;
-exports.Set = Set;
-exports.processOptions = processOptions;
-exports.md5 = md5;
-exports.home = home;

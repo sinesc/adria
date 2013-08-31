@@ -668,7 +668,18 @@ export ProtoLiteral = proto (CaptureNode) {
 
         // generate output
 
-        var result = this.csn('(function(' + (haveParent ? '___parent' : '') + ') {' + this.nl(1));
+        var assignTo = '';
+
+        if (this.value === 'proto_statement') {
+
+            // statement requires assignment of wrapper
+
+            var locals = this.ancestor(null, 'yielding_scope|scope|module').locals;
+            locals.add(this.name);
+            assignTo = this.name + ' = ';
+        }
+
+        var result = this.csn(assignTo + '(function(' + (haveParent ? '___parent' : '') + ') {' + this.nl(1));
         var body = this.get('body').toSourceNode();
 
         // user- or default-constructor
@@ -720,11 +731,13 @@ export ProtoLiteral = proto (CaptureNode) {
     },
 };
 
+export ProtoStatement = ProtoLiteral;
+
 export ProtoBodyItem = proto (CaptureNode) {
 
     toSourceNode: function()  {
 
-        var protoNode = this.ancestor(null, 'proto_literal');
+        var protoNode = this.ancestor(null, 'proto_literal|proto_statement');
         var constructorName = protoNode.name;
         var keyNode = this.get('key');
 
@@ -733,9 +746,11 @@ export ProtoBodyItem = proto (CaptureNode) {
         if (keyNode.value === 'constructor') {
 
             var functioNode = this.path('value.function');
+            this.nl(1);
             protoNode.constructorArgs = functioNode.get('param_list').toSourceNode();
-            protoNode.constructorBody = functioNode.get('body').toSourceNode();
             protoNode.constructorDefaults = functioNode.defaultArgs;
+            protoNode.constructorBody = functioNode.get('body').toSourceNode();
+            this.nl(-1);
             return this.csn();
 
         } else {

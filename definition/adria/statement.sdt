@@ -28,6 +28,13 @@ function_statement {
     "(" -> function_param_list:param_list -> ")"
 }
 
+proto_statement {
+    // proto name [ ( [ parent ] ) ] body
+    entry -> "proto" -> ident:name -> "(" -> expression:parent -> ")" -> proto_body:body -> return
+    ident:name -> proto_body:body
+    "(" -> ")"
+}
+
 generator_statement {
     entry -> "function" -> "*":generator -> ident:name -> "(" -> ")" -> yielding_scope:body -> return
     "(" -> function_param_list:param_list -> ")"
@@ -74,13 +81,14 @@ statement {
 
     // brace-terminated
 
-    entry -> function_statement:function -> return
-    entry -> switch_statement:switch -> return
     entry -> if_statement:if -> return
-    entry -> for_count_statement:for_count -> return
     entry -> for_in_statement:for_in -> return
+    entry -> for_count_statement:for_count -> return
     entry -> while_statement:while -> return
+    entry -> switch_statement:switch -> return
+    entry -> function_statement:function -> return
     entry -> try_catch_finally_statement:try_catch_finally -> return
+    entry -> proto_statement:proto -> return
     entry -> generator_statement:generator -> return
 }
 

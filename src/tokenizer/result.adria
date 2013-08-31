@@ -82,10 +82,6 @@ module Result = proto {
         return this.tokens[tokenId];
     },
 
-    /*length: function() {
-        return this.tokens.length;
-    },*/
-
     /**
      * return number of tokens in result
      */

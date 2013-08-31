@@ -23,9 +23,6 @@
 var util = require('./util');
 var Cache = require('./cache');
 
-export Scope = require('./transform/scope');
-export UnresolvedSymbol = require('./transform/unresolved_symbol');
-
 /**
  * Base for language transformation file handling. Transforms a set of input
  * files into one or more output files using given options.
@@ -63,9 +60,6 @@ module Transform = proto {
 
         this.options    = { basePath: '', paths: [ ], files: [ ], outFile: null };
         this.piped      = piped;
-        //this.rootScope          = null;
-        //this.unresolvedSymbols  = null;
-        //this.symbolPass         = 0;
 
         this.initOptions();
         this.processOptions();

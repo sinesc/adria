@@ -177,16 +177,3 @@ String::hasPostfix = function(postfix) {
 
     return (this.substr(-postfix.length) === postfix);
 };
-
-/*
- * Constructor, chain to parent prototype
- */
-
-Function::derive = function(constructor) {
-
-    var Surrogate = function() { };
-    Surrogate.prototype = this.prototype;
-    constructor.prototype = new Surrogate();
-    constructor::constructor = constructor;
-    return constructor;
-};
