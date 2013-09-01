@@ -65,25 +65,24 @@ deconstruct {
 
 statement {
 
-    // semicolon-terminated
-
-    entry -> expression:expression -> t -> return
     entry -> var_def:var_def -> t -> return
-    entry -> module_statement:module -> t -> return
+
+    entry -> if_statement:if -> return
+    entry -> for_in_statement:for_in -> return
+    entry -> for_count_statement:for_count -> return
+
+    entry -> return_statement:control -> t -> return
     entry -> export_statement:export -> t -> return
+    entry -> module_statement:module -> t -> return
+    entry -> expression:expression -> t -> return
+
     entry -> const_def:const_def -> t -> return
     entry -> global_def:global_def -> t -> return
-    entry -> return_statement:control -> t -> return
     entry -> deconstruct:deconstruct -> t -> return
     entry -> throw_statement:throw -> t -> return
     entry -> do_while_statement:do_while -> t -> return
     entry -> assert_statement:assert -> t -> return
 
-    // brace-terminated
-
-    entry -> if_statement:if -> return
-    entry -> for_in_statement:for_in -> return
-    entry -> for_count_statement:for_count -> return
     entry -> while_statement:while -> return
     entry -> switch_statement:switch -> return
     entry -> function_statement:function -> return

@@ -107,14 +107,14 @@ module LanguageParser = proto(Parser) {
     /**
      * load definition (currently from file)
      *
-     * @param string resource name
+     * @param string filename name
      * @return bool false if the file could not be opened
      */
-    loadDefinition: function(resource) {
+    loadDefinition: function(filename) {
 
-        util.log('LanguageParser', 'loading defintion file ' + resource);
+        util.log('LanguageParser', 'loading defintion file ' + filename);
 
-        var fileContents = fs.readFileSync(resource, 'UTF-8');
+        var fileContents = fs.readFileSync(filename, 'UTF-8');
 
         // feed file contents to secondary parser
 
@@ -123,7 +123,7 @@ module LanguageParser = proto(Parser) {
         }
 
         util.log('LanguageParser', 'processing definition', 2);
-        this.trainer.file = resource;
+        this.trainer.file = filename;
         this.trainer.parse(fileContents);
         util.log('LanguageParser', 'done', -2);
     },
@@ -241,20 +241,20 @@ module LanguageParser = proto(Parser) {
     /**
      * set source data and process it to a CaptureNode tree
      *
-     * @param string resource name (for display)
+     * @param string filename name (for display)
      * @param string data contents
      */
-    setSource: function(resource, data) {
+    setSource: function(filename, data) {
 
         // load source file
 
         this.captureTree = null;
-        this.file = resource;
+        this.file = filename;
         this.sourceCode = data.replace('\r\n', '\n');
 
         // parse file contents
 
-        util.log('LanguageParser', 'processing source ' + resource, 2);
+        util.log('LanguageParser', 'processing source ' + filename, 2);
         var captures = this.parse(this.sourceCode);
         util.log('LanguageParser', 'done', -2);
 
@@ -265,14 +265,14 @@ module LanguageParser = proto(Parser) {
     /**
      * try to load sourcefile from cache
      *
-     * @param resource
+     * @param filename
      */
-    loadSourceFromCache: function(resource) {
+    loadSourceFromCache: function(filename) {
 
-        this.cacheData = this.transform.cache.fetch(resource, [ 'base'/*, 'resultData'*/ ]);
+        this.cacheData = this.transform.cache.fetch(filename, [ 'base'/*, 'resultData'*/ ]);
 
         if (this.cacheData !== null) {
-            this.file = resource;
+            this.file = filename;
             this.captureTree = CaptureNode::fromJSON(this.cacheData['base'], this, this.mapType.bind(this));
             //this.resultData = this.unserializeData(this.cacheData['resultData']);
         }
@@ -281,20 +281,20 @@ module LanguageParser = proto(Parser) {
     /**
      * load source file and process it to a CaptureNode tree
      *
-     * @param string resource name
+     * @param string filename name
      */
-    loadSource: function(resource) {
+    loadSource: function(filename) {
 
         // try to load from cache
 
         if (this.transform.options.nocache !== true && this.cacheData === null) {
-            this.loadSourceFromCache(resource);
+            this.loadSourceFromCache(filename);
         }
 
         // check if now available from cache, if not, parse
 
         if (this.cacheData === null) {
-            this.setSource(resource, fs.readFileSync(resource, 'UTF-8').replace("var assert = require('assert');", '')); //!todo temporary hack for node sources
+            this.setSource(filename, fs.readFileSync(filename, 'UTF-8').replace("var assert = require('assert');", '')); //!todo temporary hack for node sources
         }
     },
 

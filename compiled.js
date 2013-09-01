@@ -1,34 +1,26 @@
 (function() {
-/**
- * application construction function. becomes application reference just *prior* to construction.
- * allows use of application-depending objects within application constructor
- */
 var application;
-
-/**
- * application-wide module importer
- */
 var __require;
-
-/**
- * hidden module registration function (shadowed by module parameter)
- */
+var resource;
 var module;
-
-/**
- * module loader
- */
 (function() {
+    var resources = { };
+    var modules = { };
+    var getResource = function(name) {
+        return resources[name];
+    };
     var Module = function(name, func) {
         this.name = name;
         this.exports = { };
-        func(this);
+        func(this, getResource);
     };
     Module.prototype.exports = null;
     Module.prototype.name = '';
-    var modules = { };
     module = function(name, func) {
         modules[name] = new Module(name, func);
+    };
+    resource = function(name, data) {
+        resources[name] = data;
     };
     application = function(Constructor /*, params... */) {
         function Application() {
@@ -44,28 +36,47 @@ var module;
         return modules[file].exports;
     }; 
 })();
-module("src/prototype", function(module) {
-    var exports = module.exports;
-    var firstToUpper;
-    firstToUpper = function(match1) {
-        return match1.replace('_', '').toUpperCase();
+module('src/prototype', function(module, resource) {
+    String.prototype.snakeToCamel = (function() {
+        var firstToUpper;
+        firstToUpper = function firstToUpper(match1) {
+            return match1.replace('_', '').toUpperCase();
+            
+            
+        };
+        
+        return function snakeToCamel(upperFirst) {
+            if (upperFirst) {
+                return this.replace(/((?:^|\_)[a-z])/g, firstToUpper);
+                
+                
+            } else {
+                return this.replace(/(\_[a-z])/g, firstToUpper);
+                
+                
+            }
+            
+        };
         
         
-    };
-    
-    String.prototype.snakeToCamel = function(upperFirst) {
-        if (upperFirst) {
-            return this.replace(/((?:^|\_)[a-z])/g, firstToUpper);
+    })();
+    String.prototype.jsify = function jsify(quoteType) {
+        if (quoteType === "'") {
+            return this.replace(/([\\'])/g, "\\$1").replace(/\r?\n/g, '\\n\\\n').replace(/\0/g, "\\0");
+            
+            
+        } else if (quoteType === '"') {
+            return this.replace(/([\\"])/g, "\\$1").replace(/\r?\n/g, '\\\n').replace(/\0/g, "\\0");
             
             
         } else {
-            return this.replace(/(\_[a-z])/g, firstToUpper);
+            return this.replace(/([\\"'])/g, "\\$1").replace(/\r?\n/g, '\\\n').replace(/\0/g, "\\0");
             
             
         }
         
     };
-    String.prototype.format = function() {
+    String.prototype.format = function format() {
         var args;
         args = Array.prototype.slice.call(arguments);
         
@@ -79,13 +90,14 @@ module("src/prototype", function(module) {
                 
                 
             }
-            return(args[matchname] !== undefined ? prefix + args[matchname] : str);
+            return (args[matchname] !== undefined ? prefix + args[matchname] : str);
+            
             
         });
         
         
     };
-    String.prototype.repeat = function(count) {
+    String.prototype.repeat = function repeat(count) {
         var result, pattern;
         if (count < 1) {
             return '';
@@ -116,7 +128,7 @@ module("src/prototype", function(module) {
         
         
     };
-    String.prototype.occurances = function(search) {
+    String.prototype.occurances = function occurances(search) {
         var count, index;
         count = 0;
         
@@ -131,13 +143,13 @@ module("src/prototype", function(module) {
         
         
     };
-    String.prototype.padLeft = function(paddedLength, padChar) {
+    String.prototype.padLeft = function padLeft(paddedLength, padChar) {
         padChar = (padChar !== undefined ? padChar : ' ');
         return padChar.repeat(paddedLength - this.length) + this.valueOf();
         
         
     };
-    String.prototype.padRight = function(paddedLength, padChar) {
+    String.prototype.padRight = function padRight(paddedLength, padChar) {
         padChar = (padChar !== undefined ? padChar : ' ');
         return this.valueOf() + padChar.repeat(paddedLength - this.length);
         
@@ -161,7 +173,7 @@ module("src/prototype", function(module) {
         
         
     };
-    String.prototype.stripPostfix = function(postfix) {
+    String.prototype.stripPostfix = function stripPostfix(postfix) {
         var len, i;
         
         if (postfix instanceof Array) {
@@ -179,17 +191,18 @@ module("src/prototype", function(module) {
             
         }
         len = postfix.length;
-        return(this.substr(-len) === postfix ? this.substr(0, this.length - len) : this.valueOf());
+        return (this.substr(-len) === postfix ? this.substr(0, this.length - len) : this.valueOf());
+        
         
     };
-    String.prototype.hasPostfix = function(postfix) {
-        return(this.substr(-postfix.length) === postfix);
+    String.prototype.hasPostfix = function hasPostfix(postfix) {
+        return (this.substr(-postfix.length) === postfix);
+        
         
     };
     
 });
-module("src/util", function(module) {
-    var exports = module.exports;
+module('src/util', function(module, resource) {
     var sysutil, crypto, DebugLog, debugLog, indent, enabled, log, dump, Enumeration, Enum, Set, processOptions, home, md5;
     sysutil = require('util');
     
@@ -217,16 +230,17 @@ module("src/util", function(module) {
         };
         
         return DebugLog;
-    })()
+    })();
     debugLog = null;
     
     indent = 0;
     
     enabled = false;
     
-    log = function(source, message, offset) {
+    log = function log(source, message, offset) {
         if (enabled !== true) {
-            return;
+            return ;
+            
             
         }
         if (debugLog === null) {
@@ -256,14 +270,14 @@ module("src/util", function(module) {
         enabled = false;
         
     };
-    dump = function(obj, depth, showHidden) {
+    dump = function dump(obj, depth, showHidden) {
         depth = (depth === undefined ? 2 : depth);
         showHidden = (showHidden === undefined ? false : showHidden);
         console.log(sysutil.inspect(obj, showHidden, depth));
         
     };
     
-    Enumeration = function(options) {
+    Enumeration = function Enumeration(options) {
         var bit, id;
         bit = 0;
         
@@ -285,7 +299,7 @@ module("src/util", function(module) {
         
     };
     
-    Enum = function(options) {
+    Enum = function Enum(options) {
         return new Enumeration(options);
         
         
@@ -401,7 +415,8 @@ module("src/util", function(module) {
                 
                 
             } else {
-                return(data.hasOwnProperty(value));
+                return (data.hasOwnProperty(value));
+                
                 
             }
             
@@ -479,7 +494,7 @@ module("src/util", function(module) {
         return Set;
     })();
     
-    processOptions = function(context, handlers) {
+    processOptions = function processOptions(context, handlers) {
         var next, argv, prefix, param;
         next = '_default';
         
@@ -512,13 +527,13 @@ module("src/util", function(module) {
         
     };
     
-    home = function() {
+    home = function home() {
         return process.env[process.platform == 'win32' ? 'USERPROFILE' : 'HOME'];
         
         
     };
     
-    md5 = function(input) {
+    md5 = function md5(input) {
         var md5sum;
         md5sum = crypto.createHash('md5');
         
@@ -537,8 +552,7 @@ module("src/util", function(module) {
     module.exports.md5 = md5;
     
 });
-module("src/xregexp", function(module) {
-    var exports = module.exports;
+module('src/xregexp', function(module, resource) {
     var XRegExp;
     XRegExp = require('xregexp').XRegExp;
     
@@ -556,12 +570,11 @@ module("src/xregexp", function(module) {
     module.exports = XRegExp;
     
 });
-module("src/template/tags", function(module) {
-    var exports = module.exports;
+module('src/template/tags', function(module, resource) {
     var Util, Tags;
     Util = __require('src/util');
     
-    Tags = function() {
+    Tags = function Tags() {
         this.ifDepth = 0;
         this.eachDepth = 0;
         this.remDepth = 0;
@@ -570,7 +583,8 @@ module("src/template/tags", function(module) {
     };
     
     Tags.prototype.supports = function supports(tagName) {
-        return(this['tag:' + tagName] !== undefined);
+        return (this['tag:' + tagName] !== undefined);
+        
         
     };
     Tags.prototype.tag = function tag(tagName, params) {
@@ -738,8 +752,7 @@ module("src/template/tags", function(module) {
     module.exports = Tags;
     
 });
-module("src/template", function(module) {
-    var exports = module.exports;
+module('src/template', function(module, resource) {
     var XRegExp, fs, Tags, Template;
     XRegExp = __require('src/xregexp');
     
@@ -813,11 +826,12 @@ module("src/template", function(module) {
             
         };
         Template.prototype.exec = function exec(tplString) {
-            return(function() {
+            return (function() {
                 return eval(tplString);
                 
                 
             }).call(this.data);
+            
             
         };
         Template.prototype.fetch = function fetch(input) {
@@ -841,8 +855,7 @@ module("src/template", function(module) {
     module.exports = Template;
     
 });
-module("src/cache", function(module) {
-    var exports = module.exports;
+module('src/cache', function(module, resource) {
     var fs, path, util, Cache, isFile;
     fs = require('fs');
     
@@ -958,7 +971,7 @@ module("src/cache", function(module) {
         return Cache;
     })();
     
-    isFile = function(path) {
+    isFile = function isFile(path) {
         var stat;
         stat = fs.statSync(path);
         
@@ -970,8 +983,7 @@ module("src/cache", function(module) {
     module.exports = Cache;
     
 });
-module("src/transform", function(module) {
-    var exports = module.exports;
+module('src/transform', function(module, resource) {
     var util, Cache, Transform;
     util = __require('src/util');
     
@@ -1058,8 +1070,7 @@ module("src/transform", function(module) {
     module.exports = Transform;
     
 });
-module("src/parser/generator_state", function(module) {
-    var exports = module.exports;
+module('src/parser/generator_state', function(module, resource) {
     var GeneratorState;
     GeneratorState = (function() {
         function GeneratorState() {}
@@ -1106,8 +1117,7 @@ module("src/parser/generator_state", function(module) {
     module.exports = GeneratorState;
     
 });
-module("src/parser/definition/node", function(module) {
-    var exports = module.exports;
+module('src/parser/definition/node', function(module, resource) {
     var Enum, Type, StackItem, Node;
     Enum = __require('src/util').Enum;
     
@@ -1160,7 +1170,8 @@ module("src/parser/definition/node", function(module) {
             var children, lastId, lastChild;
             
             if (this.hasChild(node)) {
-                return;
+                return ;
+                
                 
             }
             children = this.children;
@@ -1353,8 +1364,7 @@ module("src/parser/definition/node", function(module) {
     module.exports.StackItem = StackItem;
     
 });
-module("src/parser/definition", function(module) {
-    var exports = module.exports;
+module('src/parser/definition', function(module, resource) {
     var Node, Definition;
     Node = __require('src/parser/definition/node');
     
@@ -1374,7 +1384,8 @@ module("src/parser/definition", function(module) {
             
         };
         Definition.prototype.haveBlock = function haveBlock(name) {
-            return(this.blockRoot[name] !== undefined);
+            return (this.blockRoot[name] !== undefined);
+            
             
         };
         Definition.prototype.getBlock = function getBlock(name) {
@@ -1403,8 +1414,7 @@ module("src/parser/definition", function(module) {
     module.exports.Node = Node;
     
 });
-module("src/parser", function(module) {
-    var exports = module.exports;
+module('src/parser', function(module, resource) {
     var path, XRegExp, util, GeneratorState, Definition, Parser;
     path = require('path');
     
@@ -1587,8 +1597,7 @@ module("src/parser", function(module) {
     module.exports.Definition = Definition;
     
 });
-module("src/tokenizer/result", function(module) {
-    var exports = module.exports;
+module('src/tokenizer/result', function(module, resource) {
     var Position, Token, Result;
     Position = (function() {
         function Position(col, row) {
@@ -1656,8 +1665,7 @@ module("src/tokenizer/result", function(module) {
     module.exports = Result;
     
 });
-module("src/tokenizer", function(module) {
-    var exports = module.exports;
+module('src/tokenizer', function(module, resource) {
     var XRegExp, Enum, Result, Tokenizer;
     XRegExp = __require('src/xregexp');
     
@@ -1746,7 +1754,7 @@ module("src/tokenizer", function(module) {
     }
     Tokenizer.prefab = new (function() {
         var regexFunc, regexEscape, excludeFunc;
-        regexFunc = function(name, regex, callback) {
+        regexFunc = function regexFunc(name, regex, callback) {
             return {
                 name: name,
                 func: function(data, start) {
@@ -1783,7 +1791,7 @@ module("src/tokenizer", function(module) {
             
         };
         
-        regexEscape = function(regexString) {
+        regexEscape = function regexEscape(regexString) {
             return XRegExp.escape(regexString).replace('/', '\\/');
             
             
@@ -1814,7 +1822,7 @@ module("src/tokenizer", function(module) {
             
             
         };
-        excludeFunc = function(match) {
+        excludeFunc = function excludeFunc(match) {
             if (this.indexOf(match.data) !== -1) {
                 return null;
                 
@@ -1869,8 +1877,7 @@ module("src/tokenizer", function(module) {
     module.exports.Result = Result;
     
 });
-module("src/definition_parser/path", function(module) {
-    var exports = module.exports;
+module('src/definition_parser/path', function(module, resource) {
     var Path, PathElement;
     Path = (function() {
         function Path(sourceName, sourceCapture, sourceLabel, sourceCondition, targetName, targetCapture, targetLabel, targetCondition) {
@@ -1919,8 +1926,7 @@ module("src/definition_parser/path", function(module) {
     module.exports = Path;
     
 });
-module("src/definition_parser", function(module) {
-    var exports = module.exports;
+module('src/definition_parser', function(module, resource) {
     var XRegExp, util, Parser, Tokenizer, Path, DefinitionParser;
     XRegExp = __require('src/xregexp');
     
@@ -1961,7 +1967,8 @@ module("src/definition_parser", function(module) {
             if (name == 'block_name') {
                 this.block_name = value;
                 this.pathBlocks[this.block_name] = [  ];
-                return;
+                return ;
+                
                 
             }
             if ((name == 'path' || name == 'source_name' || name == 'block_done') && currentPath.source.name != '' && currentPath.target.name != '') {
@@ -2131,8 +2138,7 @@ module("src/definition_parser", function(module) {
     module.exports = DefinitionParser;
     
 });
-module("src/language_parser/capture_node", function(module) {
-    var exports = module.exports;
+module('src/language_parser/capture_node', function(module, resource) {
     var SourceNode, Template, CaptureNode, stackDiff;
     SourceNode = require('source-map').SourceNode;
     
@@ -2241,15 +2247,18 @@ module("src/language_parser/capture_node", function(module) {
             
         };
         CaptureNode.prototype.isLeaf = function isLeaf() {
-            return(this.children instanceof Array === false);
+            return (this.children instanceof Array === false);
+            
             
         };
         CaptureNode.prototype.isBranch = function isBranch() {
-            return(this.children instanceof Array);
+            return (this.children instanceof Array);
+            
             
         };
         CaptureNode.prototype.length = function length() {
-            return(this.children instanceof Array ? this.children.length : 0);
+            return (this.children instanceof Array ? this.children.length : 0);
+            
             
         };
         CaptureNode.prototype.depth = function depth() {
@@ -2507,7 +2516,7 @@ module("src/language_parser/capture_node", function(module) {
     CaptureNode.prototype.dummy = new CaptureNode('', '');
     CaptureNode.prototype.dummy.row = -1;
     CaptureNode.prototype.dummy.col = -1;
-    stackDiff = function(stack, lastStack, minStackLen) {
+    stackDiff = function stackDiff(stack, lastStack, minStackLen) {
         var deepestCommonCapture, minLen, numCaptures, lastLen, captures, len;
         deepestCommonCapture = -1;
         
@@ -2556,8 +2565,7 @@ module("src/language_parser/capture_node", function(module) {
     module.exports = CaptureNode;
     
 });
-module("src/language_parser", function(module) {
-    var exports = module.exports;
+module('src/language_parser', function(module, resource) {
     var fs, XRegExp, util, Parser, DefinitionParser, CaptureNode, LanguageParser;
     fs = require('fs');
     
@@ -2605,17 +2613,17 @@ module("src/language_parser", function(module) {
             this.trainer = null;
             
         };
-        LanguageParser.prototype.loadDefinition = function loadDefinition(resource) {
+        LanguageParser.prototype.loadDefinition = function loadDefinition(filename) {
             var fileContents;
-            util.log('LanguageParser', 'loading defintion file ' + resource);
-            fileContents = fs.readFileSync(resource, 'UTF-8');
+            util.log('LanguageParser', 'loading defintion file ' + filename);
+            fileContents = fs.readFileSync(filename, 'UTF-8');
             
             if (this.trainer == null) {
                 this.trainer = new DefinitionParser();
                 
             }
             util.log('LanguageParser', 'processing definition', 2);
-            this.trainer.file = resource;
+            this.trainer.file = filename;
             this.trainer.parse(fileContents);
             util.log('LanguageParser', 'done', -2);
             
@@ -2699,12 +2707,12 @@ module("src/language_parser", function(module) {
             }
             
         };
-        LanguageParser.prototype.setSource = function setSource(resource, data) {
+        LanguageParser.prototype.setSource = function setSource(filename, data) {
             var captures;
             this.captureTree = null;
-            this.file = resource;
+            this.file = filename;
             this.sourceCode = data.replace('\r\n', '\n');
-            util.log('LanguageParser', 'processing source ' + resource, 2);
+            util.log('LanguageParser', 'processing source ' + filename, 2);
             captures = this.parse(this.sourceCode);
             
             util.log('LanguageParser', 'done', -2);
@@ -2712,22 +2720,22 @@ module("src/language_parser", function(module) {
             this.captureTree.parent = this;
             
         };
-        LanguageParser.prototype.loadSourceFromCache = function loadSourceFromCache(resource) {
-            this.cacheData = this.transform.cache.fetch(resource, [ 'base' ]);
+        LanguageParser.prototype.loadSourceFromCache = function loadSourceFromCache(filename) {
+            this.cacheData = this.transform.cache.fetch(filename, [ 'base' ]);
             if (this.cacheData !== null) {
-                this.file = resource;
+                this.file = filename;
                 this.captureTree = CaptureNode.prototype.fromJSON(this.cacheData['base'], this, this.mapType.bind(this));
                 
             }
             
         };
-        LanguageParser.prototype.loadSource = function loadSource(resource) {
+        LanguageParser.prototype.loadSource = function loadSource(filename) {
             if (this.transform.options.nocache !== true && this.cacheData === null) {
-                this.loadSourceFromCache(resource);
+                this.loadSourceFromCache(filename);
                 
             }
             if (this.cacheData === null) {
-                this.setSource(resource, fs.readFileSync(resource, 'UTF-8').replace("var assert = require('assert');", ''));
+                this.setSource(filename, fs.readFileSync(filename, 'UTF-8').replace("var assert = require('assert');", ''));
                 
             }
             
@@ -2755,9 +2763,8 @@ module("src/language_parser", function(module) {
     module.exports = LanguageParser;
     
 });
-module("src/extensions/adria_node", function(module) {
-    var exports = module.exports;
-    var path, SourceNode, LanguageParser, CaptureNode, Transform, util, Set, AccessOperationProtocall, ConstLiteral, Scope, YieldingScope, Module, InvokeOperation, FunctionLiteral, GeneratorLiteral, FunctionStatement, GeneratorStatement, FunctionParamList, BaseLiteral, DoWhileStatement, WhileStatement, IfStatement, SwitchStatement, ForCountStatement, ForInStatement, ObjectLiteral, ProtoBodyProperty, ArrayLiteral, Expression, ProtoLiteral, ProtoStatement, ProtoBodyItem, ReturnStatement, YieldStatement, catchSpecificsId, CatchSpecifics, CatchAll, TryCatchFinallyStatement, ThrowStatement, AssertStatement, Statement, InterruptibleStatement, RequireLiteral, ModuleStatement, ExportStatement, GlobalDef, Ident, Name, VarDef;
+module('src/extensions/adria_node', function(module, resource) {
+    var path, SourceNode, LanguageParser, CaptureNode, Transform, util, Set, AdriaNode, AccessOperationProtocall, ConstLiteral, Scope, YieldingScope, Module, InvokeOperation, FunctionLiteral, GeneratorLiteral, FunctionStatement, GeneratorStatement, FunctionParamList, BaseLiteral, DoWhileStatement, WhileStatement, IfStatement, SwitchStatement, ForCountStatement, ForInStatement, ObjectLiteral, ProtoBodyProperty, ArrayLiteral, Expression, ProtoLiteral, ProtoStatement, ProtoBodyItem, ReturnStatement, YieldStatement, catchSpecificsId, CatchSpecifics, CatchAll, TryCatchFinallyStatement, ThrowStatement, AssertStatement, Statement, InterruptibleStatement, ResourceLiteral, RequireLiteral, ModuleStatement, ExportStatement, GlobalDef, Ident, Name, VarDef;
     path = require('path');
     
     SourceNode = require('source-map').SourceNode;
@@ -2772,6 +2779,100 @@ module("src/extensions/adria_node", function(module) {
     
     Set = util.Set;
     
+    AdriaNode = (function(___parent) {
+        function AdriaNode() {
+            ___parent.apply(this, arguments);
+        }
+        
+        AdriaNode.prototype = Object.create(___parent.prototype);
+        AdriaNode.prototype.constructor = AdriaNode;
+        
+        AdriaNode.prototype.findScope = function findScope() {
+            return this.ancestor(null, 'yielding_scope|scope|module');
+            
+            
+        };
+        AdriaNode.prototype.findName = function findName() {
+            var result, nameNode;
+            result = null;
+            
+            nameNode = this.get('name');
+            
+            if (nameNode.isNode() === false) {
+                nameNode = this.ancestor(null, 'module_statement|export_statement|expression|dec_def|proto_body_item');
+                if (nameNode !== null) {
+                    if (nameNode.value === 'dec_def' || nameNode.value === 'module_statement' || nameNode.value === 'export_statement') {
+                        result = nameNode.get('name').toSourceNode();
+                        
+                    } else if (nameNode.value === 'proto_body_item') {
+                        result = nameNode.get('key').toSourceNode();
+                        
+                    } else if (nameNode.value === 'expression') {
+                        result = nameNode.findAssignee();
+                        
+                    }
+                    
+                }
+                
+            } else {
+                result = nameNode.toSourceNode();
+                
+            }
+            return result;
+            
+            
+        };
+        AdriaNode.prototype.findAssignee = function findAssignee() {
+            var children, found, result, child;
+            children = this.children;
+            
+            found = -1;
+            
+            result = null;
+            
+            for (var id = 0; id < children.length;id++) {
+                if (children[id].key === 'assignment_op') {
+                    found = id - 1;
+                    break;
+                    
+                }
+                
+            }
+            if (found !== -1) {
+                child = children[found];
+                
+                if (child.value === 'access_operation_member' || child.value === 'access_operation_proto') {
+                    result = children[found].csn(children[found].get('item').value);
+                    
+                }
+                if (child.key === 'ident') {
+                    result = children[found].csn(children[found].value);
+                    
+                }
+                
+            }
+            return result;
+            
+            
+        };
+        AdriaNode.prototype.isRelativePath = function isRelativePath(filename) {
+            return filename.slice(0, 2) === './' || filename.slice(0, 3) === '../';
+            
+            
+        };
+        AdriaNode.prototype.makeBaseRelative = function makeBaseRelative(filename) {
+            var parser, absName;
+            parser = this.parser();
+            
+            absName = path.dirname(parser.file) + '/' + filename;
+            
+            return path.relative(parser.transform.options.basePath, absName);
+            
+            
+        };
+        
+        return AdriaNode;
+    })(CaptureNode);
     AccessOperationProtocall = (function(___parent) {
         function AccessOperationProtocall() {
             ___parent.apply(this, arguments);
@@ -2798,7 +2899,7 @@ module("src/extensions/adria_node", function(module) {
         };
         
         return AccessOperationProtocall;
-    })(CaptureNode);
+    })(AdriaNode);
     
     ConstLiteral = (function(___parent) {
         function ConstLiteral() {
@@ -2825,12 +2926,12 @@ module("src/extensions/adria_node", function(module) {
         };
         
         return ConstLiteral;
-    })(CaptureNode);
+    })(AdriaNode);
     
     Scope = (function(___parent) {
         function Scope(key, value) {
             this.locals = new Set();
-            CaptureNode.prototype.constructor.call(this, key, value);
+            AdriaNode.prototype.constructor.call(this, key, value);
             
         }
         
@@ -2840,7 +2941,7 @@ module("src/extensions/adria_node", function(module) {
         Scope.prototype.locals = null;
         Scope.prototype.toSourceNode = function toSourceNode() {
             var content, result;
-            content = CaptureNode.prototype.toSourceNode.call(this);
+            content = AdriaNode.prototype.toSourceNode.call(this);
             
             result = this.csn();
             
@@ -2855,7 +2956,7 @@ module("src/extensions/adria_node", function(module) {
         };
         
         return Scope;
-    })(CaptureNode);
+    })(AdriaNode);
     
     YieldingScope = Scope;
     
@@ -2863,7 +2964,7 @@ module("src/extensions/adria_node", function(module) {
         function Module(key, value) {
             this.exports = new Set();
             this.locals = new Set();
-            CaptureNode.prototype.constructor.call(this, key, value);
+            AdriaNode.prototype.constructor.call(this, key, value);
             
         }
         
@@ -2878,7 +2979,7 @@ module("src/extensions/adria_node", function(module) {
             parser = this.parser();
             
             this.nl(1);
-            code = CaptureNode.prototype.toSourceNode.call(this);
+            code = AdriaNode.prototype.toSourceNode.call(this);
             
             locals = this.locals.toArray();
             
@@ -2886,7 +2987,7 @@ module("src/extensions/adria_node", function(module) {
             
             file = parser.file;
             
-            result = this.csn('module("' + parser.moduleName + '", function(module) {' + this.nl());
+            result = this.csn('module(\'' + parser.moduleName + '\', function(module, resource) {' + this.nl());
             
             if (parser.transform.options['tweak-exports']) {
                 result.add('var exports = module.exports;' + this.nl());
@@ -2912,7 +3013,7 @@ module("src/extensions/adria_node", function(module) {
         };
         
         return Module;
-    })(CaptureNode);
+    })(AdriaNode);
     
     InvokeOperation = (function(___parent) {
         function InvokeOperation() {
@@ -2942,12 +3043,12 @@ module("src/extensions/adria_node", function(module) {
         };
         
         return InvokeOperation;
-    })(CaptureNode);
+    })(AdriaNode);
     
     FunctionLiteral = (function(___parent) {
         function FunctionLiteral(key, value) {
             this.defaultArgs = [  ];
-            CaptureNode.prototype.constructor.call(this, key, value);
+            AdriaNode.prototype.constructor.call(this, key, value);
             
         }
         
@@ -2957,42 +3058,8 @@ module("src/extensions/adria_node", function(module) {
         FunctionLiteral.prototype.defaultArgs = null;
         FunctionLiteral.prototype.name = null;
         FunctionLiteral.prototype.toSourceNode = function toSourceNode() {
-            var nameNode, children, id, found, result, generator;
+            var result, generator, id;
             this.nl(1);
-            nameNode = this.get('name');
-            
-            if (nameNode.isNode() === false) {
-                nameNode = this.ancestor(null, 'expression|dec_def|proto_body_item');
-                if (nameNode !== null) {
-                    if (nameNode.value === 'proto_body_item') {
-                        this.name = nameNode.get('key').toSourceNode();
-                        
-                    } else if (nameNode.value === 'expression') {
-                        children = nameNode.children;
-                        
-                        found = -1;
-                        
-                        for (id = 0; id < children.length;id++) {
-                            if (children[id].key === 'assignment_op') {
-                                found = id - 1;
-                                break;
-                                
-                            }
-                            
-                        }
-                        if (found !== -1 && children[found].value === 'access_operation_member') {
-                            this.name = children[found].csn(children[found].get('item').value);
-                            
-                        }
-                        
-                    }
-                    
-                }
-                
-            } else {
-                this.name = nameNode.toSourceNode();
-                
-            }
             result = this.csn();
             
             result.add('function');
@@ -3002,6 +3069,7 @@ module("src/extensions/adria_node", function(module) {
                 result.add(generator.csn(generator.value));
                 
             }
+            this.name = this.findName();
             if (this.name !== null) {
                 result.add([ ' ', this.name ]);
                 
@@ -3020,7 +3088,7 @@ module("src/extensions/adria_node", function(module) {
         };
         
         return FunctionLiteral;
-    })(CaptureNode);
+    })(AdriaNode);
     
     GeneratorLiteral = FunctionLiteral;
     
@@ -3071,7 +3139,7 @@ module("src/extensions/adria_node", function(module) {
         };
         
         return FunctionParamList;
-    })(CaptureNode);
+    })(AdriaNode);
     
     BaseLiteral = (function(___parent) {
         function BaseLiteral() {
@@ -3112,7 +3180,7 @@ module("src/extensions/adria_node", function(module) {
         };
         
         return BaseLiteral;
-    })(CaptureNode);
+    })(AdriaNode);
     
     DoWhileStatement = (function(___parent) {
         function DoWhileStatement() {
@@ -3136,7 +3204,7 @@ module("src/extensions/adria_node", function(module) {
         };
         
         return DoWhileStatement;
-    })(CaptureNode);
+    })(AdriaNode);
     
     WhileStatement = (function(___parent) {
         function WhileStatement() {
@@ -3164,7 +3232,7 @@ module("src/extensions/adria_node", function(module) {
         };
         
         return WhileStatement;
-    })(CaptureNode);
+    })(AdriaNode);
     
     IfStatement = (function(___parent) {
         function IfStatement() {
@@ -3210,7 +3278,7 @@ module("src/extensions/adria_node", function(module) {
         };
         
         return IfStatement;
-    })(CaptureNode);
+    })(AdriaNode);
     
     SwitchStatement = (function(___parent) {
         function SwitchStatement() {
@@ -3246,7 +3314,7 @@ module("src/extensions/adria_node", function(module) {
         };
         
         return SwitchStatement;
-    })(CaptureNode);
+    })(AdriaNode);
     
     ForCountStatement = (function(___parent) {
         function ForCountStatement() {
@@ -3304,7 +3372,7 @@ module("src/extensions/adria_node", function(module) {
         };
         
         return ForCountStatement;
-    })(CaptureNode);
+    })(AdriaNode);
     
     ForInStatement = (function(___parent) {
         function ForInStatement() {
@@ -3321,7 +3389,7 @@ module("src/extensions/adria_node", function(module) {
             valueNode = this.get('value');
             
             if (this.get('var').isNode()) {
-                locals = this.ancestor(null, 'yielding_scope|scope|module').locals;
+                locals = this.findScope().locals;
                 
                 locals.add(keyNode.value);
                 if (valueNode.isNode()) {
@@ -3352,7 +3420,7 @@ module("src/extensions/adria_node", function(module) {
         };
         
         return ForInStatement;
-    })(CaptureNode);
+    })(AdriaNode);
     
     ObjectLiteral = (function(___parent) {
         function ObjectLiteral() {
@@ -3397,7 +3465,7 @@ module("src/extensions/adria_node", function(module) {
         };
         
         return ObjectLiteral;
-    })(CaptureNode);
+    })(AdriaNode);
     
     ProtoBodyProperty = ObjectLiteral;
     
@@ -3438,7 +3506,7 @@ module("src/extensions/adria_node", function(module) {
         };
         
         return ArrayLiteral;
-    })(CaptureNode);
+    })(AdriaNode);
     
     Expression = (function(___parent) {
         function Expression() {
@@ -3551,13 +3619,13 @@ module("src/extensions/adria_node", function(module) {
         };
         
         return Expression;
-    })(CaptureNode);
+    })(AdriaNode);
     
     ProtoLiteral = (function(___parent) {
         function ProtoLiteral(key, value) {
             this.constructorArgs = [  ];
             this.constructorDefaults = [  ];
-            CaptureNode.prototype.constructor.call(this, key, value);
+            AdriaNode.prototype.constructor.call(this, key, value);
             
         }
         
@@ -3569,16 +3637,8 @@ module("src/extensions/adria_node", function(module) {
         ProtoLiteral.prototype.constructorDefaults = null;
         ProtoLiteral.prototype.name = '';
         ProtoLiteral.prototype.toSourceNode = function toSourceNode() {
-            var nameNode, parentNode, haveParent, assignTo, locals, result, body, id;
-            nameNode = this.get('name');
-            
-            if (nameNode.isNode() === false) {
-                this.name = this.ancestor(null, 'dec_def|module_statement|export_statement').get('name').value;
-                
-            } else {
-                this.name = nameNode.value;
-                
-            }
+            var parentNode, haveParent, assignTo, locals, result, body, id;
+            this.name = this.findName().toString();
             parentNode = this.get('parent');
             
             haveParent = parentNode.isNode();
@@ -3586,7 +3646,7 @@ module("src/extensions/adria_node", function(module) {
             assignTo = '';
             
             if (this.value === 'proto_statement') {
-                locals = this.ancestor(null, 'yielding_scope|scope|module').locals;
+                locals = this.findScope().locals;
                 
                 locals.add(this.name);
                 assignTo = this.name + ' = ';
@@ -3627,13 +3687,17 @@ module("src/extensions/adria_node", function(module) {
             result.add('})(');
             result.add(parentNode.toSourceNode());
             result.add(')');
+            if (this.value === 'proto_statement') {
+                result.add(';');
+                
+            }
             return result;
             
             
         };
         
         return ProtoLiteral;
-    })(CaptureNode);
+    })(AdriaNode);
     
     ProtoStatement = ProtoLiteral;
     
@@ -3693,7 +3757,7 @@ module("src/extensions/adria_node", function(module) {
         };
         
         return ProtoBodyItem;
-    })(CaptureNode);
+    })(AdriaNode);
     
     ReturnStatement = (function(___parent) {
         function ReturnStatement() {
@@ -3718,7 +3782,7 @@ module("src/extensions/adria_node", function(module) {
         };
         
         return ReturnStatement;
-    })(CaptureNode);
+    })(AdriaNode);
     
     YieldStatement = ReturnStatement;
     
@@ -3773,7 +3837,7 @@ module("src/extensions/adria_node", function(module) {
         };
         
         return CatchSpecifics;
-    })(CaptureNode);
+    })(AdriaNode);
     
     CatchAll = (function(___parent) {
         function CatchAll() {
@@ -3798,7 +3862,7 @@ module("src/extensions/adria_node", function(module) {
         };
         
         return CatchAll;
-    })(CaptureNode);
+    })(AdriaNode);
     
     TryCatchFinallyStatement = (function(___parent) {
         function TryCatchFinallyStatement() {
@@ -3838,7 +3902,7 @@ module("src/extensions/adria_node", function(module) {
         };
         
         return TryCatchFinallyStatement;
-    })(CaptureNode);
+    })(AdriaNode);
     
     ThrowStatement = (function(___parent) {
         function ThrowStatement() {
@@ -3860,7 +3924,7 @@ module("src/extensions/adria_node", function(module) {
         };
         
         return ThrowStatement;
-    })(CaptureNode);
+    })(AdriaNode);
     
     AssertStatement = (function(___parent) {
         function AssertStatement() {
@@ -3876,7 +3940,7 @@ module("src/extensions/adria_node", function(module) {
             
             if (this.parser().transform.options.assert) {
                 result.add('assert(');
-                result.add(CaptureNode.prototype.toSourceNode.call(this));
+                result.add(AdriaNode.prototype.toSourceNode.call(this));
                 result.add(');' + this.nl());
                 
             }
@@ -3886,7 +3950,7 @@ module("src/extensions/adria_node", function(module) {
         };
         
         return AssertStatement;
-    })(CaptureNode);
+    })(AdriaNode);
     
     Statement = (function(___parent) {
         function Statement() {
@@ -3902,7 +3966,7 @@ module("src/extensions/adria_node", function(module) {
             
             result = this.csn();
             
-            result.add(CaptureNode.prototype.toSourceNode.call(this));
+            result.add(AdriaNode.prototype.toSourceNode.call(this));
             switch (type) {
                 case 'expression':
                     result.add(';' + this.nl());
@@ -3919,9 +3983,42 @@ module("src/extensions/adria_node", function(module) {
         };
         
         return Statement;
-    })(CaptureNode);
+    })(AdriaNode);
     
     InterruptibleStatement = Statement;
+    
+    ResourceLiteral = (function(___parent) {
+        function ResourceLiteral() {
+            ___parent.apply(this, arguments);
+        }
+        
+        ResourceLiteral.prototype = Object.create(___parent.prototype);
+        ResourceLiteral.prototype.constructor = ResourceLiteral;
+        
+        ResourceLiteral.prototype.toSourceNode = function toSourceNode() {
+            var parser, options, fileNode, fileName, result;
+            parser = this.parser();
+            
+            options = parser.transform.options;
+            
+            fileNode = this.get('file');
+            
+            fileName = fileNode.toSourceNode().toString().slice(1, -1);
+            
+            fileName = this.makeBaseRelative(fileName);
+            parser.resultData.resources.add(fileName);
+            result = this.csn();
+            
+            result.add('resource(');
+            result.add(fileNode.csn("'" + fileName + "'"));
+            result.add(')');
+            return result;
+            
+            
+        };
+        
+        return ResourceLiteral;
+    })(AdriaNode);
     
     RequireLiteral = (function(___parent) {
         function RequireLiteral() {
@@ -3932,7 +4029,7 @@ module("src/extensions/adria_node", function(module) {
         RequireLiteral.prototype.constructor = RequireLiteral;
         
         RequireLiteral.prototype.toSourceNode = function toSourceNode() {
-            var parser, options, fileNode, moduleName, result, currentDir, absName, relName;
+            var parser, options, fileNode, moduleName, result, requireFunction;
             parser = this.parser();
             
             options = parser.transform.options;
@@ -3943,29 +4040,20 @@ module("src/extensions/adria_node", function(module) {
             
             result = this.csn();
             
-            if (options.platform === 'node') {
-                if (moduleName.slice(0, 2) === './' || moduleName.slice(0, 3) === '../') {
-                    currentDir = path.dirname(parser.file);
-                    
-                    absName = currentDir + '/' + moduleName;
-                    
-                    relName = path.relative(options.basePath, absName);
-                    
-                    parser.resultData.requires.add(relName);
-                    result.add('__require(');
-                    result.add(fileNode.csn("'" + relName + "'"));
-                    result.add(')');
-                    return result;
-                    
-                    
-                }
+            requireFunction = 'require';
+            
+            if (options.platform === 'node' && this.isRelativePath(moduleName)) {
+                moduleName = this.makeBaseRelative(moduleName);
+                parser.resultData.requires.add(moduleName);
+                requireFunction = '__require';
                 
-            } else {
+            } else if (options.platform !== 'node') {
+                moduleName = this.makeBaseRelative(moduleName);
                 parser.resultData.requires.add(moduleName);
                 
             }
-            result.add('require(');
-            result.add(fileNode.toSourceNode());
+            result.add(requireFunction + '(');
+            result.add(fileNode.csn("'" + moduleName + "'"));
             result.add(')');
             return result;
             
@@ -3973,7 +4061,7 @@ module("src/extensions/adria_node", function(module) {
         };
         
         return RequireLiteral;
-    })(CaptureNode);
+    })(AdriaNode);
     
     ModuleStatement = (function(___parent) {
         function ModuleStatement() {
@@ -4003,7 +4091,7 @@ module("src/extensions/adria_node", function(module) {
         };
         
         return ModuleStatement;
-    })(CaptureNode);
+    })(AdriaNode);
     
     ExportStatement = (function(___parent) {
         function ExportStatement() {
@@ -4033,7 +4121,7 @@ module("src/extensions/adria_node", function(module) {
         };
         
         return ExportStatement;
-    })(CaptureNode);
+    })(AdriaNode);
     
     GlobalDef = (function(___parent) {
         function GlobalDef() {
@@ -4070,7 +4158,7 @@ module("src/extensions/adria_node", function(module) {
         };
         
         return GlobalDef;
-    })(CaptureNode);
+    })(AdriaNode);
     
     Ident = (function(___parent) {
         function Ident() {
@@ -4087,7 +4175,7 @@ module("src/extensions/adria_node", function(module) {
         };
         
         return Ident;
-    })(CaptureNode);
+    })(AdriaNode);
     
     Name = Ident;
     
@@ -4102,7 +4190,7 @@ module("src/extensions/adria_node", function(module) {
         VarDef.prototype.toSourceNode = function toSourceNode() {
             var valueNode, nameNode, locals, result, nl;
             
-            locals = this.ancestor(null, 'yielding_scope|scope|module').locals;
+            locals = this.findScope().locals;
             
             result = this.csn();
             
@@ -4126,7 +4214,7 @@ module("src/extensions/adria_node", function(module) {
         };
         
         return VarDef;
-    })(CaptureNode);
+    })(AdriaNode);
     
     module.exports.AccessOperationProtocall = AccessOperationProtocall;
     module.exports.ConstLiteral = ConstLiteral;
@@ -4162,6 +4250,7 @@ module("src/extensions/adria_node", function(module) {
     module.exports.AssertStatement = AssertStatement;
     module.exports.Statement = Statement;
     module.exports.InterruptibleStatement = InterruptibleStatement;
+    module.exports.ResourceLiteral = ResourceLiteral;
     module.exports.RequireLiteral = RequireLiteral;
     module.exports.ModuleStatement = ModuleStatement;
     module.exports.ExportStatement = ExportStatement;
@@ -4171,8 +4260,7 @@ module("src/extensions/adria_node", function(module) {
     module.exports.VarDef = VarDef;
     
 });
-module("src/extensions/adria_parser", function(module) {
-    var exports = module.exports;
+module('src/extensions/adria_parser', function(module, resource) {
     var fs, util, LanguageParser, AdriaNode, Tokenizer, AdriaParser;
     fs = require('fs');
     
@@ -4187,7 +4275,12 @@ module("src/extensions/adria_parser", function(module) {
     AdriaParser = (function(___parent) {
         function AdriaParser(transform) {
             LanguageParser.prototype.constructor.call(this, transform);
-            this.resultData = { globals: new util.Set(), requires: new util.Set() };
+            this.resultData = {
+                globals: new util.Set(),
+                requires: new util.Set(),
+                resources: new util.Set()
+                
+            };
             
         }
         
@@ -4196,6 +4289,7 @@ module("src/extensions/adria_parser", function(module) {
         
         AdriaParser.prototype.moduleName = '';
         AdriaParser.prototype.indent = 0;
+        AdriaParser.prototype.resultData = null;
         AdriaParser.prototype.trainSelf = function trainSelf() {
             var keywords, matchKeywords;
             keywords = new util.Set([
@@ -4218,6 +4312,7 @@ module("src/extensions/adria_parser", function(module) {
                 'case',
                 'require',
                 'assert',
+                'resource',
                 'delete',
                 'new',
                 'instanceof',
@@ -4225,7 +4320,7 @@ module("src/extensions/adria_parser", function(module) {
                 
             ]);
             
-            matchKeywords = function(match) {
+            matchKeywords = function matchKeywords(match) {
                 if (keywords.has(match.data)) {
                     match.name = 'KEYWORD';
                     
@@ -4299,10 +4394,10 @@ module("src/extensions/adria_parser", function(module) {
             
             
         };
-        AdriaParser.prototype.loadSourceFromCache = function loadSourceFromCache(resource) {
-            LanguageParser.prototype.loadSourceFromCache.call(this, resource);
+        AdriaParser.prototype.loadSourceFromCache = function loadSourceFromCache(filename) {
+            LanguageParser.prototype.loadSourceFromCache.call(this, filename);
             if (this.cacheData !== null && this.transform.options.nomap !== true) {
-                this.sourceCode = fs.readFileSync(resource, 'UTF-8').replace('\r\n', '\n');
+                this.sourceCode = fs.readFileSync(filename, 'UTF-8').replace('\r\n', '\n');
                 
             }
             
@@ -4314,8 +4409,7 @@ module("src/extensions/adria_parser", function(module) {
     module.exports = AdriaParser;
     
 });
-module("src/extensions/adria_transform", function(module) {
-    var exports = module.exports;
+module('src/extensions/adria_transform', function(module, resource) {
     var fs, path, SourceNode, Template, Transform, AdriaParser, util, AdriaTransform;
     fs = require('fs');
     
@@ -4337,6 +4431,7 @@ module("src/extensions/adria_transform", function(module) {
             Transform.prototype.constructor.call(this, piped);
             this.globals = new util.Set();
             this.requires = new util.Set();
+            this.resources = new util.Set();
             this.requiresDone = new util.Set();
             this.modules = [  ];
             this.sourceCode = {  };
@@ -4356,8 +4451,9 @@ module("src/extensions/adria_transform", function(module) {
         
         AdriaTransform.prototype.globals = null;
         AdriaTransform.prototype.requires = null;
-        AdriaTransform.prototype.requiresDone = null;
         AdriaTransform.prototype.modules = null;
+        AdriaTransform.prototype.resources = null;
+        AdriaTransform.prototype.requiresDone = null;
         AdriaTransform.prototype.sourceCode = null;
         AdriaTransform.prototype.protoParser = null;
         AdriaTransform.prototype.initOptions = function initOptions() {
@@ -4431,6 +4527,7 @@ module("src/extensions/adria_transform", function(module) {
             }
             this.requires = this.requires.merge(parser.resultData.requires);
             this.globals = this.globals.merge(parser.resultData.globals);
+            this.resources = this.resources.merge(parser.resultData.resources);
             this.modules.push({
                 filename: parser.file,
                 sourceCode: parser.sourceCode,
@@ -4440,15 +4537,16 @@ module("src/extensions/adria_transform", function(module) {
             
         };
         AdriaTransform.prototype.generateOutputTree = function generateOutputTree() {
-            var node, tpl, fwNode, moduleNode, fw, id, module;
+            var node, tpl, fwNode, tmpNode, fw, fileName, contents, wrapped, id, module;
             node = new SourceNode(null, null);
             
             tpl = new Template();
             
             tpl.assign('globals', this.globals.toArray());
             tpl.assign('enableAssert', this.options.assert);
+            tpl.assign('platform', this.options.platform);
             
-            fw = tpl.fetchFile('adria/framework.' + this.options.platform + '.tpl');
+            fw = tpl.fetchFile('adria/framework.tpl');
             
             node.add('(function() {\n');
             if (this.options['tweak-nostrict'] !== true) {
@@ -4457,11 +4555,19 @@ module("src/extensions/adria_transform", function(module) {
             }
             fwNode = node.add(new SourceNode(1, 0, 'adria-framework.js', fw));
             fwNode.setSourceContent('adria-framework.js', fw);
+            for (fileName in this.resources.data) {
+                contents = fs.readFileSync(this.options.basePath + fileName, 'UTF-8');
+                
+                wrapped = 'resource(\'' + fileName + '\', \'' + contents.jsify("'") + '\');\n';
+                
+                tmpNode = node.add(new SourceNode(null, null, fileName, wrapped));
+                tmpNode.setSourceContent(fileName, contents);
+                
+            }
             for (id in this.modules) {
                 module = this.modules[id];
-                
-                moduleNode = node.add(new SourceNode(null, null, module.filename, module.result));
-                moduleNode.setSourceContent(module.filename, module.sourceCode);
+                tmpNode = node.add(new SourceNode(null, null, module.filename, module.result));
+                tmpNode.setSourceContent(module.filename, module.sourceCode);
                 
             }
             node.add('\n})();');
@@ -4518,8 +4624,7 @@ module("src/extensions/adria_transform", function(module) {
     module.exports = AdriaTransform;
     
 });
-module("src/extensions/adriadebug_parser", function(module) {
-    var exports = module.exports;
+module('src/extensions/adriadebug_parser', function(module, resource) {
     var AdriaParser, CaptureNode, XMLNode, AdriaDebugParser;
     AdriaParser = __require('src/extensions/adria_parser');
     
@@ -4582,9 +4687,10 @@ module("src/extensions/adriadebug_parser", function(module) {
     module.exports = AdriaDebugParser;
     
 });
-module("src/extensions/adriadebug_transform", function(module) {
-    var exports = module.exports;
-    var AdriaTransform, AdriaDebugParser, AdriaDebugTransform;
+module('src/extensions/adriadebug_transform', function(module, resource) {
+    var fs, AdriaTransform, AdriaDebugParser, AdriaDebugTransform;
+    fs = require('fs');
+    
     AdriaTransform = __require('src/extensions/adria_transform');
     
     AdriaDebugParser = __require('src/extensions/adriadebug_parser');
@@ -4599,7 +4705,7 @@ module("src/extensions/adriadebug_transform", function(module) {
         AdriaDebugTransform.prototype = Object.create(___parent.prototype);
         AdriaDebugTransform.prototype.constructor = AdriaDebugTransform;
         
-        AdriaDebugTransform.prototype.process = function process() {
+        AdriaDebugTransform.prototype.run = function run() {
             var files, id, result, mod;
             this.protoParser = new AdriaDebugParser(this);
             this.protoParser.trainSelf();
@@ -4621,7 +4727,7 @@ module("src/extensions/adriadebug_transform", function(module) {
                 
             }
             if (this.options['outFile'] !== null) {
-                fs.writeFileSync(this.options['outFile'], result.join('\n'));
+                fs.writeFileSync(options.basePath + this.options.outFile, result.join('\n'));
                 
             } else {
                 process.stdout.write(result.join('\n'));
@@ -4636,8 +4742,7 @@ module("src/extensions/adriadebug_transform", function(module) {
     module.exports = AdriaDebugTransform;
     
 });
-module("main", function(module) {
-    var exports = module.exports;
+module('main', function(module, resource) {
     var util, AdriaTransform, AdriaDebugTransform, target, piped, run, pipeData;
     __require('src/prototype');
     util = __require('src/util');
@@ -4664,7 +4769,7 @@ module("main", function(module) {
         }
         
     });
-    run = function(pipeData) {
+    run = function run(pipeData) {
         var transform;
         
         if (target === 'adria') {

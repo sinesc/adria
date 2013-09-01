@@ -34,6 +34,7 @@ module AdriaParser = proto(LanguageParser) {
 
     moduleName: '',
     indent: 0,
+    resultData: null,
 
     constructor: function(transform) {
 
@@ -42,6 +43,7 @@ module AdriaParser = proto(LanguageParser) {
         this.resultData = {
             globals: new util.Set(),
             requires: new util.Set(),
+            resources: new util.Set(),
         };
     },
 
@@ -58,7 +60,7 @@ module AdriaParser = proto(LanguageParser) {
             'throw', 'try', 'catch', 'finally',
             'function', 'proto', 'property',
             'switch', 'case',
-            'require', 'assert',
+            'require', 'assert', 'resource',
             'delete', 'new',
             'instanceof', 'typeof'
         ]);
@@ -105,7 +107,7 @@ module AdriaParser = proto(LanguageParser) {
     mapType: function(captureName, blockName) {
 
         var typeName = blockName.snakeToCamel(true);
-    
+
         if (typeof AdriaNode[typeName] === 'function') {
             return AdriaNode[typeName];
         }
@@ -153,12 +155,12 @@ module AdriaParser = proto(LanguageParser) {
      *
      * @see LanguageParser::loadSourceFromCache
      */
-    loadSourceFromCache: function(resource) {
+    loadSourceFromCache: function(filename) {
 
-        LanguageParser.prototype.loadSourceFromCache.call(this, resource);
+        LanguageParser.prototype.loadSourceFromCache.call(this, filename);
 
         if (this.cacheData !== null && this.transform.options.nomap !== true) {
-            this.sourceCode = fs.readFileSync(resource, 'UTF-8').replace('\r\n', '\n');
+            this.sourceCode = fs.readFileSync(filename, 'UTF-8').replace('\r\n', '\n');
         }
     },
 };

@@ -40,10 +40,10 @@ module AdriaTransform = proto (Transform) {
      * populated by globals node, names of application-wide globals
      */
     globals: null,
-
     requires: null,
-    requiresDone: null,
     modules: null,
+    resources: null,
+    requiresDone: null,
     sourceCode: null,
     protoParser: null,
 
@@ -53,6 +53,7 @@ module AdriaTransform = proto (Transform) {
 
         this.globals        = new util.Set();
         this.requires       = new util.Set();
+        this.resources      = new util.Set();
         this.requiresDone   = new util.Set();
         this.modules        = [ ];
         this.sourceCode     = { };
@@ -158,6 +159,7 @@ module AdriaTransform = proto (Transform) {
 
         this.requires = this.requires.merge(parser.resultData.requires);
         this.globals = this.globals.merge(parser.resultData.globals);
+        this.resources = this.resources.merge(parser.resultData.resources);
 
         // push module after all dependencies have been resolved
 
@@ -173,11 +175,12 @@ module AdriaTransform = proto (Transform) {
         var tpl = new Template();
         tpl.assign('globals', this.globals.toArray());
         tpl.assign('enableAssert', this.options.assert);
+        tpl.assign('platform', this.options.platform);
 
         // wrap with application and merge
 
-        var fwNode, moduleNode;
-        var fw = tpl.fetchFile('adria/framework.' + this.options.platform + '.tpl');
+        var fwNode, tmpNode;
+        var fw = tpl.fetchFile('adria/framework.tpl');
 
         node.add('(function() {\n');
 
@@ -190,11 +193,20 @@ module AdriaTransform = proto (Transform) {
         fwNode = node.add(new SourceNode(1, 0, 'adria-framework.js', fw));
         fwNode.setSourceContent('adria-framework.js', fw);
 
-        for (var id in this.modules) {
-            var module = this.modules[id];
+        // merge resources
 
-            moduleNode = node.add(new SourceNode(null, null, module.filename, module.result));
-            moduleNode.setSourceContent(module.filename, module.sourceCode);
+        for (var fileName in this.resources.data) {
+            var contents = fs.readFileSync(this.options.basePath + fileName, 'UTF-8');
+            var wrapped = 'resource(\'' + fileName + '\', \'' + contents.jsify("'") + '\');\n';
+            tmpNode = node.add(new SourceNode(null, null, fileName, wrapped));
+            tmpNode.setSourceContent(fileName, contents);
+        }
+
+        // merge modules
+
+        for (var id, module in this.modules) {
+            tmpNode = node.add(new SourceNode(null, null, module.filename, module.result));
+            tmpNode.setSourceContent(module.filename, module.sourceCode);
         }
 
         node.add('\n})();');

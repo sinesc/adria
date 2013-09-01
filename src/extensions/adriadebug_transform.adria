@@ -20,6 +20,7 @@
  * IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
+var fs = require('fs');
 var AdriaTransform = require('./adria_transform');
 var AdriaDebugParser = require('./adriadebug_parser');
 
@@ -38,7 +39,7 @@ module AdriaDebugTransform = proto(AdriaTransform) {
         this.options.nocache = true;
     },
 
-    process: function() {
+    run: function() {
 
         // create a prototype parser to clone from (to avoid training overhead)
 
@@ -68,7 +69,7 @@ module AdriaDebugTransform = proto(AdriaTransform) {
         // merge and return
 
         if (this.options['outFile'] !== null) {
-            fs.writeFileSync(this.options['outFile'], result.join('\n'));
+            fs.writeFileSync(options.basePath + this.options.outFile, result.join('\n'));
         } else {
             process.stdout.write(result.join('\n'));
         }

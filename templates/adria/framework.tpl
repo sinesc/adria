@@ -1,43 +1,31 @@
-/**
- * application construction function. becomes application reference just *prior* to construction.
- * allows use of application-depending objects within application constructor
- */
 var application;
-
-/**
- * application-wide module importer
- */
-var __require;
-
-/**
- * hidden module registration function (shadowed by module parameter)
- */
+var <if platform == 'node'>__</if>require;
+var resource;
 var module;<if enableAssert>
-
-/**
- * application-wide assertion support
- */
 var assert;</if><if globals.length != 0>
-
-/**
- * application defined globals
- */
 var <each global in globals><global><if ! each.last>, </if></each>;</if>
-
-/**
- * module loader
- */
 (function() {
+    var resources = { };
+    var modules = { };
+    var getResource = function(name) {<if enableAssert>
+        if (resources[name] === undefined) {
+            throw Error("missing resource " + name);
+        }
+        </if>
+        return resources[name];
+    };
     var Module = function(name, func) {
         this.name = name;
         this.exports = { };
-        func(this);
+        func(this, getResource);
     };
     Module.prototype.exports = null;
     Module.prototype.name = '';
-    var modules = { };
     module = function(name, func) {
         modules[name] = new Module(name, func);
+    };
+    resource = function(name, data) {
+        resources[name] = data;
     };
     application = function(Constructor /*, params... */) {
         function Application() {
@@ -49,7 +37,7 @@ var <each global in globals><global><if ! each.last>, </if></each>;</if>
         args[0] = null;
         return new (Function.prototype.bind.apply(Application, args));
     };
-    __require = function(file) {<if enableAssert>
+    <if platform == 'node'>__</if>require = function(file) {<if enableAssert>
         if (modules[file] === undefined) {
             throw Error("missing dependency " + file);
         }

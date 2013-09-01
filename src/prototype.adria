@@ -21,16 +21,41 @@
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-var firstToUpper = function(match1) {
-    return match1.replace('_', '').toUpperCase();
-};
+/**
+ * convert snake-cast to camel-case, i.e. test_function to testFunction or TestFunction
+ *
+ * @param upperFirst if true, uppercase first letter as well
+ * @return string
+ */
+String::snakeToCamel = (function() {
 
-String::snakeToCamel = function(upperFirst) {
+    var firstToUpper = function(match1) {
+        return match1.replace('_', '').toUpperCase();
+    };
 
-    if (upperFirst) {
-        return this.replace(/((?:^|\_)[a-z])/g, firstToUpper);
+    return function snakeToCamel(upperFirst) {
+
+        if (upperFirst) {
+            return this.replace(/((?:^|\_)[a-z])/g, firstToUpper);
+        } else {
+            return this.replace(/(\_[a-z])/g, firstToUpper);
+        }
+    };
+
+})();
+
+/**
+ * escape string for use in javascript source code
+ * @param quoteType either " or ', string will not be enclosed, just be escaped for use in given quote-type, omit parameter to escape for both quote-types
+ */
+String::jsify = function(quoteType) {
+
+    if (quoteType === "'") {
+        return this.replace(/([\\'])/g, "\\$1").replace(/\r?\n/g, '\\n\\\n').replace(/\0/g, "\\0");
+    } else if (quoteType === '"') {
+        return this.replace(/([\\"])/g, "\\$1").replace(/\r?\n/g, '\\\n').replace(/\0/g, "\\0");
     } else {
-        return this.replace(/(\_[a-z])/g, firstToUpper);
+        return this.replace(/([\\"'])/g, "\\$1").replace(/\r?\n/g, '\\\n').replace(/\0/g, "\\0");
     }
 };
 
