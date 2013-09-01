@@ -4,7 +4,7 @@
  */
 
 object_literal_item {
-    entry -> ident:key -> ":"
+    entry -> name:key -> ":"
     entry -> string:key -> ":"
     ":" -> literal_expression:value -> return
 }
@@ -95,6 +95,15 @@ resource_literal {
 }
 
 /*
+ * parent
+ */
+
+parent_literal {
+    // this is really just a function, but it has to be evaluable at compilation time
+    entry -> "parent" -> return
+}
+
+/*
  * literal groups
  */
 
@@ -114,6 +123,7 @@ base_literal {
     entry -> "(":brace -> proto_literal:proto -> ")":brace -> return
     entry -> "(":brace -> generator_literal:function -> ")":brace -> return
     entry -> require_literal:require -> return
+    entry -> parent_literal:parent -> return
     entry -> resource_literal:resource -> return
 }
 

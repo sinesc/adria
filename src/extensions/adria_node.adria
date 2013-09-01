@@ -20,7 +20,6 @@
  * IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-var assert = require('assert');
 var path = require('path');
 var SourceNode = require('source-map').SourceNode;
 var LanguageParser = require('../language_parser');
@@ -217,36 +216,49 @@ export Module = proto (AdriaNode) {
 
         var parser = this.parser();
 
-        this.nl(1);
+        if (parser.transform.options['no-framework'] === false) {
+            this.nl(1);
+        }
 
         var code = AdriaNode->toSourceNode();
         var locals = this.locals.toArray();
         var exports = this.exports.toArray();
         var file = parser.file;
+        var result;
 
-        var result = this.csn('module(\'' + parser.moduleName + '\', function(module, resource) {' + this.nl());
+        if (parser.transform.options['no-framework'] === false) {
 
-        // tweak: commonJS module.exports shortcut
+            result = this.csn('module(\'' + parser.moduleName + '\', function(module, resource) {' + this.nl());
 
-        if (parser.transform.options['tweak-exports']) {
-            result.add('var exports = module.exports;' + this.nl());
+            // tweak: commonJS module.exports shortcut
+
+            if (parser.transform.options['tweak-exports']) {
+                result.add('var exports = module.exports;' + this.nl());
+            }
+
+            if (locals.length > 0) {
+                result.add('var ' + locals.join(', ') + ';' + this.nl());
+            }
+
+            result.add(code);
+
+            if (parser.transform.options['no-framework'] === false) {
+
+                if (this.moduleExport !== null) {
+                    result.add('module.exports = ' + this.moduleExport + ';' + this.nl());
+                }
+
+                for (var id in exports) {
+                    result.add('module.exports.' + exports[id] + ' = ' + exports[id] + ';' + this.nl());
+                }
+
+                result.add(this.nl(-1) + '});' + this.nl());
+            }
+
+        } else {
+
+            result = this.csn(code);
         }
-
-        if (locals.length > 0) {
-            result.add('var ' + locals.join(', ') + ';' + this.nl());
-        }
-
-        result.add(code);
-
-        if (this.moduleExport !== null) {
-            result.add('module.exports = ' + this.moduleExport + ';' + this.nl());
-        }
-
-        for (var id in exports) {
-            result.add('module.exports.' + exports[id] + ' = ' + exports[id] + ';' + this.nl());
-        }
-
-        result.add(this.nl(-1) + '});' + this.nl());
 
         return result;
     },
@@ -1053,13 +1065,13 @@ export RequireLiteral = proto (AdriaNode) {
 
         if (options.platform === 'node' && this.isRelativePath(moduleName)) {
 
-            moduleName = this.makeBaseRelative(moduleName);
+            moduleName = util.normalizeExtension(this.makeBaseRelative(moduleName), options.fileExt);
             parser.resultData.requires.add(moduleName);
             requireFunction = '__require';
 
         } else if (options.platform !== 'node') {
 
-            moduleName = this.makeBaseRelative(moduleName);
+            moduleName = util.normalizeExtension(this.makeBaseRelative(moduleName), options.fileExt);
             parser.resultData.requires.add(moduleName);
         }
 
@@ -1132,6 +1144,13 @@ export GlobalDef = proto (AdriaNode) {
     },
 };
 
+export ParentLiteral = proto (AdriaNode) {
+
+    toSourceNode: function() {
+        return this.csn('(Object.getPrototypeOf(this.constructor.prototype).constructor)');
+    }
+};
+
 export Ident = proto (AdriaNode) {
 
     toSourceNode: function() {
@@ -1167,37 +1186,3 @@ export VarDef = proto (AdriaNode) {
     },
 };
 
-/*
- * parent accessor
- */
-/*
-var ParentCall = AdriaNode('parent_call');
-
-ParentCall.prototype.toString = function() {
-
-    var node = this.ancestor(null, 'assignment|proto_literal');
-
-    if (node.isNode()) {
-
-        var funcNode = this.ancestor('function', 'function_literal');
-        var params = this.get('param_list').toString();
-
-        if (node.value === 'proto_literal') {
-
-            var parentName = node.get('parent').toString();
-            return (parentName !== '' ? parentName : 'Object') + '.prototype.' + funcNode.name + '.call(this' + (params !== '' ? ', ' + params : '') + ')';
-
-        } else if (node.value === 'assignment') {
-
-            var ownName = node.get('name').toString();
-            ownName = ownName.slice(0, ownName.lastIndexOf('.prototype'));
-            //ownName = ownName.slice(ownName.lastIndexOf('.') + 1);
-
-            return 'Object.getPrototypeOf(' + ownName + '.prototype).' + funcNode.name + '.call(this' + (params !== '' ? ', ' + params : '') + ')';
-        }
-
-    }
-
-    throw new Error('usage of parent keyword restricted to prototype methods');
-};
-*/

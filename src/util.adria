@@ -22,7 +22,6 @@
  */
 var sysutil = require('util');
 var crypto = require('crypto');
-var assert = require('assert');
 
 /**
  * timed debug log
@@ -389,6 +388,14 @@ export processOptions = function(context, handlers) {
  */
 export home = function() {
     return process.env[process.platform == 'win32' ? 'USERPROFILE' : 'HOME'];
+};
+
+export normalizeExtension = function(fullname, defaultExtension) {
+
+    var slash = fullname.lastIndexOf('/');
+    var baseName = slash > 0 ? fullname.slice(slash) : fullname;
+
+    return (baseName.indexOf('.') > -1 ? fullname : fullname + defaultExtension);
 };
 
 /**

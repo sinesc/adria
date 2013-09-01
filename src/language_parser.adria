@@ -21,7 +21,6 @@
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 var fs = require('fs');
-var assert = require('assert');
 var XRegExp = require('./xregexp');
 var util = require('./util');
 var Parser = require('./parser');
@@ -287,14 +286,14 @@ module LanguageParser = proto(Parser) {
 
         // try to load from cache
 
-        if (this.transform.options.nocache !== true && this.cacheData === null) {
+        if (this.transform.options['no-cache'] !== true && this.cacheData === null) {
             this.loadSourceFromCache(filename);
         }
 
         // check if now available from cache, if not, parse
 
         if (this.cacheData === null) {
-            this.setSource(filename, fs.readFileSync(filename, 'UTF-8').replace("var assert = require('assert');", '')); //!todo temporary hack for node sources
+            this.setSource(filename, fs.readFileSync(filename, 'UTF-8'));
         }
     },
 
@@ -314,7 +313,7 @@ module LanguageParser = proto(Parser) {
 
         // write new data to cache (don't write it again if it just came from the cache)
 
-        if (this.transform.options.nocache !== true && this.cacheData === null && fs.existsSync(this.file)) {
+        if (this.transform.options['no-cache'] !== true && this.cacheData === null && fs.existsSync(this.file)) {
 
             this.transform.cache.insert(this.file, {
                 base        : this.captureTree.toJSON(),

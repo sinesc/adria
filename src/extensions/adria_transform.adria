@@ -62,10 +62,12 @@ module AdriaTransform = proto (Transform) {
 
         var options = this.options;
 
-        options.nolink = (options.nolink === undefined ? false : options.nolink);
-        options.nomap = (options.nomap === undefined ? false : options.nomap);
+        options['no-link'] = (options['no-link'] === undefined ? false : options['no-link']);
+        options['no-map'] = (options['no-map'] === undefined ? false : options['no-map']);
+        options['no-framework'] = (options['no-framework'] === undefined ? false : options['no-framework']);
         options.fileExt = (options.fileExt === undefined ? '.adria' : options.fileExt);
         options.platform = (options.platform === undefined ? 'web' : options.platform);
+
         options['tweak-exports'] = (options['tweak-exports'] === undefined ? false : options['tweak-exports']);
         options['tweak-nostrict'] = (options['tweak-nostrict'] === undefined ? false : options['tweak-nostrict']);
     },
@@ -85,25 +87,21 @@ module AdriaTransform = proto (Transform) {
     },
 
     /**
-     * returns the full filename of given module
+     * returns the full path to given filename
      *
-     * @param moduleName
+     * @param filename
      * @return absolute path (including filename) to module
      */
-    resolveModule: function(moduleName) {
+    resolveModule: function(filename) {
 
-        var slash = moduleName.lastIndexOf('/');
-        var baseName = slash > 0 ? moduleName.slice(slash) : moduleName;
-
-        var filename = (baseName.indexOf('.') > -1 ? moduleName : moduleName + this.options.fileExt);
         var fullname = this.options.basePath + filename;
-        var current = fullname;
 
         // check if file exists, if not scan path
 
         if (fs.existsSync(fullname) !== true) {
 
             var paths = this.options.paths;
+            var current = fullname;
 
             for (var id in paths) {
 
@@ -136,7 +134,7 @@ module AdriaTransform = proto (Transform) {
         if (data === undefined) {
             parser.loadSource(this.resolveModule(moduleName));
         } else {
-            parser.setSource(moduleName + this.options.fileExt, data);
+            parser.setSource(moduleName, data);
         }
 
         // generate result
@@ -171,35 +169,42 @@ module AdriaTransform = proto (Transform) {
      */
     generateOutputTree: function() {
 
+        var options = this.options;
         var node = new SourceNode(null, null);
         var tpl = new Template();
+
         tpl.assign('globals', this.globals.toArray());
-        tpl.assign('enableAssert', this.options.assert);
-        tpl.assign('platform', this.options.platform);
+        tpl.assign('enableAssert', options.assert);
+        tpl.assign('platform', options.platform);
 
         // wrap with application and merge
 
-        var fwNode, tmpNode;
-        var fw = tpl.fetchFile('adria/framework.tpl');
+        var fw, tmpNode;
 
-        node.add('(function() {\n');
+        if (options['no-framework'] === false) {
+            node.add('(function() {\n');
+        }
 
         // nostrict tweak
 
-        if (this.options['tweak-nostrict'] !== true) {
+        if (options['tweak-nostrict'] !== true) {
             node.add('"use strict";\n');
         }
 
-        fwNode = node.add(new SourceNode(1, 0, 'adria-framework.js', fw));
-        fwNode.setSourceContent('adria-framework.js', fw);
+        if (options['no-framework'] === false) {
 
-        // merge resources
+            fw = tpl.fetchFile('adria/framework.tpl');
+            tmpNode = node.add(new SourceNode(1, 0, 'adria-framework.js', fw));
+            tmpNode.setSourceContent('adria-framework.js', fw);
 
-        for (var fileName in this.resources.data) {
-            var contents = fs.readFileSync(this.options.basePath + fileName, 'UTF-8');
-            var wrapped = 'resource(\'' + fileName + '\', \'' + contents.jsify("'") + '\');\n';
-            tmpNode = node.add(new SourceNode(null, null, fileName, wrapped));
-            tmpNode.setSourceContent(fileName, contents);
+            // merge resources
+
+            for (var fileName in this.resources.data) {
+                var contents = fs.readFileSync(options.basePath + fileName, 'UTF-8');
+                var wrapped = 'resource(\'' + fileName + '\', \'' + contents.jsify("'") + '\');\n';
+                tmpNode = node.add(new SourceNode(null, null, fileName, wrapped));
+                tmpNode.setSourceContent(fileName, contents);
+            }
         }
 
         // merge modules
@@ -209,7 +214,10 @@ module AdriaTransform = proto (Transform) {
             tmpNode.setSourceContent(module.filename, module.sourceCode);
         }
 
-        node.add('\n})();');
+        if (options['no-framework'] === false) {
+            node.add('\n})();');
+        }
+
         return node;
     },
 
@@ -226,13 +234,13 @@ module AdriaTransform = proto (Transform) {
         // process piped data and initial files
 
         if (this.piped !== undefined) {
-            this.buildModule('main', this.piped);
+            this.buildModule('main' + this.options.fileExt, this.piped);
         }
 
         var files = this.options.files;
 
         for (var id in files) {
-            this.buildModule(files[id].stripPostfix(this.options.fileExt));
+            this.buildModule(util.normalizeExtension(files[id], this.options.fileExt));
         }
 
         // result
@@ -245,12 +253,12 @@ module AdriaTransform = proto (Transform) {
             var jsFile = options.basePath + options.outFile;
             var mapFile = jsFile.stripPostfix('.js') + '.map';
 
-            if (options.nomap !== true) {
+            if (options['no-map'] !== true) {
 
                 var result = node.toStringWithSourceMap({ file: options.outFile });
                 var mapLink = '\n//@ sourceMappingURL=' + path.relative(options.basePath, mapFile);
 
-                fs.writeFileSync(jsFile, result.code + (options.nolink ? '' : mapLink));
+                fs.writeFileSync(jsFile, result.code + (options['no-link'] ? '' : mapLink));
                 fs.writeFileSync(mapFile, result.map);
 
             } else {

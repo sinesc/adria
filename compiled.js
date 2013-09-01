@@ -36,7 +36,7 @@ var module;
         return modules[file].exports;
     }; 
 })();
-module('src/prototype', function(module, resource) {
+module('src/prototype.adria', function(module, resource) {
     String.prototype.snakeToCamel = (function() {
         var firstToUpper;
         firstToUpper = function firstToUpper(match1) {
@@ -202,8 +202,8 @@ module('src/prototype', function(module, resource) {
     };
     
 });
-module('src/util', function(module, resource) {
-    var sysutil, crypto, DebugLog, debugLog, indent, enabled, log, dump, Enumeration, Enum, Set, processOptions, home, md5;
+module('src/util.adria', function(module, resource) {
+    var sysutil, crypto, DebugLog, debugLog, indent, enabled, log, dump, Enumeration, Enum, Set, processOptions, home, normalizeExtension, md5;
     sysutil = require('util');
     
     crypto = require('crypto');
@@ -533,6 +533,17 @@ module('src/util', function(module, resource) {
         
     };
     
+    normalizeExtension = function normalizeExtension(fullname, defaultExtension) {
+        var slash, baseName;
+        slash = fullname.lastIndexOf('/');
+        
+        baseName = slash > 0 ? fullname.slice(slash) : fullname;
+        
+        return (baseName.indexOf('.') > -1 ? fullname : fullname + defaultExtension);
+        
+        
+    };
+    
     md5 = function md5(input) {
         var md5sum;
         md5sum = crypto.createHash('md5');
@@ -549,10 +560,11 @@ module('src/util', function(module, resource) {
     module.exports.Set = Set;
     module.exports.processOptions = processOptions;
     module.exports.home = home;
+    module.exports.normalizeExtension = normalizeExtension;
     module.exports.md5 = md5;
     
 });
-module('src/xregexp', function(module, resource) {
+module('src/xregexp.adria', function(module, resource) {
     var XRegExp;
     XRegExp = require('xregexp').XRegExp;
     
@@ -570,9 +582,9 @@ module('src/xregexp', function(module, resource) {
     module.exports = XRegExp;
     
 });
-module('src/template/tags', function(module, resource) {
+module('src/template/tags.adria', function(module, resource) {
     var Util, Tags;
-    Util = __require('src/util');
+    Util = __require('src/util.adria');
     
     Tags = function Tags() {
         this.ifDepth = 0;
@@ -752,13 +764,13 @@ module('src/template/tags', function(module, resource) {
     module.exports = Tags;
     
 });
-module('src/template', function(module, resource) {
+module('src/template.adria', function(module, resource) {
     var XRegExp, fs, Tags, Template;
-    XRegExp = __require('src/xregexp');
+    XRegExp = __require('src/xregexp.adria');
     
     fs = require('fs');
     
-    Tags = __require('src/template/tags');
+    Tags = __require('src/template/tags.adria');
     
     Template = (function() {
         function Template(tags, delimiterOpen, delimiterClose) {
@@ -855,13 +867,13 @@ module('src/template', function(module, resource) {
     module.exports = Template;
     
 });
-module('src/cache', function(module, resource) {
+module('src/cache.adria', function(module, resource) {
     var fs, path, util, Cache, isFile;
     fs = require('fs');
     
     path = require('path');
     
-    util = __require('src/util');
+    util = __require('src/util.adria');
     
     Cache = (function() {
         function Cache() {
@@ -983,11 +995,11 @@ module('src/cache', function(module, resource) {
     module.exports = Cache;
     
 });
-module('src/transform', function(module, resource) {
+module('src/transform.adria', function(module, resource) {
     var util, Cache, Transform;
-    util = __require('src/util');
+    util = __require('src/util.adria');
     
-    Cache = __require('src/cache');
+    Cache = __require('src/cache.adria');
     
     Transform = (function() {
         function Transform(piped) {
@@ -995,7 +1007,7 @@ module('src/transform', function(module, resource) {
             this.piped = piped;
             this.initOptions();
             this.processOptions();
-            if (this.options.nocache !== true) {
+            if (this.options['no-cache'] !== true) {
                 this.cache = new Cache();
                 
             }
@@ -1070,7 +1082,7 @@ module('src/transform', function(module, resource) {
     module.exports = Transform;
     
 });
-module('src/parser/generator_state', function(module, resource) {
+module('src/parser/generator_state.adria', function(module, resource) {
     var GeneratorState;
     GeneratorState = (function() {
         function GeneratorState() {}
@@ -1117,9 +1129,9 @@ module('src/parser/generator_state', function(module, resource) {
     module.exports = GeneratorState;
     
 });
-module('src/parser/definition/node', function(module, resource) {
+module('src/parser/definition/node.adria', function(module, resource) {
     var Enum, Type, StackItem, Node;
-    Enum = __require('src/util').Enum;
+    Enum = __require('src/util.adria').Enum;
     
     Type = Enum([ 'NONE', 'BLOCK', 'JUMP', 'RETURN' ]);
     
@@ -1364,9 +1376,9 @@ module('src/parser/definition/node', function(module, resource) {
     module.exports.StackItem = StackItem;
     
 });
-module('src/parser/definition', function(module, resource) {
+module('src/parser/definition.adria', function(module, resource) {
     var Node, Definition;
-    Node = __require('src/parser/definition/node');
+    Node = __require('src/parser/definition/node.adria');
     
     Definition = (function() {
         function Definition(initialBlock) {
@@ -1414,17 +1426,17 @@ module('src/parser/definition', function(module, resource) {
     module.exports.Node = Node;
     
 });
-module('src/parser', function(module, resource) {
+module('src/parser.adria', function(module, resource) {
     var path, XRegExp, util, GeneratorState, Definition, Parser;
     path = require('path');
     
-    XRegExp = __require('src/xregexp');
+    XRegExp = __require('src/xregexp.adria');
     
-    util = __require('src/util');
+    util = __require('src/util.adria');
     
-    GeneratorState = __require('src/parser/generator_state');
+    GeneratorState = __require('src/parser/generator_state.adria');
     
-    Definition = __require('src/parser/definition');
+    Definition = __require('src/parser/definition.adria');
     
     Parser = (function() {
         function Parser() {
@@ -1597,7 +1609,7 @@ module('src/parser', function(module, resource) {
     module.exports.Definition = Definition;
     
 });
-module('src/tokenizer/result', function(module, resource) {
+module('src/tokenizer/result.adria', function(module, resource) {
     var Position, Token, Result;
     Position = (function() {
         function Position(col, row) {
@@ -1665,13 +1677,13 @@ module('src/tokenizer/result', function(module, resource) {
     module.exports = Result;
     
 });
-module('src/tokenizer', function(module, resource) {
+module('src/tokenizer.adria', function(module, resource) {
     var XRegExp, Enum, Result, Tokenizer;
-    XRegExp = __require('src/xregexp');
+    XRegExp = __require('src/xregexp.adria');
     
-    Enum = __require('src/util').Enum;
+    Enum = __require('src/util.adria').Enum;
     
-    Result = __require('src/tokenizer/result');
+    Result = __require('src/tokenizer/result.adria');
     
     Tokenizer = (function() {
         function Tokenizer(definition, extra) {
@@ -1877,7 +1889,7 @@ module('src/tokenizer', function(module, resource) {
     module.exports.Result = Result;
     
 });
-module('src/definition_parser/path', function(module, resource) {
+module('src/definition_parser/path.adria', function(module, resource) {
     var Path, PathElement;
     Path = (function() {
         function Path(sourceName, sourceCapture, sourceLabel, sourceCondition, targetName, targetCapture, targetLabel, targetCondition) {
@@ -1926,17 +1938,17 @@ module('src/definition_parser/path', function(module, resource) {
     module.exports = Path;
     
 });
-module('src/definition_parser', function(module, resource) {
+module('src/definition_parser.adria', function(module, resource) {
     var XRegExp, util, Parser, Tokenizer, Path, DefinitionParser;
-    XRegExp = __require('src/xregexp');
+    XRegExp = __require('src/xregexp.adria');
     
-    util = __require('src/util');
+    util = __require('src/util.adria');
     
-    Parser = __require('src/parser');
+    Parser = __require('src/parser.adria');
     
-    Tokenizer = __require('src/tokenizer');
+    Tokenizer = __require('src/tokenizer.adria');
     
-    Path = __require('src/definition_parser/path');
+    Path = __require('src/definition_parser/path.adria');
     
     DefinitionParser = (function(___parent) {
         function DefinitionParser() {
@@ -2138,11 +2150,11 @@ module('src/definition_parser', function(module, resource) {
     module.exports = DefinitionParser;
     
 });
-module('src/language_parser/capture_node', function(module, resource) {
+module('src/language_parser/capture_node.adria', function(module, resource) {
     var SourceNode, Template, CaptureNode, stackDiff;
     SourceNode = require('source-map').SourceNode;
     
-    Template = __require('src/template');
+    Template = __require('src/template.adria');
     
     CaptureNode = (function() {
         function CaptureNode(key, value) {
@@ -2179,13 +2191,13 @@ module('src/language_parser/capture_node', function(module, resource) {
             
             
         };
-        CaptureNode.prototype.fromJSON = function fromJSON(json, parent, typeMapper) {
+        CaptureNode.prototype.fromJSON = function fromJSON(json, parentNode, typeMapper) {
             var Type, result, jsonChildren, resultChildren, id;
             Type = typeMapper(null, json._);
             
             result = new Type(json.k, json.v);
             
-            result.parent = parent;
+            result.parent = parentNode;
             result.tpl = json.t;
             result.row = json.r;
             result.col = json.c;
@@ -2565,19 +2577,19 @@ module('src/language_parser/capture_node', function(module, resource) {
     module.exports = CaptureNode;
     
 });
-module('src/language_parser', function(module, resource) {
+module('src/language_parser.adria', function(module, resource) {
     var fs, XRegExp, util, Parser, DefinitionParser, CaptureNode, LanguageParser;
     fs = require('fs');
     
-    XRegExp = __require('src/xregexp');
+    XRegExp = __require('src/xregexp.adria');
     
-    util = __require('src/util');
+    util = __require('src/util.adria');
     
-    Parser = __require('src/parser');
+    Parser = __require('src/parser.adria');
     
-    DefinitionParser = __require('src/definition_parser');
+    DefinitionParser = __require('src/definition_parser.adria');
     
-    CaptureNode = __require('src/language_parser/capture_node');
+    CaptureNode = __require('src/language_parser/capture_node.adria');
     
     LanguageParser = (function(___parent) {
         function LanguageParser(transform) {
@@ -2730,12 +2742,12 @@ module('src/language_parser', function(module, resource) {
             
         };
         LanguageParser.prototype.loadSource = function loadSource(filename) {
-            if (this.transform.options.nocache !== true && this.cacheData === null) {
+            if (this.transform.options['no-cache'] !== true && this.cacheData === null) {
                 this.loadSourceFromCache(filename);
                 
             }
             if (this.cacheData === null) {
-                this.setSource(filename, fs.readFileSync(filename, 'UTF-8').replace("var assert = require('assert');", ''));
+                this.setSource(filename, fs.readFileSync(filename, 'UTF-8'));
                 
             }
             
@@ -2746,7 +2758,7 @@ module('src/language_parser', function(module, resource) {
             InitialType = this.mapType('', this.definition.initialBlock);
             
             result = InitialType.prototype[this.outputMethod].call(this.captureTree);
-            if (this.transform.options.nocache !== true && this.cacheData === null && fs.existsSync(this.file)) {
+            if (this.transform.options['no-cache'] !== true && this.cacheData === null && fs.existsSync(this.file)) {
                 this.transform.cache.insert(this.file, { base: this.captureTree.toJSON() });
                 
             }
@@ -2763,19 +2775,19 @@ module('src/language_parser', function(module, resource) {
     module.exports = LanguageParser;
     
 });
-module('src/extensions/adria_node', function(module, resource) {
-    var path, SourceNode, LanguageParser, CaptureNode, Transform, util, Set, AdriaNode, AccessOperationProtocall, ConstLiteral, Scope, YieldingScope, Module, InvokeOperation, FunctionLiteral, GeneratorLiteral, FunctionStatement, GeneratorStatement, FunctionParamList, BaseLiteral, DoWhileStatement, WhileStatement, IfStatement, SwitchStatement, ForCountStatement, ForInStatement, ObjectLiteral, ProtoBodyProperty, ArrayLiteral, Expression, ProtoLiteral, ProtoStatement, ProtoBodyItem, ReturnStatement, YieldStatement, catchSpecificsId, CatchSpecifics, CatchAll, TryCatchFinallyStatement, ThrowStatement, AssertStatement, Statement, InterruptibleStatement, ResourceLiteral, RequireLiteral, ModuleStatement, ExportStatement, GlobalDef, Ident, Name, VarDef;
+module('src/extensions/adria_node.adria', function(module, resource) {
+    var path, SourceNode, LanguageParser, CaptureNode, Transform, util, Set, AdriaNode, AccessOperationProtocall, ConstLiteral, Scope, YieldingScope, Module, InvokeOperation, FunctionLiteral, GeneratorLiteral, FunctionStatement, GeneratorStatement, FunctionParamList, BaseLiteral, DoWhileStatement, WhileStatement, IfStatement, SwitchStatement, ForCountStatement, ForInStatement, ObjectLiteral, ProtoBodyProperty, ArrayLiteral, Expression, ProtoLiteral, ProtoStatement, ProtoBodyItem, ReturnStatement, YieldStatement, catchSpecificsId, CatchSpecifics, CatchAll, TryCatchFinallyStatement, ThrowStatement, AssertStatement, Statement, InterruptibleStatement, ResourceLiteral, RequireLiteral, ModuleStatement, ExportStatement, GlobalDef, ParentLiteral, Ident, Name, VarDef;
     path = require('path');
     
     SourceNode = require('source-map').SourceNode;
     
-    LanguageParser = __require('src/language_parser');
+    LanguageParser = __require('src/language_parser.adria');
     
     CaptureNode = LanguageParser.CaptureNode;
     
-    Transform = __require('src/transform');
+    Transform = __require('src/transform.adria');
     
-    util = __require('src/util');
+    util = __require('src/util.adria');
     
     Set = util.Set;
     
@@ -2978,7 +2990,10 @@ module('src/extensions/adria_node', function(module, resource) {
             var parser, code, locals, exports, file, result, id;
             parser = this.parser();
             
-            this.nl(1);
+            if (parser.transform.options['no-framework'] === false) {
+                this.nl(1);
+                
+            }
             code = AdriaNode.prototype.toSourceNode.call(this);
             
             locals = this.locals.toArray();
@@ -2987,26 +3002,35 @@ module('src/extensions/adria_node', function(module, resource) {
             
             file = parser.file;
             
-            result = this.csn('module(\'' + parser.moduleName + '\', function(module, resource) {' + this.nl());
             
-            if (parser.transform.options['tweak-exports']) {
-                result.add('var exports = module.exports;' + this.nl());
+            if (parser.transform.options['no-framework'] === false) {
+                result = this.csn('module(\'' + parser.moduleName + '\', function(module, resource) {' + this.nl());
+                if (parser.transform.options['tweak-exports']) {
+                    result.add('var exports = module.exports;' + this.nl());
+                    
+                }
+                if (locals.length > 0) {
+                    result.add('var ' + locals.join(', ') + ';' + this.nl());
+                    
+                }
+                result.add(code);
+                if (parser.transform.options['no-framework'] === false) {
+                    if (this.moduleExport !== null) {
+                        result.add('module.exports = ' + this.moduleExport + ';' + this.nl());
+                        
+                    }
+                    for (id in exports) {
+                        result.add('module.exports.' + exports[id] + ' = ' + exports[id] + ';' + this.nl());
+                        
+                    }
+                    result.add(this.nl(-1) + '});' + this.nl());
+                    
+                }
+                
+            } else {
+                result = this.csn(code);
                 
             }
-            if (locals.length > 0) {
-                result.add('var ' + locals.join(', ') + ';' + this.nl());
-                
-            }
-            result.add(code);
-            if (this.moduleExport !== null) {
-                result.add('module.exports = ' + this.moduleExport + ';' + this.nl());
-                
-            }
-            for (id in exports) {
-                result.add('module.exports.' + exports[id] + ' = ' + exports[id] + ';' + this.nl());
-                
-            }
-            result.add(this.nl(-1) + '});' + this.nl());
             return result;
             
             
@@ -4043,12 +4067,12 @@ module('src/extensions/adria_node', function(module, resource) {
             requireFunction = 'require';
             
             if (options.platform === 'node' && this.isRelativePath(moduleName)) {
-                moduleName = this.makeBaseRelative(moduleName);
+                moduleName = util.normalizeExtension(this.makeBaseRelative(moduleName), options.fileExt);
                 parser.resultData.requires.add(moduleName);
                 requireFunction = '__require';
                 
             } else if (options.platform !== 'node') {
-                moduleName = this.makeBaseRelative(moduleName);
+                moduleName = util.normalizeExtension(this.makeBaseRelative(moduleName), options.fileExt);
                 parser.resultData.requires.add(moduleName);
                 
             }
@@ -4160,6 +4184,23 @@ module('src/extensions/adria_node', function(module, resource) {
         return GlobalDef;
     })(AdriaNode);
     
+    ParentLiteral = (function(___parent) {
+        function ParentLiteral() {
+            ___parent.apply(this, arguments);
+        }
+        
+        ParentLiteral.prototype = Object.create(___parent.prototype);
+        ParentLiteral.prototype.constructor = ParentLiteral;
+        
+        ParentLiteral.prototype.toSourceNode = function toSourceNode() {
+            return this.csn('(Object.getPrototypeOf(this.constructor.prototype).constructor)');
+            
+            
+        };
+        
+        return ParentLiteral;
+    })(AdriaNode);
+    
     Ident = (function(___parent) {
         function Ident() {
             ___parent.apply(this, arguments);
@@ -4255,22 +4296,23 @@ module('src/extensions/adria_node', function(module, resource) {
     module.exports.ModuleStatement = ModuleStatement;
     module.exports.ExportStatement = ExportStatement;
     module.exports.GlobalDef = GlobalDef;
+    module.exports.ParentLiteral = ParentLiteral;
     module.exports.Ident = Ident;
     module.exports.Name = Name;
     module.exports.VarDef = VarDef;
     
 });
-module('src/extensions/adria_parser', function(module, resource) {
+module('src/extensions/adria_parser.adria', function(module, resource) {
     var fs, util, LanguageParser, AdriaNode, Tokenizer, AdriaParser;
     fs = require('fs');
     
-    util = __require('src/util');
+    util = __require('src/util.adria');
     
-    LanguageParser = __require('src/language_parser');
+    LanguageParser = __require('src/language_parser.adria');
     
-    AdriaNode = __require('src/extensions/adria_node');
+    AdriaNode = __require('src/extensions/adria_node.adria');
     
-    Tokenizer = __require('src/tokenizer');
+    Tokenizer = __require('src/tokenizer.adria');
     
     AdriaParser = (function(___parent) {
         function AdriaParser(transform) {
@@ -4308,6 +4350,7 @@ module('src/extensions/adria_parser', function(module, resource) {
                 'function',
                 'proto',
                 'property',
+                'parent',
                 'switch',
                 'case',
                 'require',
@@ -4396,7 +4439,7 @@ module('src/extensions/adria_parser', function(module, resource) {
         };
         AdriaParser.prototype.loadSourceFromCache = function loadSourceFromCache(filename) {
             LanguageParser.prototype.loadSourceFromCache.call(this, filename);
-            if (this.cacheData !== null && this.transform.options.nomap !== true) {
+            if (this.cacheData !== null && this.transform.options['no-map'] !== true) {
                 this.sourceCode = fs.readFileSync(filename, 'UTF-8').replace('\r\n', '\n');
                 
             }
@@ -4409,7 +4452,7 @@ module('src/extensions/adria_parser', function(module, resource) {
     module.exports = AdriaParser;
     
 });
-module('src/extensions/adria_transform', function(module, resource) {
+module('src/extensions/adria_transform.adria', function(module, resource) {
     var fs, path, SourceNode, Template, Transform, AdriaParser, util, AdriaTransform;
     fs = require('fs');
     
@@ -4417,13 +4460,13 @@ module('src/extensions/adria_transform', function(module, resource) {
     
     SourceNode = require('source-map').SourceNode;
     
-    Template = __require('src/template');
+    Template = __require('src/template.adria');
     
-    Transform = __require('src/transform');
+    Transform = __require('src/transform.adria');
     
-    AdriaParser = __require('src/extensions/adria_parser');
+    AdriaParser = __require('src/extensions/adria_parser.adria');
     
-    util = __require('src/util');
+    util = __require('src/util.adria');
     
     AdriaTransform = (function(___parent) {
         function AdriaTransform(piped) {
@@ -4437,8 +4480,9 @@ module('src/extensions/adria_transform', function(module, resource) {
             this.sourceCode = {  };
             options = this.options;
             
-            options.nolink = (options.nolink === undefined ? false : options.nolink);
-            options.nomap = (options.nomap === undefined ? false : options.nomap);
+            options['no-link'] = (options['no-link'] === undefined ? false : options['no-link']);
+            options['no-map'] = (options['no-map'] === undefined ? false : options['no-map']);
+            options['no-framework'] = (options['no-framework'] === undefined ? false : options['no-framework']);
             options.fileExt = (options.fileExt === undefined ? '.adria' : options.fileExt);
             options.platform = (options.platform === undefined ? 'web' : options.platform);
             options['tweak-exports'] = (options['tweak-exports'] === undefined ? false : options['tweak-exports']);
@@ -4471,20 +4515,14 @@ module('src/extensions/adria_transform', function(module, resource) {
             });
             
         };
-        AdriaTransform.prototype.resolveModule = function resolveModule(moduleName) {
-            var slash, baseName, filename, fullname, current, paths, id;
-            slash = moduleName.lastIndexOf('/');
-            
-            baseName = slash > 0 ? moduleName.slice(slash) : moduleName;
-            
-            filename = (baseName.indexOf('.') > -1 ? moduleName : moduleName + this.options.fileExt);
-            
+        AdriaTransform.prototype.resolveModule = function resolveModule(filename) {
+            var fullname, paths, current, id;
             fullname = this.options.basePath + filename;
-            
-            current = fullname;
             
             if (fs.existsSync(fullname) !== true) {
                 paths = this.options.paths;
+                
+                current = fullname;
                 
                 for (id in paths) {
                     current = this.options.basePath + paths[id] + filename;
@@ -4510,7 +4548,7 @@ module('src/extensions/adria_transform', function(module, resource) {
                 parser.loadSource(this.resolveModule(moduleName));
                 
             } else {
-                parser.setSource(moduleName + this.options.fileExt, data);
+                parser.setSource(moduleName, data);
                 
             }
             result = parser.output();
@@ -4537,31 +4575,38 @@ module('src/extensions/adria_transform', function(module, resource) {
             
         };
         AdriaTransform.prototype.generateOutputTree = function generateOutputTree() {
-            var node, tpl, fwNode, tmpNode, fw, fileName, contents, wrapped, id, module;
+            var options, node, tpl, fw, tmpNode, fileName, contents, wrapped, id, module;
+            options = this.options;
+            
             node = new SourceNode(null, null);
             
             tpl = new Template();
             
             tpl.assign('globals', this.globals.toArray());
-            tpl.assign('enableAssert', this.options.assert);
-            tpl.assign('platform', this.options.platform);
+            tpl.assign('enableAssert', options.assert);
+            tpl.assign('platform', options.platform);
             
-            fw = tpl.fetchFile('adria/framework.tpl');
-            
-            node.add('(function() {\n');
-            if (this.options['tweak-nostrict'] !== true) {
+            if (options['no-framework'] === false) {
+                node.add('(function() {\n');
+                
+            }
+            if (options['tweak-nostrict'] !== true) {
                 node.add('"use strict";\n');
                 
             }
-            fwNode = node.add(new SourceNode(1, 0, 'adria-framework.js', fw));
-            fwNode.setSourceContent('adria-framework.js', fw);
-            for (fileName in this.resources.data) {
-                contents = fs.readFileSync(this.options.basePath + fileName, 'UTF-8');
-                
-                wrapped = 'resource(\'' + fileName + '\', \'' + contents.jsify("'") + '\');\n';
-                
-                tmpNode = node.add(new SourceNode(null, null, fileName, wrapped));
-                tmpNode.setSourceContent(fileName, contents);
+            if (options['no-framework'] === false) {
+                fw = tpl.fetchFile('adria/framework.tpl');
+                tmpNode = node.add(new SourceNode(1, 0, 'adria-framework.js', fw));
+                tmpNode.setSourceContent('adria-framework.js', fw);
+                for (fileName in this.resources.data) {
+                    contents = fs.readFileSync(options.basePath + fileName, 'UTF-8');
+                    
+                    wrapped = 'resource(\'' + fileName + '\', \'' + contents.jsify("'") + '\');\n';
+                    
+                    tmpNode = node.add(new SourceNode(null, null, fileName, wrapped));
+                    tmpNode.setSourceContent(fileName, contents);
+                    
+                }
                 
             }
             for (id in this.modules) {
@@ -4570,7 +4615,10 @@ module('src/extensions/adria_transform', function(module, resource) {
                 tmpNode.setSourceContent(module.filename, module.sourceCode);
                 
             }
-            node.add('\n})();');
+            if (options['no-framework'] === false) {
+                node.add('\n})();');
+                
+            }
             return node;
             
             
@@ -4580,13 +4628,13 @@ module('src/extensions/adria_transform', function(module, resource) {
             this.protoParser = new AdriaParser(this);
             this.protoParser.trainSelf();
             if (this.piped !== undefined) {
-                this.buildModule('main', this.piped);
+                this.buildModule('main' + this.options.fileExt, this.piped);
                 
             }
             files = this.options.files;
             
             for (id in files) {
-                this.buildModule(files[id].stripPostfix(this.options.fileExt));
+                this.buildModule(util.normalizeExtension(files[id], this.options.fileExt));
                 
             }
             node = this.generateOutputTree();
@@ -4598,12 +4646,12 @@ module('src/extensions/adria_transform', function(module, resource) {
                 
                 mapFile = jsFile.stripPostfix('.js') + '.map';
                 
-                if (options.nomap !== true) {
+                if (options['no-map'] !== true) {
                     result = node.toStringWithSourceMap({ file: options.outFile });
                     
                     mapLink = '\n//@ sourceMappingURL=' + path.relative(options.basePath, mapFile);
                     
-                    fs.writeFileSync(jsFile, result.code + (options.nolink ? '' : mapLink));
+                    fs.writeFileSync(jsFile, result.code + (options['no-link'] ? '' : mapLink));
                     fs.writeFileSync(mapFile, result.map);
                     
                 } else {
@@ -4624,11 +4672,11 @@ module('src/extensions/adria_transform', function(module, resource) {
     module.exports = AdriaTransform;
     
 });
-module('src/extensions/adriadebug_parser', function(module, resource) {
+module('src/extensions/adriadebug_parser.adria', function(module, resource) {
     var AdriaParser, CaptureNode, XMLNode, AdriaDebugParser;
-    AdriaParser = __require('src/extensions/adria_parser');
+    AdriaParser = __require('src/extensions/adria_parser.adria');
     
-    CaptureNode = __require('src/language_parser/capture_node');
+    CaptureNode = __require('src/language_parser/capture_node.adria');
     
     XMLNode = (function(___parent) {
         function XMLNode() {
@@ -4687,13 +4735,13 @@ module('src/extensions/adriadebug_parser', function(module, resource) {
     module.exports = AdriaDebugParser;
     
 });
-module('src/extensions/adriadebug_transform', function(module, resource) {
+module('src/extensions/adriadebug_transform.adria', function(module, resource) {
     var fs, AdriaTransform, AdriaDebugParser, AdriaDebugTransform;
     fs = require('fs');
     
-    AdriaTransform = __require('src/extensions/adria_transform');
+    AdriaTransform = __require('src/extensions/adria_transform.adria');
     
-    AdriaDebugParser = __require('src/extensions/adriadebug_parser');
+    AdriaDebugParser = __require('src/extensions/adriadebug_parser.adria');
     
     AdriaDebugTransform = (function(___parent) {
         function AdriaDebugTransform(piped) {
@@ -4742,14 +4790,14 @@ module('src/extensions/adriadebug_transform', function(module, resource) {
     module.exports = AdriaDebugTransform;
     
 });
-module('main', function(module, resource) {
+module('main.adria', function(module, resource) {
     var util, AdriaTransform, AdriaDebugTransform, target, piped, run, pipeData;
-    __require('src/prototype');
-    util = __require('src/util');
+    __require('src/prototype.adria');
+    util = __require('src/util.adria');
     
-    AdriaTransform = __require('src/extensions/adria_transform');
+    AdriaTransform = __require('src/extensions/adria_transform.adria');
     
-    AdriaDebugTransform = __require('src/extensions/adriadebug_transform');
+    AdriaDebugTransform = __require('src/extensions/adriadebug_transform.adria');
     
     target = 'adria';
     

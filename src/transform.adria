@@ -64,7 +64,7 @@ module Transform = proto {
         this.initOptions();
         this.processOptions();
 
-        if (this.options.nocache !== true) {
+        if (this.options['no-cache'] !== true) {
             this.cache = new Cache();
         }
 

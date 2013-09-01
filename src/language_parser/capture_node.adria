@@ -20,7 +20,6 @@
  * IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-var assert = require('assert');
 var SourceNode = require('source-map').SourceNode;
 var Template = require('../template');
 
@@ -77,12 +76,12 @@ module CaptureNode = proto {
     /**
      * static, create from JSON, restores parent
      */
-    fromJSON: function(json, parent, typeMapper) {
+    fromJSON: function(json, parentNode, typeMapper) {
 
         var Type = typeMapper(null, json._);
 
         var result = new Type(json.k, json.v);
-        result.parent = parent;
+        result.parent = parentNode;
         result.tpl = json.t;
         result.row = json.r;
         result.col = json.c;

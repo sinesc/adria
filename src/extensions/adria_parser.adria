@@ -58,7 +58,7 @@ module AdriaParser = proto(LanguageParser) {
             'if', 'else',
             'for', 'in', 'do', 'while',
             'throw', 'try', 'catch', 'finally',
-            'function', 'proto', 'property',
+            'function', 'proto', 'property', 'parent',
             'switch', 'case',
             'require', 'assert', 'resource',
             'delete', 'new',
@@ -159,7 +159,7 @@ module AdriaParser = proto(LanguageParser) {
 
         LanguageParser.prototype.loadSourceFromCache.call(this, filename);
 
-        if (this.cacheData !== null && this.transform.options.nomap !== true) {
+        if (this.cacheData !== null && this.transform.options['no-map'] !== true) {
             this.sourceCode = fs.readFileSync(filename, 'UTF-8').replace('\r\n', '\n');
         }
     },
