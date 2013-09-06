@@ -10,6 +10,14 @@ proto_literal {
     "proto" -> proto_body:body
 }
 
+new_proto_literal {
+
+    // new parent(...) body
+
+    entry -> "new" -> expression:parent -> "(" -> ")" -> proto_body:body -> return
+    "(" -> function_param_list:param_list -> ")"
+}
+
 proto_body {
     entry -> "{" -> "}" -> return
     "{" -> proto_body_item:item -> "}"

@@ -38,7 +38,7 @@ array_literal {
  */
 
 generator_literal {
-    entry -> "function" -> "*":generator -> "(" -> ")" -> yielding_scope:body -> return
+    entry -> "function" -> "*":generator -> "(" -> ")" -> scope:body -> return
     "*" -> ident:name -> "("
     "(" -> function_param_list:param_list -> ")"
 }
@@ -131,5 +131,6 @@ literal {
     entry -> base_literal:base -> return
     entry -> function_literal:function -> return
     entry -> proto_literal:proto -> return
+    entry -> new_proto_literal:newproto -> return
     entry -> generator_literal:generator -> return
 }

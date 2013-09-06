@@ -296,6 +296,17 @@ module LanguageParser = proto(Parser) {
             this.setSource(filename, fs.readFileSync(filename, 'UTF-8'));
         }
     },
+    
+    /**
+     * runs scan on the capture tree
+     *
+     * @param state userdefined scan state object passed to every node
+     */
+    scan: function(state) {
+    
+        var InitialType = this.mapType('', this.definition.initialBlock);
+        InitialType::scan.call(this.captureTree, state);        
+    },
 
     /**
      * process the parse captures into output format

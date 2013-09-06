@@ -36,7 +36,7 @@ proto_statement {
 }
 
 generator_statement {
-    entry -> "function" -> "*":generator -> ident:name -> "(" -> ")" -> yielding_scope:body -> return
+    entry -> "function" -> "*":generator -> ident:name -> "(" -> ")" -> scope:body -> return
     "(" -> function_param_list:param_list -> ")"
 }
 
@@ -82,6 +82,9 @@ statement {
     entry -> throw_statement:throw -> t -> return
     entry -> do_while_statement:do_while -> t -> return
     entry -> assert_statement:assert -> t -> return
+    
+    entry -> flow_statement:control -> t -> return
+    entry -> yield_statement:control -> t -> return    
 
     entry -> while_statement:while -> return
     entry -> switch_statement:switch -> return
@@ -89,16 +92,6 @@ statement {
     entry -> try_catch_finally_statement:try_catch_finally -> return
     entry -> proto_statement:proto -> return
     entry -> generator_statement:generator -> return
-}
-
-interruptible_statement {
-    entry -> statement -> return
-    entry -> flow_statement:control -> return
-}
-
-yielding_statement {
-    entry -> statement -> return
-    entry -> yield_statement:control -> return
 }
 
 /*

@@ -156,14 +156,14 @@ module('src/prototype.adria', function(module, resource) {
         
     };
     String.random = function random(length, chars) {
-        var chars, numChars, result, rnum;
+        var chars, numChars, result, i, rnum;
         chars = (chars === undefined ? '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ' : chars);
         
         numChars = chars.length;
         
         result = '';
         
-        for (var i = 0; i < length;i++) {
+        for (i = 0; i < length;i++) {
             rnum = Math.floor(Math.random() * numChars);
             
             result += chars.substr(rnum, 1);
@@ -495,10 +495,10 @@ module('src/util.adria', function(module, resource) {
     })();
     
     processOptions = function processOptions(context, handlers) {
-        var next, argv, prefix, param;
+        var next, i, argv, prefix, param;
         next = '_default';
         
-        for (var i = 2; i < process.argv.length;i++) {
+        for (i = 2; i < process.argv.length;i++) {
             argv = process.argv[i];
             
             prefix = argv.slice(0, 2);
@@ -868,7 +868,7 @@ module('src/template.adria', function(module, resource) {
     
 });
 module('src/cache.adria', function(module, resource) {
-    var fs, path, util, Cache, isFile;
+    var fs, path, util, Cache;
     fs = require('fs');
     
     path = require('path');
@@ -897,7 +897,7 @@ module('src/cache.adria', function(module, resource) {
                 part = parts[id];
                 path += part;
                 if (fs.existsSync(path)) {
-                    if (isFile(path)) {
+                    if (fs.statSync(path).isFile()) {
                         throw new Error(path + ' is a file');
                         
                         
@@ -982,15 +982,6 @@ module('src/cache.adria', function(module, resource) {
         
         return Cache;
     })();
-    
-    isFile = function isFile(path) {
-        var stat;
-        stat = fs.statSync(path);
-        
-        return stat.isFile();
-        
-        
-    };
     
     module.exports = Cache;
     
@@ -1271,19 +1262,23 @@ module('src/parser/definition/node.adria', function(module, resource) {
             
         };
         Node.prototype.filter = function* filter(parser, token, stack) {
-            var children, child, blockRoot, generator, result, message, top;
+            var children, child, blockRoot, generator, result, message, id, len, top;
             children = this.children;
+            
+            
             if (stack.length > 500) {
                 message = parser.errorMessage(token, this, stack);
                 
                 throw new Error('recursion too deep. last error:\n' + message);
                 
                 
-            }for (var id = 0, len = children.length; id < len;id++) {
+            }
+            for (id = 0, len = children.length; id < len;id++) {
                 child = children[id];
                 if (child.type === Type.JUMP) {
                     if (child.condition !== '' && parser.checkCondition(child.condition, stack) === false) {
-                        continue;
+                        continue ;
+                        
                         
                     }
                     blockRoot = parser.definition.getBlock(child.match);
@@ -1317,6 +1312,7 @@ module('src/parser/definition/node.adria', function(module, resource) {
                 }
                 
             }
+            
         };
         Node.prototype.toString = function toString(owner, known) {
             var data, childId, child, result, item;
@@ -1548,7 +1544,8 @@ module('src/parser.adria', function(module, resource) {
                     
                 } catch (e) {
                     if (e.message === 'nothing to yield') {
-                        break;
+                        break ;
+                        
                         
                     } else {
                         throw e;
@@ -1570,10 +1567,12 @@ module('src/parser.adria', function(module, resource) {
                 } else if (id === len - 1) {
                     if (result.node.reachesExit(result.stack)) {
                         success = true;
-                        break;
+                        break ;
+                        
                         
                     } else {
-                        continue;
+                        continue ;
+                        
                         
                     }
                     
@@ -1734,7 +1733,8 @@ module('src/tokenizer.adria', function(module, resource) {
                         col = (match.containedRows === 0 ? col + match.lastRowLen : match.lastRowLen + 1);
                         found = true;
                         startPos += match.data.length;
-                        break;
+                        break ;
+                        
                         
                     }
                     
@@ -2449,6 +2449,18 @@ module('src/language_parser/capture_node.adria', function(module, resource) {
             
             
         };
+        CaptureNode.prototype.scan = function scan(state) {
+            var id, child;
+            if (this.children instanceof Array) {
+                for (id in this.children) {
+                    child = this.children[id];
+                    child.scan(state);
+                    
+                }
+                
+            }
+            
+        };
         CaptureNode.prototype.each = function each(fn) {
             var children, last, id;
             children = this.children;
@@ -2498,7 +2510,7 @@ module('src/language_parser/capture_node.adria', function(module, resource) {
                     }
                     
                 }
-                if (prevChild.key === part[0] && part.length === 1) {
+                if (prevChild !== null && prevChild.key === part[0] && part.length === 1) {
                     fn.call(this, prevChild, false, true);
                     
                 }
@@ -2529,12 +2541,12 @@ module('src/language_parser/capture_node.adria', function(module, resource) {
     CaptureNode.prototype.dummy.row = -1;
     CaptureNode.prototype.dummy.col = -1;
     stackDiff = function stackDiff(stack, lastStack, minStackLen) {
-        var deepestCommonCapture, minLen, numCaptures, lastLen, captures, len;
+        var deepestCommonCapture, minLen, i, numCaptures, lastLen, captures, len;
         deepestCommonCapture = -1;
         
         minLen = Math.min(stack.length, lastStack.length, minStackLen);
         
-        for (var i = 0; i < minLen;i++) {
+        for (i = 0; i < minLen;i++) {
             if (stack[i].node === lastStack[i].node) {
                 if (stack[i].node.capture !== '') {
                     deepestCommonCapture = i;
@@ -2542,7 +2554,8 @@ module('src/language_parser/capture_node.adria', function(module, resource) {
                 }
                 
             } else {
-                break;
+                break ;
+                
                 
             }
             
@@ -2551,7 +2564,7 @@ module('src/language_parser/capture_node.adria', function(module, resource) {
         
         lastLen = lastStack.length;
         
-        for (var i = deepestCommonCapture + 1; i < lastLen;i++) {
+        for (i = deepestCommonCapture + 1; i < lastLen;i++) {
             if (lastStack[i].node.capture !== '') {
                 numCaptures++;
                 
@@ -2562,7 +2575,7 @@ module('src/language_parser/capture_node.adria', function(module, resource) {
         
         len = stack.length;
         
-        for (var i = deepestCommonCapture + 1; i < len;i++) {
+        for (i = deepestCommonCapture + 1; i < len;i++) {
             if (stack[i].node.capture !== '') {
                 captures.push(stack[i].node);
                 
@@ -2663,21 +2676,24 @@ module('src/language_parser.adria', function(module, resource) {
                     node.tokenType = -1;
                     node.type = (name == 'entry' ? Node.Type.BLOCK : Node.Type.RETURN);
                     node.description = name;
-                    break;
+                    break ;
+                    
                     
                 case 'string':
                     node.match = '';
                     node.tokenType = this.tokenizer.Type.STRING;
                     node.type = 0;
                     node.description = 'string';
-                    break;
+                    break ;
+                    
                     
                 case 'numeric':
                     node.match = '';
                     node.tokenType = this.tokenizer.Type.NUMERIC;
                     node.type = 0;
                     node.description = 'numerical';
-                    break;
+                    break ;
+                    
                     
                 default:
                     numChars = name.length;
@@ -2703,7 +2719,8 @@ module('src/language_parser.adria', function(module, resource) {
                         node.description = 'definition jump';
                         
                     }
-                    break;
+                    break ;
+                    
                     
                 
             }
@@ -2752,6 +2769,13 @@ module('src/language_parser.adria', function(module, resource) {
             }
             
         };
+        LanguageParser.prototype.scan = function scan(state) {
+            var InitialType;
+            InitialType = this.mapType('', this.definition.initialBlock);
+            
+            InitialType.prototype.scan.call(this.captureTree, state);
+            
+        };
         LanguageParser.prototype.output = function output() {
             var result, InitialType;
             
@@ -2775,8 +2799,8 @@ module('src/language_parser.adria', function(module, resource) {
     module.exports = LanguageParser;
     
 });
-module('src/extensions/adria_node.adria', function(module, resource) {
-    var path, SourceNode, LanguageParser, CaptureNode, Transform, util, Set, AdriaNode, AccessOperationProtocall, ConstLiteral, Scope, YieldingScope, Module, InvokeOperation, FunctionLiteral, GeneratorLiteral, FunctionStatement, GeneratorStatement, FunctionParamList, BaseLiteral, DoWhileStatement, WhileStatement, IfStatement, SwitchStatement, ForCountStatement, ForInStatement, ObjectLiteral, ProtoBodyProperty, ArrayLiteral, Expression, ProtoLiteral, ProtoStatement, ProtoBodyItem, ReturnStatement, YieldStatement, catchSpecificsId, CatchSpecifics, CatchAll, TryCatchFinallyStatement, ThrowStatement, AssertStatement, Statement, InterruptibleStatement, ResourceLiteral, RequireLiteral, ModuleStatement, ExportStatement, GlobalDef, ParentLiteral, Ident, Name, VarDef;
+module('src/targets/adria_node.adria', function(module, resource) {
+    var path, SourceNode, LanguageParser, CaptureNode, Transform, util, Set, AdriaNode, AccessOperationProtocall, ConstLiteral, Scope, Module, InvokeOperation, FunctionLiteral, GeneratorLiteral, FunctionStatement, GeneratorStatement, FunctionParamList, BaseLiteral, DoWhileStatement, WhileStatement, IfStatement, SwitchStatement, ForCountStatement, ForInStatement, ObjectLiteral, ProtoBodyProperty, ArrayLiteral, Expression, ProtoLiteral, ProtoStatement, NewProtoLiteral, ProtoBodyItem, ReturnStatement, YieldStatement, FlowStatement, catchSpecificsId, CatchSpecifics, CatchAll, TryCatchFinallyStatement, ThrowStatement, AssertStatement, Statement, InterruptibleStatement, ResourceLiteral, RequireLiteral, ModuleStatement, ExportStatement, GlobalDef, ParentLiteral, Ident, Name, VarDef;
     path = require('path');
     
     SourceNode = require('source-map').SourceNode;
@@ -2799,9 +2823,126 @@ module('src/extensions/adria_node.adria', function(module, resource) {
         AdriaNode.prototype = Object.create(___parent.prototype);
         AdriaNode.prototype.constructor = AdriaNode;
         
-        AdriaNode.prototype.findScope = function findScope() {
-            return this.ancestor(null, 'yielding_scope|scope|module');
+        AdriaNode.prototype.validIdentifier = {
+            common: new Set([
+                'arguments',
+                'this',
+                'true',
+                'false',
+                'null',
+                'undefined',
+                'Infinity',
+                'NaN',
+                'Array',
+                'Boolean',
+                'Date',
+                'Intl',
+                'JSON',
+                'Function',
+                'Math',
+                'Number',
+                'Object',
+                'RegExp',
+                'String',
+                'ArrayBuffer',
+                'DataView',
+                'Float32Array',
+                'Float64Array',
+                'Int16Array',
+                'Int32Array',
+                'Int8Array',
+                'Uint16Array',
+                'Uint32Array',
+                'Uint8Array',
+                'Error',
+                'EvalError',
+                'RangeError',
+                'ReferenceError',
+                'SyntaxError',
+                'TypeError',
+                'URIError',
+                'decodeURI',
+                'decodeURIComponent',
+                'encodeURI',
+                'encodeURIComponent',
+                'eval',
+                'isFinite',
+                'isNaN',
+                'parseFloat',
+                'parseInt',
+                'console',
+                'debugger'
+                
+            ]),
+            node: new Set([ 'process' ]),
+            web: new Set([ 'window', 'document' ])
             
+        };
+        AdriaNode.prototype.findScope = function findScope() {
+            return this.ancestor(null, 'scope|module');
+            
+            
+        };
+        AdriaNode.prototype.checkDefined = function checkDefined(name) {
+            var scope, paramNode;
+            if (this.validIdentifier.common.has(name) || this.validIdentifier.node.has(name)) {
+                return ;
+                
+                
+            }
+            scope = this;
+            
+            do {
+                if (scope instanceof Scope !== true) {
+                    continue ;
+                    
+                    
+                }
+                if (scope.locals.has(name)) {
+                    return ;
+                    
+                    
+                }
+                if (scope instanceof Scope && scope.implicits.has(name)) {
+                    return ;
+                    
+                    
+                }
+                if (scope instanceof Module && (scope.exports.has(name) || scope.moduleExport === name)) {
+                    return ;
+                    
+                    
+                }
+                
+            } while ((scope = scope.findScope()) !== null);
+            if (this.parser().transform.globals.has(name)) {
+                return ;
+                
+                
+            }
+            paramNode = this.ancestor(null, 'function_param_list');
+            
+            if (paramNode !== null) {
+                scope = paramNode.parent.get('body');
+                
+                scope.checkDefined(name);
+                return ;
+                
+                
+            }
+            throw new Error('Undefined variable "' + name + '" in ' + this.parser().file + ' line ' + this.row + ', column ' + this.col);
+            
+            return false;
+            
+            
+        };
+        AdriaNode.prototype.addParentLookup = function addParentLookup(result, lookupName, ownName) {
+            ownName = (ownName !== undefined ? ownName : (lookupName));
+            result.add('var __p, __p0 = __p = (this === this.constructor.prototype ? this : Object.getPrototypeOf(this));' + this.nl());
+            result.add('while (__p !== null && (__p.' + lookupName + ' !== ' + ownName + ' || __p.hasOwnProperty(\'' + lookupName + '\') === false)) {' + this.nl(1));
+            result.add('__p = Object.getPrototypeOf(__p);' + this.nl(-1));
+            result.add('}' + this.nl());
+            result.add('__p = (__p !== null ? Object.getPrototypeOf(__p).constructor : __p0);' + this.nl());
             
         };
         AdriaNode.prototype.findName = function findName() {
@@ -2835,17 +2976,18 @@ module('src/extensions/adria_node.adria', function(module, resource) {
             
         };
         AdriaNode.prototype.findAssignee = function findAssignee() {
-            var children, found, result, child;
+            var children, found, result, id, child;
             children = this.children;
             
             found = -1;
             
             result = null;
             
-            for (var id = 0; id < children.length;id++) {
+            for (id = 0; id < children.length;id++) {
                 if (children[id].key === 'assignment_op') {
                     found = id - 1;
-                    break;
+                    break ;
+                    
                     
                 }
                 
@@ -2943,6 +3085,7 @@ module('src/extensions/adria_node.adria', function(module, resource) {
     Scope = (function(___parent) {
         function Scope(key, value) {
             this.locals = new Set();
+            this.implicits = new Set();
             AdriaNode.prototype.constructor.call(this, key, value);
             
         }
@@ -2951,6 +3094,7 @@ module('src/extensions/adria_node.adria', function(module, resource) {
         Scope.prototype.constructor = Scope;
         
         Scope.prototype.locals = null;
+        Scope.prototype.implicits = null;
         Scope.prototype.toSourceNode = function toSourceNode() {
             var content, result;
             content = AdriaNode.prototype.toSourceNode.call(this);
@@ -2970,13 +3114,10 @@ module('src/extensions/adria_node.adria', function(module, resource) {
         return Scope;
     })(AdriaNode);
     
-    YieldingScope = Scope;
-    
     Module = (function(___parent) {
         function Module(key, value) {
             this.exports = new Set();
-            this.locals = new Set();
-            AdriaNode.prototype.constructor.call(this, key, value);
+            Scope.prototype.constructor.call(this, key, value);
             
         }
         
@@ -2985,18 +3126,15 @@ module('src/extensions/adria_node.adria', function(module, resource) {
         
         Module.prototype.moduleExport = null;
         Module.prototype.exports = null;
-        Module.prototype.locals = null;
         Module.prototype.toSourceNode = function toSourceNode() {
-            var parser, code, locals, exports, file, result, id;
+            var parser, code, exports, file, result, id;
             parser = this.parser();
             
             if (parser.transform.options['no-framework'] === false) {
                 this.nl(1);
                 
             }
-            code = AdriaNode.prototype.toSourceNode.call(this);
-            
-            locals = this.locals.toArray();
+            code = Scope.prototype.toSourceNode.call(this);
             
             exports = this.exports.toArray();
             
@@ -3007,10 +3145,6 @@ module('src/extensions/adria_node.adria', function(module, resource) {
                 result = this.csn('module(\'' + parser.moduleName + '\', function(module, resource) {' + this.nl());
                 if (parser.transform.options['tweak-exports']) {
                     result.add('var exports = module.exports;' + this.nl());
-                    
-                }
-                if (locals.length > 0) {
-                    result.add('var ' + locals.join(', ') + ';' + this.nl());
                     
                 }
                 result.add(code);
@@ -3037,7 +3171,7 @@ module('src/extensions/adria_node.adria', function(module, resource) {
         };
         
         return Module;
-    })(AdriaNode);
+    })(Scope);
     
     InvokeOperation = (function(___parent) {
         function InvokeOperation() {
@@ -3081,21 +3215,25 @@ module('src/extensions/adria_node.adria', function(module, resource) {
         
         FunctionLiteral.prototype.defaultArgs = null;
         FunctionLiteral.prototype.name = null;
+        FunctionLiteral.prototype.lookupParent = false;
         FunctionLiteral.prototype.toSourceNode = function toSourceNode() {
-            var result, generator, id;
+            var result, id, body;
             this.nl(1);
             result = this.csn();
             
             result.add('function');
-            generator = this.get('generator');
-            
-            if (generator.isNode()) {
-                result.add(generator.csn(generator.value));
+            if (this instanceof GeneratorLiteral) {
+                result.add('*');
                 
             }
             this.name = this.findName();
             if (this.name !== null) {
+                this.get('body').implicits.add(this.name);
                 result.add([ ' ', this.name ]);
+                
+            }
+            if (this instanceof FunctionStatement || this instanceof GeneratorStatement) {
+                this.findScope().implicits.add(this.name);
                 
             }
             result.add('(');
@@ -3105,7 +3243,13 @@ module('src/extensions/adria_node.adria', function(module, resource) {
                 result.add([ this.defaultArgs[id], ';' + this.nl() ]);
                 
             }
-            result.add([ this.get('body').toSourceNode(), this.nl(-1) + '}' ]);
+            body = this.get('body').toSourceNode();
+            
+            if (this.lookupParent) {
+                this.addParentLookup(result, this.name);
+                
+            }
+            result.add([ body, this.nl(-1) + '}' ]);
             return result;
             
             
@@ -3114,11 +3258,41 @@ module('src/extensions/adria_node.adria', function(module, resource) {
         return FunctionLiteral;
     })(AdriaNode);
     
-    GeneratorLiteral = FunctionLiteral;
+    GeneratorLiteral = (function(___parent) {
+        function GeneratorLiteral() {
+            ___parent.apply(this, arguments);
+        }
+        
+        GeneratorLiteral.prototype = Object.create(___parent.prototype);
+        GeneratorLiteral.prototype.constructor = GeneratorLiteral;
+        
+        
+        return GeneratorLiteral;
+    })(FunctionLiteral);
     
-    FunctionStatement = FunctionLiteral;
+    FunctionStatement = (function(___parent) {
+        function FunctionStatement() {
+            ___parent.apply(this, arguments);
+        }
+        
+        FunctionStatement.prototype = Object.create(___parent.prototype);
+        FunctionStatement.prototype.constructor = FunctionStatement;
+        
+        
+        return FunctionStatement;
+    })(FunctionLiteral);
     
-    GeneratorStatement = FunctionLiteral;
+    GeneratorStatement = (function(___parent) {
+        function GeneratorStatement() {
+            ___parent.apply(this, arguments);
+        }
+        
+        GeneratorStatement.prototype = Object.create(___parent.prototype);
+        GeneratorStatement.prototype.constructor = GeneratorStatement;
+        
+        
+        return GeneratorStatement;
+    })(GeneratorLiteral);
     
     FunctionParamList = (function(___parent) {
         function FunctionParamList() {
@@ -3129,15 +3303,18 @@ module('src/extensions/adria_node.adria', function(module, resource) {
         FunctionParamList.prototype.constructor = FunctionParamList;
         
         FunctionParamList.prototype.toSourceNode = function toSourceNode() {
-            var name, defaultArg, valueNode, result, functionNode;
+            var name, defaultArg, valueNode, result, functionNode, scope;
             
             result = this.csn();
             
-            functionNode = this.ancestor('function');
+            functionNode = this.ancestor('function|generator');
+            
+            scope = functionNode.get('body');
             
             this.eachKey('item', function(node) {
                 name = node.get('name').toSourceNode();
                 result.add(name);
+                scope.implicits.add(name);
                 valueNode = node.get('value');
                 if (valueNode.isNode()) {
                     defaultArg = new SourceNode();
@@ -3173,23 +3350,32 @@ module('src/extensions/adria_node.adria', function(module, resource) {
         BaseLiteral.prototype = Object.create(___parent.prototype);
         BaseLiteral.prototype.constructor = BaseLiteral;
         
+        BaseLiteral.prototype.scan = function scan(state) {
+            AdriaNode.prototype.scan.call(this, state);
+            this.eachKey('ident', function(child) {
+                this.checkDefined(child.value);
+                
+            });
+            
+        };
         BaseLiteral.prototype.toSourceNode = function toSourceNode() {
             var result;
             result = '';
             
             this.each(function(child) {
                 switch (child.key) {
+                    case 'ident':
+                        
                     case 'numeric':
                         
                     case 'string':
                         
                     case 'regexp':
                         
-                    case 'ident':
-                        
                     case 'brace':
                         result += this.csn(child.value);
-                        break;
+                        break ;
+                        
                         
                     default:
                         result += child.toSourceNode();
@@ -3362,6 +3548,7 @@ module('src/extensions/adria_node.adria', function(module, resource) {
                     
                     nameNode = node.get('name');
                     
+                    this.findScope().locals.add(nameNode.value);
                     if (valueNode.isNode()) {
                         varDef = new SourceNode();
                         
@@ -3375,7 +3562,7 @@ module('src/extensions/adria_node.adria', function(module, resource) {
                     
                 });
                 init = new SourceNode();
-                init.add([ 'var ', varDefs.join(', ') ]);
+                init.add([ varDefs.join(', ') ]);
                 
             } else {
                 init = initNode.toSourceNode();
@@ -3540,6 +3727,14 @@ module('src/extensions/adria_node.adria', function(module, resource) {
         Expression.prototype = Object.create(___parent.prototype);
         Expression.prototype.constructor = Expression;
         
+        Expression.prototype.scan = function scan(state) {
+            AdriaNode.prototype.scan.call(this, state);
+            this.eachKey('ident', function(child) {
+                this.checkDefined(child.value);
+                
+            });
+            
+        };
         Expression.prototype.toSourceNode = function toSourceNode() {
             var children, child, propertyAssignSplit, result, id;
             children = this.children;
@@ -3553,29 +3748,34 @@ module('src/extensions/adria_node.adria', function(module, resource) {
                 child = children[id];
                 if (children[+id + 1] !== undefined && children[+id + 1].key === 'passignment_op') {
                     propertyAssignSplit = +id + 1;
-                    break;
+                    break ;
+                    
                     
                 }
                 switch (child.key) {
                     case 'member':
                         result.add(child.csn('.' + child.children[0].value));
-                        break;
+                        break ;
+                        
                         
                     case 'index':
                         result.add(child.csn('['));
                         result.add(child.toSourceNode());
                         result.add(child.csn(']'));
-                        break;
+                        break ;
+                        
                         
                     case 'proto':
                         result.add(child.csn('.prototype.' + child.children[0].value));
-                        break;
+                        break ;
+                        
                         
                     case 'call':
                         
                     case 'pcall':
                         result.add(child.csn(child.toSourceNode()));
-                        break;
+                        break ;
+                        
                         
                     case 'ident':
                         
@@ -3583,11 +3783,13 @@ module('src/extensions/adria_node.adria', function(module, resource) {
                         
                     case 'xfix_op':
                         result.add(child.csn(child.value));
-                        break;
+                        break ;
+                        
                         
                     case 'unary_op':
                         result.add(child.csn(child.value.search(/[a-z]/) > -1 ? child.value + ' ' : child.value));
-                        break;
+                        break ;
+                        
                         
                     case 'binary_op':
                         
@@ -3595,11 +3797,13 @@ module('src/extensions/adria_node.adria', function(module, resource) {
                         
                     case 'ternary_op':
                         result.add([ ' ', child.csn(child.value), ' ' ]);
-                        break;
+                        break ;
+                        
                         
                     default:
                         result.add(child.toSourceNode());
-                        break;
+                        break ;
+                        
                         
                     
                 }
@@ -3611,17 +3815,20 @@ module('src/extensions/adria_node.adria', function(module, resource) {
                 switch (child.key) {
                     case 'member':
                         result.add(", '" + child.children[0].value + "',");
-                        break;
+                        break ;
+                        
                         
                     case 'index':
                         result.add(', ');
                         result.add(child.toSourceNode());
                         result.add(', ');
-                        break;
+                        break ;
+                        
                         
                     case 'proto':
                         result.add(".prototype, '" + child.children[0].value + "', ");
-                        break;
+                        break ;
+                        
                         
                     
                 }
@@ -3659,6 +3866,7 @@ module('src/extensions/adria_node.adria', function(module, resource) {
         ProtoLiteral.prototype.constructorArgs = null;
         ProtoLiteral.prototype.constructorBody = null;
         ProtoLiteral.prototype.constructorDefaults = null;
+        ProtoLiteral.prototype.lookupParent = false;
         ProtoLiteral.prototype.name = '';
         ProtoLiteral.prototype.toSourceNode = function toSourceNode() {
             var parentNode, haveParent, assignTo, locals, result, body, id;
@@ -3687,6 +3895,10 @@ module('src/extensions/adria_node.adria', function(module, resource) {
                 for (id in this.constructorDefaults) {
                     result.add(this.constructorDefaults[id]);
                     result.add(';' + this.nl());
+                    
+                }
+                if (this.lookupParent) {
+                    this.addParentLookup(result, 'constructor', this.name);
                     
                 }
                 result.add(this.constructorBody);
@@ -3725,6 +3937,41 @@ module('src/extensions/adria_node.adria', function(module, resource) {
     
     ProtoStatement = ProtoLiteral;
     
+    NewProtoLiteral = (function(___parent) {
+        function NewProtoLiteral() {
+            ___parent.apply(this, arguments);
+        }
+        
+        NewProtoLiteral.prototype = Object.create(___parent.prototype);
+        NewProtoLiteral.prototype.constructor = NewProtoLiteral;
+        
+        NewProtoLiteral.prototype.toSourceNode = function toSourceNode() {
+            var __p, __p0 = __p = (this === this.constructor.prototype ? this : Object.getPrototypeOf(this));
+            while (__p !== null && (__p.toSourceNode !== toSourceNode || __p.hasOwnProperty('toSourceNode') === false)) {
+                __p = Object.getPrototypeOf(__p);
+            }
+            __p = (__p !== null ? Object.getPrototypeOf(__p).constructor : __p0);
+            var result, paramList;
+            result = this.csn();
+            
+            result.add('new (');
+            result.add(__p.prototype.toSourceNode.call(this));
+            result.add(')(');
+            paramList = this.get('param_list');
+            
+            if (paramList.isNode()) {
+                result.add(paramList.toSourceNode());
+                
+            }
+            result.add(')');
+            return result;
+            
+            
+        };
+        
+        return NewProtoLiteral;
+    })(ProtoLiteral);
+    
     ProtoBodyItem = (function(___parent) {
         function ProtoBodyItem() {
             ___parent.apply(this, arguments);
@@ -3734,20 +3981,21 @@ module('src/extensions/adria_node.adria', function(module, resource) {
         ProtoBodyItem.prototype.constructor = ProtoBodyItem;
         
         ProtoBodyItem.prototype.toSourceNode = function toSourceNode() {
-            var protoNode, constructorName, keyNode, functioNode, valueNode, result, name;
-            protoNode = this.ancestor(null, 'proto_literal|proto_statement');
+            var protoNode, constructorName, keyNode, functionNode, valueNode, result, name;
+            protoNode = this.ancestor(null, 'new_proto_literal|proto_literal|proto_statement');
             
             constructorName = protoNode.name;
             
             keyNode = this.get('key');
             
             if (keyNode.value === 'constructor') {
-                functioNode = this.path('value.function');
+                functionNode = this.path('value.function');
                 
                 this.nl(1);
-                protoNode.constructorArgs = functioNode.get('param_list').toSourceNode();
-                protoNode.constructorDefaults = functioNode.defaultArgs;
-                protoNode.constructorBody = functioNode.get('body').toSourceNode();
+                protoNode.constructorArgs = functionNode.get('param_list').toSourceNode();
+                protoNode.constructorDefaults = functionNode.defaultArgs;
+                protoNode.constructorBody = functionNode.get('body').toSourceNode();
+                protoNode.lookupParent = functionNode.lookupParent;
                 this.nl(-1);
                 return this.csn();
                 
@@ -3810,6 +4058,8 @@ module('src/extensions/adria_node.adria', function(module, resource) {
     
     YieldStatement = ReturnStatement;
     
+    FlowStatement = ReturnStatement;
+    
     catchSpecificsId = 1;
     
     CatchSpecifics = (function(___parent) {
@@ -3821,21 +4071,25 @@ module('src/extensions/adria_node.adria', function(module, resource) {
         CatchSpecifics.prototype.constructor = CatchSpecifics;
         
         CatchSpecifics.prototype.toSourceNode = function toSourceNode() {
-            var name, result, allNode;
+            var name, result, allNode, valueNode;
             name = '___exc' + (catchSpecificsId++);
             
             result = this.csn();
             
             result.add(' catch (' + name + ') {' + this.nl(1));
             this.eachKey('specific', function(node, first, last) {
+                var valueNode;
                 if (first !== true) {
                     result.add(' else ');
                     
                 }
+                valueNode = node.get('value');
+                
+                this.findScope().implicits.add(valueNode.value);
                 result.add('if (' + name + ' instanceof ');
                 result.add(node.get('type').toSourceNode());
                 result.add(') {' + this.nl(1));
-                result.add('var ' + node.get('value').value + ' = ' + name + ';' + this.nl());
+                result.add('var ' + valueNode.value + ' = ' + name + ';' + this.nl());
                 result.add(node.get('body').toSourceNode());
                 result.add(this.nl(-1) + '}');
                 
@@ -3843,8 +4097,11 @@ module('src/extensions/adria_node.adria', function(module, resource) {
             allNode = this.get('catch');
             
             if (allNode.isNode()) {
+                valueNode = allNode.get('value');
+                
+                this.findScope().implicits.add(valueNode.value);
                 result += ' else { ' + this.nl(1);
-                result += 'var ' + allNode.get('value').value + ' = ' + name + ';' + this.nl();
+                result += 'var ' + valueNode.value + ' = ' + name + ';' + this.nl();
                 result += allNode.get('body').toString();
                 result += this.nl(-1) + '}';
                 
@@ -3872,11 +4129,14 @@ module('src/extensions/adria_node.adria', function(module, resource) {
         CatchAll.prototype.constructor = CatchAll;
         
         CatchAll.prototype.toSourceNode = function toSourceNode() {
-            var result;
+            var result, valueNode;
             result = this.csn();
             
+            valueNode = this.get('value');
+            
+            this.findScope().implicits.add(valueNode.value);
             result.add(' catch (');
-            result.add(this.get('value').toSourceNode());
+            result.add(valueNode.toSourceNode());
             result.add(') {' + this.nl(1));
             result.add(this.get('body').toSourceNode());
             result.add(this.nl(-1) + '}');
@@ -3994,7 +4254,8 @@ module('src/extensions/adria_node.adria', function(module, resource) {
             switch (type) {
                 case 'expression':
                     result.add(';' + this.nl());
-                    break;
+                    break ;
+                    
                     
                 default:
                     result.add(this.nl());
@@ -4193,7 +4454,8 @@ module('src/extensions/adria_node.adria', function(module, resource) {
         ParentLiteral.prototype.constructor = ParentLiteral;
         
         ParentLiteral.prototype.toSourceNode = function toSourceNode() {
-            return this.csn('(Object.getPrototypeOf(this.constructor.prototype).constructor)');
+            this.ancestor('function').lookupParent = true;
+            return this.csn('__p');
             
             
         };
@@ -4260,7 +4522,6 @@ module('src/extensions/adria_node.adria', function(module, resource) {
     module.exports.AccessOperationProtocall = AccessOperationProtocall;
     module.exports.ConstLiteral = ConstLiteral;
     module.exports.Scope = Scope;
-    module.exports.YieldingScope = YieldingScope;
     module.exports.Module = Module;
     module.exports.InvokeOperation = InvokeOperation;
     module.exports.FunctionLiteral = FunctionLiteral;
@@ -4281,9 +4542,11 @@ module('src/extensions/adria_node.adria', function(module, resource) {
     module.exports.Expression = Expression;
     module.exports.ProtoLiteral = ProtoLiteral;
     module.exports.ProtoStatement = ProtoStatement;
+    module.exports.NewProtoLiteral = NewProtoLiteral;
     module.exports.ProtoBodyItem = ProtoBodyItem;
     module.exports.ReturnStatement = ReturnStatement;
     module.exports.YieldStatement = YieldStatement;
+    module.exports.FlowStatement = FlowStatement;
     module.exports.CatchSpecifics = CatchSpecifics;
     module.exports.CatchAll = CatchAll;
     module.exports.TryCatchFinallyStatement = TryCatchFinallyStatement;
@@ -4302,7 +4565,7 @@ module('src/extensions/adria_node.adria', function(module, resource) {
     module.exports.VarDef = VarDef;
     
 });
-module('src/extensions/adria_parser.adria', function(module, resource) {
+module('src/targets/adria_parser.adria', function(module, resource) {
     var fs, util, LanguageParser, AdriaNode, Tokenizer, AdriaParser;
     fs = require('fs');
     
@@ -4310,7 +4573,7 @@ module('src/extensions/adria_parser.adria', function(module, resource) {
     
     LanguageParser = __require('src/language_parser.adria');
     
-    AdriaNode = __require('src/extensions/adria_node.adria');
+    AdriaNode = __require('src/targets/adria_node.adria');
     
     Tokenizer = __require('src/tokenizer.adria');
     
@@ -4343,6 +4606,10 @@ module('src/extensions/adria_parser.adria', function(module, resource) {
                 'in',
                 'do',
                 'while',
+                'break',
+                'continue',
+                'switch',
+                'case',
                 'throw',
                 'try',
                 'catch',
@@ -4351,8 +4618,6 @@ module('src/extensions/adria_parser.adria', function(module, resource) {
                 'proto',
                 'property',
                 'parent',
-                'switch',
-                'case',
                 'require',
                 'assert',
                 'resource',
@@ -4452,11 +4717,13 @@ module('src/extensions/adria_parser.adria', function(module, resource) {
     module.exports = AdriaParser;
     
 });
-module('src/extensions/adria_transform.adria', function(module, resource) {
-    var fs, path, SourceNode, Template, Transform, AdriaParser, util, AdriaTransform;
+module('src/targets/adria_transform.adria', function(module, resource) {
+    var fs, path, util, SourceNode, Template, Transform, AdriaParser, AdriaTransform;
     fs = require('fs');
     
     path = require('path');
+    
+    util = __require('src/util.adria');
     
     SourceNode = require('source-map').SourceNode;
     
@@ -4464,9 +4731,7 @@ module('src/extensions/adria_transform.adria', function(module, resource) {
     
     Transform = __require('src/transform.adria');
     
-    AdriaParser = __require('src/extensions/adria_parser.adria');
-    
-    util = __require('src/util.adria');
+    AdriaParser = __require('src/targets/adria_parser.adria');
     
     AdriaTransform = (function(___parent) {
         function AdriaTransform(piped) {
@@ -4528,7 +4793,8 @@ module('src/extensions/adria_transform.adria', function(module, resource) {
                     current = this.options.basePath + paths[id] + filename;
                     if (fs.existsSync(current)) {
                         fullname = current;
-                        break;
+                        break ;
+                        
                         
                     }
                     
@@ -4540,7 +4806,7 @@ module('src/extensions/adria_transform.adria', function(module, resource) {
             
         };
         AdriaTransform.prototype.buildModule = function buildModule(moduleName, data) {
-            var parser, result, requires, name;
+            var parser, result, requires, name, scanResult;
             parser = this.protoParser.clone();
             
             parser.moduleName = moduleName;
@@ -4566,6 +4832,9 @@ module('src/extensions/adria_transform.adria', function(module, resource) {
             this.requires = this.requires.merge(parser.resultData.requires);
             this.globals = this.globals.merge(parser.resultData.globals);
             this.resources = this.resources.merge(parser.resultData.resources);
+            scanResult = {  };
+            
+            parser.scan(scanResult);
             this.modules.push({
                 filename: parser.file,
                 sourceCode: parser.sourceCode,
@@ -4672,9 +4941,9 @@ module('src/extensions/adria_transform.adria', function(module, resource) {
     module.exports = AdriaTransform;
     
 });
-module('src/extensions/adriadebug_parser.adria', function(module, resource) {
+module('src/targets/adriadebug_parser.adria', function(module, resource) {
     var AdriaParser, CaptureNode, XMLNode, AdriaDebugParser;
-    AdriaParser = __require('src/extensions/adria_parser.adria');
+    AdriaParser = __require('src/targets/adria_parser.adria');
     
     CaptureNode = __require('src/language_parser/capture_node.adria');
     
@@ -4735,13 +5004,15 @@ module('src/extensions/adriadebug_parser.adria', function(module, resource) {
     module.exports = AdriaDebugParser;
     
 });
-module('src/extensions/adriadebug_transform.adria', function(module, resource) {
-    var fs, AdriaTransform, AdriaDebugParser, AdriaDebugTransform;
+module('src/targets/adriadebug_transform.adria', function(module, resource) {
+    var fs, util, AdriaTransform, AdriaDebugParser, AdriaDebugTransform;
     fs = require('fs');
     
-    AdriaTransform = __require('src/extensions/adria_transform.adria');
+    util = __require('src/util.adria');
     
-    AdriaDebugParser = __require('src/extensions/adriadebug_parser.adria');
+    AdriaTransform = __require('src/targets/adria_transform.adria');
+    
+    AdriaDebugParser = __require('src/targets/adriadebug_parser.adria');
     
     AdriaDebugTransform = (function(___parent) {
         function AdriaDebugTransform(piped) {
@@ -4754,17 +5025,19 @@ module('src/extensions/adriadebug_transform.adria', function(module, resource) {
         AdriaDebugTransform.prototype.constructor = AdriaDebugTransform;
         
         AdriaDebugTransform.prototype.run = function run() {
-            var files, id, result, mod;
+            var options, files, id, result, mod;
+            options = this.options;
+            
             this.protoParser = new AdriaDebugParser(this);
             this.protoParser.trainSelf();
             if (this.piped !== undefined) {
-                this.buildModule('main', this.piped);
+                this.buildModule('main' + options.fileExt, this.piped);
                 
             }
-            files = this.options.files;
+            files = options.files;
             
             for (id in files) {
-                this.buildModule(files[id].stripPostfix(this.options.fileExt));
+                this.buildModule(util.normalizeExtension(files[id], options.fileExt));
                 
             }
             result = [  ];
@@ -4774,8 +5047,8 @@ module('src/extensions/adriadebug_transform.adria', function(module, resource) {
                 result.push(mod.result);
                 
             }
-            if (this.options['outFile'] !== null) {
-                fs.writeFileSync(options.basePath + this.options.outFile, result.join('\n'));
+            if (options['outFile'] !== null) {
+                fs.writeFileSync(options.basePath + options.outFile, result.join('\n'));
                 
             } else {
                 process.stdout.write(result.join('\n'));
@@ -4795,9 +5068,9 @@ module('main.adria', function(module, resource) {
     __require('src/prototype.adria');
     util = __require('src/util.adria');
     
-    AdriaTransform = __require('src/extensions/adria_transform.adria');
+    AdriaTransform = __require('src/targets/adria_transform.adria');
     
-    AdriaDebugTransform = __require('src/extensions/adriadebug_transform.adria');
+    AdriaDebugTransform = __require('src/targets/adriadebug_transform.adria');
     
     target = 'adria';
     
@@ -4820,6 +5093,7 @@ module('main.adria', function(module, resource) {
     run = function run(pipeData) {
         var transform;
         
+        debugger;
         if (target === 'adria') {
             transform = new AdriaTransform(pipeData);
             
@@ -4856,4 +5130,3 @@ module('main.adria', function(module, resource) {
 });
 
 })();
-//@ sourceMappingURL=out.map

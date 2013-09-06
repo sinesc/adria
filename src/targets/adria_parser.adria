@@ -56,10 +56,10 @@ module AdriaParser = proto(LanguageParser) {
         var keywords = new util.Set([
             'var', 'global',
             'if', 'else',
-            'for', 'in', 'do', 'while',
+            'for', 'in', 'do', 'while', 'break', 'continue',
+            'switch', 'case',
             'throw', 'try', 'catch', 'finally',
             'function', 'proto', 'property', 'parent',
-            'switch', 'case',
             'require', 'assert', 'resource',
             'delete', 'new',
             'instanceof', 'typeof'

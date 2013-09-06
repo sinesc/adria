@@ -22,11 +22,11 @@
  */
 var fs = require('fs');
 var path = require('path');
+var util = require('../util');
 var SourceNode = require('source-map').SourceNode;
 var Template = require('../template');
 var Transform = require('../transform');
 var AdriaParser = require('./adria_parser');
-var util = require('../util');
 
 /**
  * Transforms a set of input files into one or more output files using the
@@ -159,6 +159,11 @@ module AdriaTransform = proto (Transform) {
         this.globals = this.globals.merge(parser.resultData.globals);
         this.resources = this.resources.merge(parser.resultData.resources);
 
+        // scan module for undefined variables
+        
+        var scanResult = { };
+        parser.scan(scanResult);
+        
         // push module after all dependencies have been resolved
 
         this.modules.push({ filename: parser.file, sourceCode: parser.sourceCode, result: result });

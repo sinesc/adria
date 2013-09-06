@@ -21,6 +21,7 @@
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 var fs = require('fs');
+var util = require('../util');
 var AdriaTransform = require('./adria_transform');
 var AdriaDebugParser = require('./adriadebug_parser');
 
@@ -41,6 +42,8 @@ module AdriaDebugTransform = proto(AdriaTransform) {
 
     run: function() {
 
+        var options = this.options;
+    
         // create a prototype parser to clone from (to avoid training overhead)
 
         this.protoParser = new AdriaDebugParser(this);
@@ -49,13 +52,13 @@ module AdriaDebugTransform = proto(AdriaTransform) {
         // process piped data and initial files
 
         if (this.piped !== undefined) {
-            this.buildModule('main', this.piped);
+            this.buildModule('main' + options.fileExt, this.piped);
         }
 
-        var files = this.options.files;
+        var files = options.files;
 
         for (var id in files) {
-            this.buildModule(files[id].stripPostfix(this.options.fileExt));
+            this.buildModule(util.normalizeExtension(files[id], options.fileExt));
         }
 
         // extract result for join
@@ -68,8 +71,8 @@ module AdriaDebugTransform = proto(AdriaTransform) {
 
         // merge and return
 
-        if (this.options['outFile'] !== null) {
-            fs.writeFileSync(options.basePath + this.options.outFile, result.join('\n'));
+        if (options['outFile'] !== null) {
+            fs.writeFileSync(options.basePath + options.outFile, result.join('\n'));
         } else {
             process.stdout.write(result.join('\n'));
         }

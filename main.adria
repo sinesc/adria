@@ -23,8 +23,8 @@
 require('./src/prototype');
 var util = require('./src/util');
 
-var AdriaTransform = require('./src/extensions/adria_transform');
-var AdriaDebugTransform = require('./src/extensions/adriadebug_transform');
+var AdriaTransform = require('./src/targets/adria_transform');
+var AdriaDebugTransform = require('./src/targets/adriadebug_transform');
 
 // process base command line
 
@@ -47,7 +47,7 @@ util.processOptions(null, {
 var run = function(pipeData) {
 
     var transform;
-
+debugger;
     //try {
 
         if (target === 'adria') {

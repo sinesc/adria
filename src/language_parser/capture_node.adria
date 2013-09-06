@@ -389,6 +389,19 @@ module CaptureNode = proto {
         return result;
     },
 
+    /**
+     * recursively calls children for scanning purposes
+     *
+     * @param state userdefined scan state object passed to every child
+     */
+    scan: function(state) {
+
+        if (this.children instanceof Array) {
+            for (var id, child in this.children) {
+                child.scan(state);
+            }
+        }
+    },
 
     /**
      * iterate over all childnodes
@@ -450,7 +463,7 @@ module CaptureNode = proto {
 
             // last item
 
-            if (prevChild.key === part[0] && part.length === 1) {
+            if (prevChild !== null && prevChild.key === part[0] && part.length === 1) {
                 fn.call(this, prevChild, false, true);
             }
         }

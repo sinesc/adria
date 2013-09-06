@@ -13,22 +13,6 @@ block {
     statement:statement -> statement:statement
 }
 
-yielding_scope {
-    entry -> yielding_block -> return
-}
-
-yielding_block {
-    entry -> "{" -> "}" -> return
-    "{" -> yielding_statement:statement -> "}"
-    yielding_statement:statement -> yielding_statement:statement
-}
-
-interruptible_block {
-    entry -> "{" -> "}" -> return
-    "{" -> interruptible_statement:statement -> "}"
-    interruptible_statement:statement -> interruptible_statement:statement
-}
-
 /*
  * break/return/continue
  */
@@ -36,18 +20,16 @@ interruptible_block {
 return_statement {
     entry -> "return":type -> return
     "return":type -> literal_expression:value -> return
-
-    entry -> "yield":type -> return //!todo temp
-    "yield":type -> literal_expression:value -> return
 }
 
 flow_statement {
-    entry -> "break":type -> t -> return
-    entry -> "continue":type -> t -> return
+    entry -> "break":type -> return
+    entry -> "continue":type -> return
 }
 
 yield_statement {
-    entry -> "yield":type -> t -> return
+    entry -> "yield":type -> return
+    "yield":type -> literal_expression:value -> return
 }
 
 /*
@@ -66,11 +48,11 @@ if_statement {
  */
 
 do_while_statement {
-    entry -> "do" -> interruptible_block:body -> "while" -> "(" -> expression:condition -> ")" -> return
+    entry -> "do" -> block:body -> "while" -> "(" -> expression:condition -> ")" -> return
 }
 
 while_statement {
-    entry -> "while" -> "(" -> expression:condition -> ")" -> interruptible_block:body -> return
+    entry -> "while" -> "(" -> expression:condition -> ")" -> block:body -> return
 }
 
 /*
@@ -83,7 +65,7 @@ for_count_init {
 }
 
 for_count_statement {
-    entry -> "for" -> "(" -> for_count_init -> t -> expression:test[full] -> t -> expression:cond_op -> ")" -> interruptible_block:body -> return
+    entry -> "for" -> "(" -> for_count_init -> t -> expression:test[full] -> t -> expression:cond_op -> ")" -> block:body -> return
     "(" -> expression:test[short] -> ")"
 }
 
@@ -92,7 +74,7 @@ for_count_statement {
  */
 
 for_in_statement {
-    entry -> "for" -> "(" -> ident:key -> "in" -> expression:source -> ")" -> interruptible_block:body -> return
+    entry -> "for" -> "(" -> ident:key -> "in" -> expression:source -> ")" -> block:body -> return
     "(" -> "var":var -> ident:key
     ident:key -> "," -> ident:value -> "in"
 }

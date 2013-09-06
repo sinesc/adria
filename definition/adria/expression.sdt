@@ -3,6 +3,7 @@ literal_expression {
     entry -> function_literal:function -> return
     entry -> generator_literal:generator -> return
     entry -> proto_literal:proto -> return
+    entry -> new_proto_literal:newproto -> return
     entry -> expression:expression -> return
 }
 
