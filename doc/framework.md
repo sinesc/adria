@@ -1,10 +1,10 @@
 adria
 =====
 
-- <a href="/sinesc/adria/blob/master/README.md">Readme</a>
-- <a href="/sinesc/adria/blob/master/doc/overview.md">Language overview</a>
+- <a href="//github.com/sinesc/adria/blob/master/README.md">Readme</a>
+- <a href="//github.com/sinesc/adria/blob/master/doc/overview.md">Language overview</a>
 - Minimal default framework
-- <a href="/sinesc/adria/blob/master/doc/commandline.md">Commandline options</a>
+- <a href="//github.com/sinesc/adria/blob/master/doc/commandline.md">Commandline options</a>
 
 Framework
 ---------
