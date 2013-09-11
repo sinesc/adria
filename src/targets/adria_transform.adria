@@ -160,10 +160,10 @@ module AdriaTransform = proto (Transform) {
         this.resources = this.resources.merge(parser.resultData.resources);
 
         // scan module for undefined variables
-        
+
         var scanResult = { };
         parser.scan(scanResult);
-        
+
         // push module after all dependencies have been resolved
 
         this.modules.push({ filename: parser.file, sourceCode: parser.sourceCode, result: result });
@@ -198,7 +198,7 @@ module AdriaTransform = proto (Transform) {
 
         if (options['no-framework'] === false) {
 
-            fw = tpl.fetchFile('adria/framework.tpl');
+            fw = tpl.fetch(resource('../../templates/adria/framework.tpl'));
             tmpNode = node.add(new SourceNode(1, 0, 'adria-framework.js', fw));
             tmpNode.setSourceContent('adria-framework.js', fw);
 

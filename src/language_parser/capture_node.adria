@@ -464,7 +464,7 @@ module CaptureNode = proto {
             // last item
 
             if (prevChild !== null && prevChild.key === part[0] && part.length === 1) {
-                fn.call(this, prevChild, false, true);
+                fn.call(this, prevChild, first, true);
             }
         }
     },

@@ -37,9 +37,15 @@ array_literal {
  * function literal
  */
 
+async_literal {
+    entry -> "function" -> "#":async -> "(" -> ")" -> scope:body -> return
+    "#":async -> ident:name -> "("
+    "(" -> function_param_list:param_list -> ")"
+}
+
 generator_literal {
     entry -> "function" -> "*":generator -> "(" -> ")" -> scope:body -> return
-    "*" -> ident:name -> "("
+    "*":generator -> ident:name -> "("
     "(" -> function_param_list:param_list -> ")"
 }
 
@@ -95,6 +101,15 @@ resource_literal {
 }
 
 /*
+ * generator/async yield
+ */
+
+yield_literal {
+    entry -> "yield":type -> return
+    "yield":type -> literal_expression:value -> return
+}
+
+/*
  * parent
  */
 
@@ -125,12 +140,18 @@ base_literal {
     entry -> require_literal:require -> return
     entry -> parent_literal:parent -> return
     entry -> resource_literal:resource -> return
+    entry -> yield_literal:yield -> return
 }
 
-literal {
-    entry -> base_literal:base -> return
+complex_literal {
     entry -> function_literal:function -> return
     entry -> proto_literal:proto -> return
     entry -> new_proto_literal:newproto -> return
     entry -> generator_literal:generator -> return
+    entry -> async_literal:async -> return
+}
+
+literal {
+    entry -> base_literal:base -> return //!todo where is extra base capture used?
+    entry -> complex_literal -> return
 }

@@ -1,9 +1,6 @@
 
 literal_expression {
-    entry -> function_literal:function -> return
-    entry -> generator_literal:generator -> return
-    entry -> proto_literal:proto -> return
-    entry -> new_proto_literal:newproto -> return
+    entry -> complex_literal -> return
     entry -> expression:expression -> return
 }
 
@@ -41,6 +38,12 @@ expression {
     // ()()
 
     invoke_operation:call -> invoke_operation:call
+
+    // end on async wrap
+
+    brace_operation -> async_wrap_operation:wrap -> return
+    invoke_operation:call -> async_wrap_operation:wrap
+    base_literal:item -> async_wrap_operation:wrap
 }
 
 brace_operation {
@@ -99,6 +102,10 @@ access_operation {
 invoke_operation {
     entry -> "(" -> ")" -> return
     "(" -> invoke_param_list -> ")"
+}
+
+async_wrap_operation {
+    entry -> "(" -> async_wrap_param_list -> ")" -> return
 }
 
 /*
@@ -180,6 +187,25 @@ invoke_param_list {
     entry -> literal_expression:param -> return
     literal_expression:param -> "," -> literal_expression:param
 }
+
+async_wrap_param_list {
+
+    // start with lit.exp. or #
+
+    entry -> literal_expression:param[before]
+    entry -> "#":param -> return
+
+    // lit.exp may be followed by another or by a #
+
+    literal_expression:param[before] -> ","[before] -> literal_expression:param[before]
+    literal_expression:param[before] -> ","[before] -> "#":param
+
+    // # may be followed by another literal expression, but must remain the only #
+
+    "#":param -> ","[after] -> literal_expression:param[after]
+    literal_expression:param[after] -> ","[after]-> literal_expression:param[after] -> return
+}
+
 
 /*
  * assignment ops

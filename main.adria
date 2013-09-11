@@ -47,7 +47,12 @@ util.processOptions(null, {
 var run = function(pipeData) {
 
     var transform;
-debugger;
+    
+    // put a break here. "break on any exception" can be enabled after this statement.
+    // enabling "break on any exception" earlier will introduce you to node exception hell
+    
+    debugger;
+    
     //try {
 
         if (target === 'adria') {
@@ -63,6 +68,7 @@ debugger;
     //} catch (e) {
 
     //    console.log(e.message);
+    //    process.exit(1);
     //}
 };
 

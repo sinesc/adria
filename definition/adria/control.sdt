@@ -27,11 +27,6 @@ flow_statement {
     entry -> "continue":type -> return
 }
 
-yield_statement {
-    entry -> "yield":type -> return
-    "yield":type -> literal_expression:value -> return
-}
-
 /*
  * if else block
  * "elseif" is achieved by else followed by a new if-block

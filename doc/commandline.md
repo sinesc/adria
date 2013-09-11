@@ -1,10 +1,10 @@
 adria
 =====
 
-- <a href="concept.md">Concept & reason for developing Adria</a>
-- <a href="commandline.md">Commandline options</a>
-- <a href="reference.md">Language reference</a>
-- <a href="framework.md">Minimal default framework</a>
+- <a href="/sinesc/adria/blob/master/README.md">Readme</a>
+- <a href="/sinesc/adria/blob/master/doc/overview.md">Language overview</a>
+- <a href="/sinesc/adria/blob/master/doc/framework.md">Minimal default framework</a>
+- Commandline options
 
 Commandline options
 -------------------

@@ -104,16 +104,14 @@ module LanguageParser = proto(Parser) {
     },
 
     /**
-     * load definition (currently from file)
+     * set definition from string
      *
-     * @param string filename name
-     * @return bool false if the file could not be opened
+     * @param string data definition string
+     * @param string filename name (display purpose only)
      */
-    loadDefinition: function(filename) {
+    setDefinition: function(data, filename) {
 
-        util.log('LanguageParser', 'loading defintion file ' + filename);
-
-        var fileContents = fs.readFileSync(filename, 'UTF-8');
+        util.log('LanguageParser', 'setting definition file ' + filename);
 
         // feed file contents to secondary parser
 
@@ -123,8 +121,22 @@ module LanguageParser = proto(Parser) {
 
         util.log('LanguageParser', 'processing definition', 2);
         this.trainer.file = filename;
-        this.trainer.parse(fileContents);
+        this.trainer.parse(data);
         util.log('LanguageParser', 'done', -2);
+    },
+
+    /**
+     * load definition
+     *
+     * @param string filename name
+     */
+    loadDefinition: function(filename) {
+
+        util.log('LanguageParser', 'loading definition file ' + filename);
+
+        var fileContents = fs.readFileSync(filename, 'UTF-8');
+
+        this.setDefinition(fileContents, filename);
     },
 
     /**
@@ -296,16 +308,16 @@ module LanguageParser = proto(Parser) {
             this.setSource(filename, fs.readFileSync(filename, 'UTF-8'));
         }
     },
-    
+
     /**
      * runs scan on the capture tree
      *
      * @param state userdefined scan state object passed to every node
      */
     scan: function(state) {
-    
+
         var InitialType = this.mapType('', this.definition.initialBlock);
-        InitialType::scan.call(this.captureTree, state);        
+        InitialType::scan.call(this.captureTree, state);
     },
 
     /**

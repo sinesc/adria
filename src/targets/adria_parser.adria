@@ -59,7 +59,7 @@ module AdriaParser = proto(LanguageParser) {
             'for', 'in', 'do', 'while', 'break', 'continue',
             'switch', 'case',
             'throw', 'try', 'catch', 'finally',
-            'function', 'proto', 'property', 'parent',
+            'function', 'proto', 'property', 'parent', 'yield', 'await',
             'require', 'assert', 'resource',
             'delete', 'new',
             'instanceof', 'typeof'
@@ -78,7 +78,7 @@ module AdriaParser = proto(LanguageParser) {
             Tokenizer.prefab.regex(null, /^\/\/.*/),
             Tokenizer.prefab.breaker(),
             Tokenizer.prefab.regex('REGEXP', /^\/([^\/]*?(?:[^\n\\]|\\\\)+?)+?\/[a-z]*/),
-            Tokenizer.prefab.set('DELIM', [ ';', '.', ',', '(', ')', '[', ']', '{', '}', '!==', '!=', '!', '++', '--' ]),
+            Tokenizer.prefab.set('DELIM', [ ';', '.', ',', '(', ')', '[', ']', '{', '}', '!==', '!=', '!', '++', '--', '#' ]),
             Tokenizer.prefab.group('DELIM', [ '=', '&', '|', '<', '>', ':', '?', '+', '-', '*', '/', '%' ]),
             Tokenizer.prefab.regex('IDENT', /^[a-zA-Z_\$][a-zA-Z0-9_\$]*/, matchKeywords),
             Tokenizer.prefab.number('NUMERIC'),
@@ -86,12 +86,12 @@ module AdriaParser = proto(LanguageParser) {
         ], [ 'KEYWORD' ]);
 
         util.log('AdriaParser', 'trainer processing adria .sdt-files', 2);
-        this.loadDefinition('definition/adria/control.sdt');
-        this.loadDefinition('definition/adria/expression.sdt');
-        this.loadDefinition('definition/adria/literal.sdt');
-        this.loadDefinition('definition/adria/proto.sdt');
-        this.loadDefinition('definition/adria/root.sdt');
-        this.loadDefinition('definition/adria/statement.sdt');
+        this.setDefinition(resource('../../definition/adria/control.sdt'), 'control');
+        this.setDefinition(resource('../../definition/adria/expression.sdt'), 'expression');
+        this.setDefinition(resource('../../definition/adria/literal.sdt'), 'literal');
+        this.setDefinition(resource('../../definition/adria/proto.sdt'), 'proto');
+        this.setDefinition(resource('../../definition/adria/root.sdt'), 'root');
+        this.setDefinition(resource('../../definition/adria/statement.sdt'), 'statement');
 
         util.log('AdriaParser', 'being trained', -2);
         LanguageParser->trainSelf();

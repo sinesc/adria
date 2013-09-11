@@ -36,28 +36,34 @@ proto_body_item {
 }
 
 proto_body_property {
-    entry -> "property" -> "{" -> proto_body_property_item:item -> "}" -> return
-    proto_body_property_item:item -> ","[any] -> proto_body_property_item:item
-    proto_body_property_item:item -> ","[last] -> "}"
+    entry -> "property" -> proto_body_property_accessor -> return
+    entry -> "property" -> proto_body_property_data -> return
 }
-//!todo this does not prevent mixing these
+
 proto_body_property_accessor {
+    entry -> "{" -> proto_body_property_accessor_item:item -> "}" -> return
+    proto_body_property_accessor_item:item -> ","[any] -> proto_body_property_accessor_item:item
+    proto_body_property_accessor_item:item -> ","[last] -> "}" -> return
+}
+
+proto_body_property_data {
+    entry -> "{" -> proto_body_property_data_item:item -> "}" -> return
+    proto_body_property_data_item:item -> ","[any] -> proto_body_property_data_item:item
+    proto_body_property_data_item:item -> ","[last] -> "}" -> return
+}
+
+proto_body_property_accessor_item {
     entry -> "get":key -> ":"
     entry -> "set":key -> ":"
     entry -> "configurable":key -> ":"
     entry -> "enumerable":key -> ":"
-    ":" -> literal:value -> return
+    ":" -> literal_expression:value -> return
 }
 
-proto_body_property_data {
+proto_body_property_data_item {
     entry -> "value":key -> ":"
     entry -> "writable":key -> ":"
     entry -> "configurable":key -> ":"
     entry -> "enumerable":key -> ":"
-    ":" -> literal:value -> return
-}
-
-proto_body_property_item {
-    entry -> proto_body_property_accessor -> return
-    entry -> proto_body_property_data -> return
+    ":" -> literal_expression:value -> return
 }

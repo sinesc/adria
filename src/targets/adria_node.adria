@@ -31,18 +31,19 @@ var Set = util.Set;
 proto AdriaNode (CaptureNode) {
 
     validIdentifier: {
-        common: new Set([ 
-            'arguments', 'this', 'true', 'false', 'null', 'undefined', 'Infinity', 'NaN', 
+        common: new Set([
+            'arguments', 'this', 'true', 'false', 'null', 'undefined', 'Infinity', 'NaN',
             'Array', 'Boolean', 'Date', 'Intl', 'JSON', 'Function', 'Math', 'Number', 'Object', 'RegExp', 'String',
             'ArrayBuffer', 'DataView', 'Float32Array', 'Float64Array', 'Int16Array', 'Int32Array', 'Int8Array',
             'Uint16Array', 'Uint32Array', 'Uint8Array',
             'Error', 'EvalError', 'RangeError', 'ReferenceError', 'SyntaxError', 'TypeError', 'URIError',
             'decodeURI', 'decodeURIComponent', 'encodeURI', 'encodeURIComponent', 'eval',
+            'setTimeout', 'clearTimeout', 'setInterval', 'clearInterval',
             'isFinite', 'isNaN', 'parseFloat', 'parseInt',
             'console', 'debugger',
         ]),
         node: new Set([ 'process' ]),
-        web: new Set([ 'window', 'document' ]),
+        web: new Set([ 'window', 'document', 'performance' ]),
     },
 
     /**
@@ -72,15 +73,15 @@ proto AdriaNode (CaptureNode) {
         var scope = this;
 
         do {
-        
+
             // first iteration might not be a scope
-            
+
             if (scope instanceof Scope !== true) {
                 continue;
             }
 
             // check locals, implicits and module exports
-            
+
             if (scope.locals.has(name)) {
                 return;
             }
@@ -92,7 +93,7 @@ proto AdriaNode (CaptureNode) {
             if (scope instanceof Module && (scope.exports.has(name) || scope.moduleExport === name)) {
                 return;
             }
-            
+
         } while ((scope = scope.findScope()) !== null);
 
         // check globally
@@ -100,13 +101,13 @@ proto AdriaNode (CaptureNode) {
         if (this.parser().transform.globals.has(name)) {
             return;
         }
-        
+
         // check other parameter //!todo this allows all scope variables in parameters, not just other parameters
-        
+
         var paramNode = this.ancestor(null, 'function_param_list');
-        
+
         if (paramNode !== null) {
-        
+
             var scope = paramNode.parent.get('body');
             scope.checkDefined(name);
             return;
@@ -198,11 +199,11 @@ proto AdriaNode (CaptureNode) {
             var child = children[found];
 
             if (child.value === 'access_operation_member' || child.value === 'access_operation_proto') {
-                result = children[found].csn(children[found].get('item').value);
+                result = child.csn(child.get('item').value);
             }
 
             if (child.key === 'ident') {
-                result = children[found].csn(children[found].value);
+                result = child.csn(child.toSourceNode());
             }
         }
 
@@ -279,7 +280,7 @@ export Scope = proto (AdriaNode) {
     },
 
     toSourceNode: function() {
-//!todo ideally there'd be a block and a scoping block so that the scope itself doesn't have to output the var defs
+
         // prefix content with local variable
 
         var content = AdriaNode->toSourceNode();
@@ -370,7 +371,11 @@ export InvokeOperation = proto (AdriaNode) {
                 result.add(', ');
             }
 
-            result.add(node.toSourceNode());
+            if (node.value === '#') {
+                result.add('___callback');
+            } else {
+                result.add(node.toSourceNode());
+            }
         });
 
         result.add(')');
@@ -378,6 +383,8 @@ export InvokeOperation = proto (AdriaNode) {
         return result;
     },
 };
+
+export AsyncWrapOperation = InvokeOperation;
 
 export FunctionLiteral = proto (AdriaNode) {
 
@@ -401,7 +408,7 @@ export FunctionLiteral = proto (AdriaNode) {
         var result = this.csn();
         result.add('function');
 
-        if (this instanceof GeneratorLiteral) {
+        if (this instanceof GeneratorLiteral || this instanceof AsyncLiteral) {
             result.add('*');
         }
 
@@ -410,17 +417,17 @@ export FunctionLiteral = proto (AdriaNode) {
         this.name = this.findName();
 
         if (this.name !== null) {
-        
+
             this.get('body').implicits.add(this.name);
             result.add([ ' ', this.name ]);
         }
 
         // statements also add the name to the parent scope
-        
+
         if (this instanceof FunctionStatement || this instanceof GeneratorStatement) {
             this.findScope().implicits.add(this.name);
         }
-        
+
         result.add('(');
         result.add(this.get('param_list').toSourceNode());
         result.add(') {' + this.nl());
@@ -447,13 +454,30 @@ export GeneratorLiteral = proto (FunctionLiteral) { };
 export FunctionStatement = proto (FunctionLiteral) { };
 export GeneratorStatement = proto (GeneratorLiteral) { };
 
+export AsyncLiteral = proto (FunctionLiteral) {
+
+    toSourceNode: function() {
+
+        var result = this.csn();
+        result.add('(function() {' + this.nl(1));
+        result.add([ 'var ___self = ', FunctionLiteral->toSourceNode(), ';', this.nl() ]);
+        result.add([ 'return function(', this.get('param_list').toSourceNode(), ') {' + this.nl(1) ]);
+        result.add('return new Async(___self.apply(this, arguments));' + this.nl(-1));
+        result.add('};'+ this.nl(-1));
+        result.add('})()');
+        return result;
+    },
+};
+
+export AsyncStatement = proto (AsyncLiteral) { };
+
 export FunctionParamList = proto (AdriaNode) {
 
     toSourceNode: function() {
 
         var name, defaultArg, valueNode;
         var result = this.csn();
-        var functionNode = this.ancestor('function|generator');
+        var functionNode = this.ancestor('function|generator|async');
         var scope = functionNode.get('body');
 
         this.eachKey('item', function(node) {
@@ -482,13 +506,13 @@ export FunctionParamList = proto (AdriaNode) {
 export BaseLiteral = proto (AdriaNode) {
 
     scan: function(state) {
-        
+
         AdriaNode->scan(state);
-    
+
         this.eachKey('ident', function(child) {
             this.checkDefined(child.value);
         });
-    },    
+    },
 
     toSourceNode: function() {
 
@@ -496,7 +520,7 @@ export BaseLiteral = proto (AdriaNode) {
 
         this.each(function(child) {
             switch (child.key) {
-                case 'ident':
+                //!case 'ident':
                 case 'numeric':
                 case 'string':
                 case 'regexp':
@@ -614,7 +638,7 @@ export ForCountStatement = proto (AdriaNode) {
 
                 var valueNode = node.get('value');
                 var nameNode = node.get('name');
-                
+
                 this.findScope().locals.add(nameNode.value);
 
                 if (valueNode.isNode()) {
@@ -760,9 +784,9 @@ export ArrayLiteral = proto (AdriaNode) {
 export Expression = proto (AdriaNode) {
 
     scan: function(state) {
-        
+
         AdriaNode->scan(state);
-        
+
         this.eachKey('ident', function(child) {
             this.checkDefined(child.value);
         });
@@ -771,9 +795,12 @@ export Expression = proto (AdriaNode) {
     toSourceNode: function() {
 
         var children = this.children;
-        var child;
         var propertyAssignSplit = -1;
+        var isWrapped = this.get('wrap').isNode();
         var result = this.csn();
+        var child;
+
+        //this instanceof AsyncLiteral
 
         for (var id in children) {
             child = children[id];
@@ -797,9 +824,10 @@ export Expression = proto (AdriaNode) {
                     break;
                 case 'call':
                 case 'pcall':
+                case 'wrap':
+                case 'ident':
                     result.add(child.csn(child.toSourceNode()));
                     break;
-                case 'ident':
                 case 'brace_op':
                 case 'xfix_op':
                     result.add(child.csn(child.value));
@@ -847,6 +875,13 @@ export Expression = proto (AdriaNode) {
             }
         }
 
+        // async wrap operation
+
+        if (isWrapped) {
+
+            result = this.csn([ '(function(___callback) { return ', result, '; }).bind(this)' ]);
+        }
+
         return result;
     }
 };
@@ -870,7 +905,11 @@ export ProtoLiteral = proto (AdriaNode) {
 
         // get own and parent name
 
-        this.name = this.findName().toString();
+        var nameNode = this.findName();
+
+        if (nameNode !== null) {
+            this.name = nameNode.toString();
+        }
 
         var parentNode = this.get('parent');
         var haveParent = parentNode.isNode();
@@ -895,7 +934,7 @@ export ProtoLiteral = proto (AdriaNode) {
 
         if (this.constructorBody !== null) {
 
-            result.add('function ' + this.name + '(');
+            result.add('var ___self = function ' + this.name + '(');
             result.add(this.constructorArgs);
             result.add(') {' + this.nl(1));
 
@@ -907,15 +946,15 @@ export ProtoLiteral = proto (AdriaNode) {
             // dynamic parent lookup
 
             if (this.lookupParent) {
-                this.addParentLookup(result, 'constructor', this.name);
+                this.addParentLookup(result, 'constructor', '___self');
             }
 
             result.add(this.constructorBody);
-            result.add(this.nl(-1) + '}' + this.nl() + this.nl());
+            result.add(this.nl(-1) + '};' + this.nl() + this.nl());
 
         } else {
 
-            result.add('function ' + this.name + '() {');
+            result.add('var ___self = function ' + this.name + '() {');
 
             if (haveParent) {
                 result.add(this.nl(1) + '___parent.apply(this, arguments);' + this.nl(-1));
@@ -927,8 +966,8 @@ export ProtoLiteral = proto (AdriaNode) {
         // chain to parent
 
         if (haveParent) {
-            result.add(this.name + '.prototype = Object.create(___parent.prototype);' + this.nl());
-            result.add(this.name + '.prototype.constructor = ' + this.name + ';' + this.nl() + this.nl());
+            result.add('___self.prototype = Object.create(___parent.prototype);' + this.nl());
+            result.add('___self.prototype.constructor = ___self;' + this.nl() + this.nl());
         }
 
         // body elements
@@ -937,7 +976,7 @@ export ProtoLiteral = proto (AdriaNode) {
 
         // close and return
 
-        result.add(this.nl() + 'return ' + this.name + ';' + this.nl(-1));
+        result.add(this.nl() + 'return ___self;' + this.nl(-1));
         result.add('})(');
         result.add(parentNode.toSourceNode());
         result.add(')');
@@ -978,7 +1017,7 @@ export ProtoBodyItem = proto (AdriaNode) {
     toSourceNode: function()  {
 
         var protoNode = this.ancestor(null, 'new_proto_literal|proto_literal|proto_statement');
-        var constructorName = protoNode.name;
+        //!var constructorName = protoNode.name;
         var keyNode = this.get('key');
 
         // set constructor attributes in ProtoLiteral, do the rest ourselves
@@ -1003,7 +1042,7 @@ export ProtoBodyItem = proto (AdriaNode) {
 
                 var name = (keyNode.value === 'string' ? keyNode.value : '"' + keyNode.value + '"');
 
-                result = this.csn('Object.defineProperty(' + constructorName + '.prototype, ' + name + ', ');
+                result = this.csn('Object.defineProperty(___self.prototype, ' + name + ', ');
                 result.add(valueNode.toSourceNode());
                 result.add(');' + this.nl());
                 return result;
@@ -1012,7 +1051,7 @@ export ProtoBodyItem = proto (AdriaNode) {
 
                 var name = (keyNode.value === 'string' ? '[' + keyNode.value + ']' : '.' + keyNode.value);
 
-                result = this.csn(constructorName + '.prototype' + name + ' = ');
+                result = this.csn('___self.prototype' + name + ' = ');
                 result.add(valueNode.toSourceNode());
                 result.add(';' + this.nl());
                 return result;
@@ -1036,9 +1075,57 @@ export ReturnStatement = proto (AdriaNode) {
     },
 };
 
-export YieldStatement = ReturnStatement;
 export FlowStatement = ReturnStatement;
 
+export YieldLiteral = proto (AdriaNode) {
+
+    toSourceNode: function() {
+
+        var result = this.csn();
+        var type = this.get('type');
+
+        result.add([ type.csn(type.value), ' ' ]);
+        result.add(this.get('value').toSourceNode());
+
+        return result;
+    },
+};
+
+export AwaitLiteral = proto (AdriaNode) {
+
+    toSourceNode: function() {
+
+        var result = this.csn();
+        result.add('yield Async.wrap(');
+        result.add(this.get('value').toSourceNode());
+        result.add(', this)');
+        //result.add(this.get('params').toSourceNode());
+        return result;
+    },
+
+    /*toSourceNode: function() {
+
+        var result = this.csn();
+        result.add('(function(callback) {' + this.nl(1));
+        result.add(this.get('value').toSourceNode());
+        result.add(', this)');
+        result.add(this.get('params').toSourceNode());
+        result.add(';' + this.nl());
+        return result;
+    },
+
+
+
+    }).bind(this)
+
+    (function(___this) {
+        var args = Array.prototype.slice.call(arguments);
+        return (function(callback) {
+            args.push(callback);
+            func.apply(context, args);
+        };
+    })(this)*/
+};
 
 var catchSpecificsId = 1;
 
@@ -1058,14 +1145,14 @@ export CatchSpecifics = proto (AdriaNode) {
             if (first !== true) {
                 result.add(' else ');
             }
-                        
+
             var valueNode = node.get('value');
-            this.findScope().implicits.add(valueNode.value);
+            this.findScope().locals.add(valueNode.value);
 
             result.add('if (' + name + ' instanceof ');
             result.add(node.get('type').toSourceNode());
             result.add(') {' + this.nl(1));
-            result.add('var ' + valueNode.value + ' = ' + name + ';' + this.nl());
+            result.add(valueNode.value + ' = ' + name + ';' + this.nl());
             result.add(node.get('body').toSourceNode());
             result.add(this.nl(-1) + '}');
         });
@@ -1077,21 +1164,21 @@ export CatchSpecifics = proto (AdriaNode) {
         if (allNode.isNode()) {
 
             var valueNode = allNode.get('value');
-            this.findScope().implicits.add(valueNode.value);
-            
-            result += ' else { ' + this.nl(1);
-            result += 'var ' + valueNode.value + ' = ' + name + ';' + this.nl();
-            result += allNode.get('body').toString();
-            result += this.nl(-1) + '}';
+            this.findScope().locals.add(valueNode.value);
+
+            result.add(' else { ' + this.nl(1));
+            result.add(valueNode.value + ' = ' + name + ';' + this.nl());
+            result.add(allNode.get('body').toSourceNode());
+            result.add(this.nl(-1) + '}');
 
         } else {
 
-            result += ' else { ' + this.nl(1);
-            result += 'throw ' + name + ';' + this.nl();
-            result += this.nl(-1) + '}';
+            result.add(' else { ' + this.nl(1));
+            result.add('throw ' + name + ';' + this.nl());
+            result.add(this.nl(-1) + '}');
         }
 
-        result += this.nl(-1) + '}';
+        result.add(this.nl(-1) + '}');
 
         return result;
     },
@@ -1104,7 +1191,7 @@ export CatchAll = proto (AdriaNode) {
 
         var result = this.csn();
         var valueNode = this.get('value');
-        
+
         this.findScope().implicits.add(valueNode.value);
 
         result.add(' catch (');

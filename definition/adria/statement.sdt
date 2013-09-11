@@ -40,6 +40,11 @@ generator_statement {
     "(" -> function_param_list:param_list -> ")"
 }
 
+async_statement {
+    entry -> "function" -> "#":async -> ident:name -> "(" -> ")" -> scope:body -> return
+    "(" -> function_param_list:param_list -> ")"
+}
+
 /*
  * assert statement
  */
@@ -82,9 +87,8 @@ statement {
     entry -> throw_statement:throw -> t -> return
     entry -> do_while_statement:do_while -> t -> return
     entry -> assert_statement:assert -> t -> return
-    
+
     entry -> flow_statement:control -> t -> return
-    entry -> yield_statement:control -> t -> return    
 
     entry -> while_statement:while -> return
     entry -> switch_statement:switch -> return
