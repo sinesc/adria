@@ -1,15 +1,15 @@
 adria
 =====
 
-- Readme
+- <a href="//github.com/sinesc/adria/blob/master/README.md">Readme</a>
 - <a href="//github.com/sinesc/adria/blob/master/doc/overview.md">Language overview</a>
-- <a href="//github.com/sinesc/adria/blob/master/doc/framework.md">Minimal default framework</a>
+- <a href="//github.com/sinesc/adria/blob/master/doc/modules.md">Module structure</a>
 - <a href="//github.com/sinesc/adria/blob/master/doc/commandline.md">Commandline options</a>
 
 About
 -----
 
-Adria is a programming language for NodeJS and the browser. It is also the name for the self-hosting transcompiler used to generate .js from .adria.
+Adria is a programming language for NodeJS and the browser and the name for the self-hosting transcompiler used to generate .js from .adria.
 
 Adria compiles to JavaScript and is syntactically very similar to it. Most strict Javascript code will either work out of the box or require very little
 modification to make it compile, though ultimately you'll want to update existing code to use Adria's extended syntax.

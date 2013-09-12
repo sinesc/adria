@@ -65,6 +65,7 @@ module AdriaTransform = proto (Transform) {
         options['no-link'] = (options['no-link'] === undefined ? false : options['no-link']);
         options['no-map'] = (options['no-map'] === undefined ? false : options['no-map']);
         options['no-framework'] = (options['no-framework'] === undefined ? false : options['no-framework']);
+        options['no-blanks'] = (options['no-blanks'] === undefined ? false : options['no-blanks']);
         options.fileExt = (options.fileExt === undefined ? '.adria' : options.fileExt);
         options.platform = (options.platform === undefined ? 'web' : options.platform);
 
@@ -268,12 +269,21 @@ module AdriaTransform = proto (Transform) {
 
             } else {
 
-                fs.writeFileSync(jsFile, node.toString());
+                var result = node.toString();
+                fs.writeFileSync(jsFile, options['no-blanks'] ? this.postProcess(result) : result);
             }
 
         } else {
 
             process.stdout.write(node.toString());
         }
+    },
+
+    postProcess: function(code) {
+
+        // remove blank lines
+
+        code = code.replace(/\n[\ \n]*\n/g, '\n');
+        return code;
     },
 };

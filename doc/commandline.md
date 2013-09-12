@@ -3,8 +3,8 @@ adria
 
 - <a href="//github.com/sinesc/adria/blob/master/README.md">Readme</a>
 - <a href="//github.com/sinesc/adria/blob/master/doc/overview.md">Language overview</a>
-- <a href="//github.com/sinesc/adria/blob/master/doc/framework.md">Minimal default framework</a>
-- Commandline options
+- <a href="//github.com/sinesc/adria/blob/master/doc/modules.md">Module structure</a>
+- <a href="//github.com/sinesc/adria/blob/master/doc/commandline.md">Commandline options</a>
 
 Commandline options
 -------------------
