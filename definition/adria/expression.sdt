@@ -90,13 +90,15 @@ access_operation {
     // degraded from generic expression to member access, cannot go back to generic, i.e. (a || b).c.d::e ...
     entry -> access_operation_types -> return
     access_operation_types -> invoke_operation:call -> return
+    access_operation_types -> async_wrap_operation:wrap -> return
     access_operation_types -> access_operation -> return
     invoke_operation:call -> access_operation
 
     entry -> access_operation_types_assignable -> property_assignment_operation -> return
     entry -> access_operation_types_assignable -> assignment_operation -> return
 
-    invoke_operation:call -> invoke_operation:call
+    invoke_operation:call -> invoke_operation:call    
+    invoke_operation:call -> async_wrap_operation:wrap
 }
 
 invoke_operation {
