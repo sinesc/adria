@@ -60,7 +60,7 @@ function_param {
 }
 
 function_param_default {
-    entry -> ident:name -> "=" -> literal:value -> return
+    entry -> ident:name -> "=" -> expression:value -> return
 }
 
 function_param_list {
@@ -134,16 +134,15 @@ base_literal {
     entry -> ident:ident -> return
     entry -> object_literal:object -> return
     entry -> array_literal:array -> return
-    entry -> "(":brace -> function_literal:function -> ")":brace -> return
-    entry -> "(":brace -> proto_literal:proto -> ")":brace -> return
-    entry -> "(":brace -> generator_literal:function -> ")":brace -> return
     entry -> require_literal:require -> return
     entry -> parent_literal:parent -> return
     entry -> resource_literal:resource -> return
     entry -> yield_literal:yield -> return
+    entry -> "(":brace -> complex_literal -> ")":brace -> return
 }
 
 complex_literal {
+    // not directly usable in expressions
     entry -> function_literal:function -> return
     entry -> proto_literal:proto -> return
     entry -> new_proto_literal:newproto -> return

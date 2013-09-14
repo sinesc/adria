@@ -6,8 +6,8 @@ adria
 - <a href="//github.com/sinesc/adria/blob/master/doc/modules.md">Module structure</a>
 - <a href="//github.com/sinesc/adria/blob/master/doc/commandline.md">Commandline options</a>
 
-Reference
-----------
+Language overview
+-----------------
 
 This document details only differences between Javascript and Adria
 
@@ -58,7 +58,7 @@ Support for catching specific types of exceptions was added. If an exception is 
 
 Creates a new asynchronous function. Asynchronous functions cannot return a specific value, they always return an Async object. Asynchronous functions add support for the yield literal, which will halt execution of the function until its function-argument invokes a callback, passed in via the #-token or until all of its array- or object-argument functions have invoked their callbacks. While the function is halted, other code may run.
 
-In the following examples, a simple sleep function is used. The function follows the NodeJS `callback(err, val)` style.
+In the following examples, a simple sleep function is used. The function follows the NodeJS `callback(err, val)` style and could be replaced with any of NodeJS's callback based functions, i.e. `fs.readFile`.
 
 ```javascript
 var sleep = function(ms, callback) {
@@ -67,7 +67,10 @@ var sleep = function(ms, callback) {
     }, ms);
 };
 ```
-An asynchronous function can wait for sleep to invoke its callback by passing the `#`-token to sleep and then yielding it.
+An asynchronous function can wait for another function to invoke its callback by yielding the results of a wrap-operation on it. The wrap operation looks like an invocation except
+that one of the parameters used is the `#` token. A wrap operation marks the position of the callback and sets the functions parameters. If the slight overhead of this operation
+is not acceptable in a given situation, the application-wide available Async object also provides a wrap method that does not bind function parameters, allowing the programmer
+to pre-wrap all required functions.
 
 ```javascript
 var testAsync = function#(callback) {
@@ -75,7 +78,8 @@ var testAsync = function#(callback) {
     var result = yield sleep(1000, #);
     console.log('sleep done', result);
 
-    result += yield sleep(1000, #);
+    var sleep1000 = sleep(1000, #);    // wrap is allowed anywhere
+    result += yield sleep1000;
     console.log('sleep done', result);
 };
 

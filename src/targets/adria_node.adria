@@ -41,6 +41,7 @@ module AdriaNode = proto (CaptureNode) {
             'setTimeout', 'clearTimeout', 'setInterval', 'clearInterval',
             'isFinite', 'isNaN', 'parseFloat', 'parseInt',
             'console', 'debugger',
+            'Async',
         ]),
         node: new Set([ 'process' ]),
         web: new Set([ 'window', 'document', 'performance' ]),
@@ -364,6 +365,33 @@ export InvokeOperation = proto (AdriaNode) {
 
         var result = this.csn();
         result.add('(');
+        this.params = [];
+
+        this.each(function(node, first) {
+
+            if (first === false) {
+                result.add(', ');
+            }
+
+            result.add(node.toSourceNode());
+        });
+
+        result.add(')');
+
+        return result;
+    },
+};
+
+export AsyncWrapOperation = proto (AdriaNode) {
+
+    params: null,
+
+    toSourceNode: function() {
+
+        var id = 0;
+        var result = this.csn();
+        this.params = [];
+        result.add('(');
 
         this.each(function(node, first) {
 
@@ -374,7 +402,8 @@ export InvokeOperation = proto (AdriaNode) {
             if (node.value === '#') {
                 result.add('___callback');
             } else {
-                result.add(node.toSourceNode());
+                result.add('___' + id++);
+                this.params.push(node.toSourceNode().toString());
             }
         });
 
@@ -383,8 +412,6 @@ export InvokeOperation = proto (AdriaNode) {
         return result;
     },
 };
-
-export AsyncWrapOperation = InvokeOperation;
 
 export FunctionLiteral = proto (AdriaNode) {
 
@@ -823,7 +850,7 @@ export Expression = proto (AdriaNode) {
 
         var children = this.children;
         var propertyAssignSplit = -1;
-        var isWrapped = this.get('wrap').isNode();
+        var wrapper = this.get('wrap');
         var result = this.csn();
 
         //this instanceof AsyncLiteral
@@ -902,9 +929,20 @@ export Expression = proto (AdriaNode) {
 
         // async wrap operation
 
-        if (isWrapped) {
+        if (wrapper.isNode()) {
 
-            result = this.csn([ '(function(___callback) { return ', result, '; }).bind(this)' ]);
+            var locals = '';
+            var params = wrapper.params.join(', ');
+
+            for (var id = 0; id < wrapper.params.length; id++) {
+                locals += '___' + id + ', ';
+            }
+
+            result = this.csn([
+                '(function(' + locals + '___callback) { return ',
+                result,
+                '; }).bind(this' + (wrapper.params.length > 0 ? ', ' + params : '') + ')'
+            ]);
         }
 
         return result;
@@ -1114,42 +1152,6 @@ export YieldLiteral = proto (AdriaNode) {
 
         return result;
     },
-};
-
-export AwaitLiteral = proto (AdriaNode) {
-
-    toSourceNode: function() {
-
-        var result = this.csn();
-        result.add('yield Async.wrap(');
-        result.add(this.get('value').toSourceNode());
-        result.add(', this)');
-        //result.add(this.get('params').toSourceNode());
-        return result;
-    },
-
-    /*toSourceNode: function() {
-
-        var result = this.csn();
-        result.add('(function(callback) {' + this.nl(1));
-        result.add(this.get('value').toSourceNode());
-        result.add(', this)');
-        result.add(this.get('params').toSourceNode());
-        result.add(';' + this.nl());
-        return result;
-    },
-
-
-
-    }).bind(this)
-
-    (function(___this) {
-        var args = Array.prototype.slice.call(arguments);
-        return (function(callback) {
-            args.push(callback);
-            func.apply(context, args);
-        };
-    })(this)*/
 };
 
 var catchSpecificsId = 1;

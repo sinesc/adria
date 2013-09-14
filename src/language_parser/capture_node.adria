@@ -347,9 +347,7 @@ module CaptureNode = proto {
       * @param to inclusive end child index
       * @param Constructor optional constructor for the new node, defaults to parent type
       */
-    nest: function(from, to, Constructor) {
-
-        Constructor = (Constructor === undefined ? this.constructor : Constructor);
+    nest: function(from, to, Constructor = this.constructor) {
 
         var node = new Constructor(this.key, this.value);
 

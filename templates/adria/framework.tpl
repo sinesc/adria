@@ -88,12 +88,16 @@ var Async;
             this.sync = 0;
 
             if (typeof arg === 'function') {
-                arg(this.boundCallback);
+                try {
+                    arg(this.boundCallback);
+                } catch (e) {
+                    return this.generator.throw(e);
+                }
             } else {
                 this.waitAll(arg);
             }
 
-            // check if the function returned before or after calling its callback (did it call the callback directly or did it defer)
+            // check if the function returned before or after the callback was invoked
 
             if (this.sync === 0) {
                 this.sync = -1;
@@ -115,9 +119,13 @@ var Async;
             var arg = args[id];
             if (typeof arg === 'function') {
                 this.waiting++;
-                arg(this._waitAllCallback.bind(this, id));
+                try {
+                    arg(this._waitAllCallback.bind(this, id));
+                } catch (e) {
+                    return this.generator.throw(e);
+                }
             } else {
-                this.generator.throw(new Async.AsyncError('Property ' + id + ' of yielding object is not a function'));
+                return this.generator.throw(new Async.AsyncError('Property ' + id + ' of yielding object is not a function'));
             }
         }
     };
@@ -126,12 +134,12 @@ var Async;
 
         var numArgs = arguments.length;
 
-        if (err && numArgs >= 3) {
+        if (err instanceof Error) {
             return this.generator.throw(err);
         }
 
         if (this.result.hasOwnProperty(originalId)) {
-            this.generator.throw(new Async.AsyncError('Callback for item ' + originalId + ' of yield was invoked more than once'));
+            return this.generator.throw(new Async.AsyncError('Callback for item ' + originalId + ' of yield was invoked more than once'));
         }
 
         // add this callbacks result to set of results
@@ -150,7 +158,7 @@ var Async;
 
         var numArgs = arguments.length;
 
-        if (err && numArgs >= 2) {
+        if (err instanceof Error) {
             return this.generator.throw(err);
         }
 

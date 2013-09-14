@@ -66,11 +66,15 @@ var Async;
             arg = arg.value;
             this.sync = 0;
             if (typeof arg === 'function') {
-                arg(this.boundCallback);
+                try {
+                    arg(this.boundCallback);
+                } catch (e) {
+                    return this.generator.throw(e);
+                }
             } else {
                 this.waitAll(arg);
             }
-            // check if the function returned before or after calling its callback (did it call the callback directly or did it defer)
+            // check if the function returned before or after the callback was invoked
             if (this.sync === 0) {
                 this.sync = -1;
                 break;
@@ -88,19 +92,23 @@ var Async;
             var arg = args[id];
             if (typeof arg === 'function') {
                 this.waiting++;
-                arg(this._waitAllCallback.bind(this, id));
+                try {
+                    arg(this._waitAllCallback.bind(this, id));
+                } catch (e) {
+                    return this.generator.throw(e);
+                }
             } else {
-                this.generator.throw(new Async.AsyncError('Property ' + id + ' of yielding object is not a function'));
+                return this.generator.throw(new Async.AsyncError('Property ' + id + ' of yielding object is not a function'));
             }
         }
     };
     Async.prototype._waitAllCallback = function(originalId, err, val) {
         var numArgs = arguments.length;
-        if (err && numArgs >= 3) {
+        if (err instanceof Error) {
             return this.generator.throw(err);
         }
         if (this.result.hasOwnProperty(originalId)) {
-            this.generator.throw(new Async.AsyncError('Callback for item ' + originalId + ' of yield was invoked more than once'));
+            return this.generator.throw(new Async.AsyncError('Callback for item ' + originalId + ' of yield was invoked more than once'));
         }
         // add this callbacks result to set of results
         this.result[originalId] = (numArgs === 2 ? err : val);
@@ -112,7 +120,7 @@ var Async;
     };
     Async.prototype.callback = function(err, val) {
         var numArgs = arguments.length;
-        if (err && numArgs >= 2) {
+        if (err instanceof Error) {
             return this.generator.throw(err);
         }
         this.result = (numArgs === 1 ? err : val);
@@ -561,7 +569,7 @@ function_param {\n\
 }\n\
 \n\
 function_param_default {\n\
-    entry -> ident:name -> "=" -> literal:value -> return\n\
+    entry -> ident:name -> "=" -> expression:value -> return\n\
 }\n\
 \n\
 function_param_list {\n\
@@ -635,16 +643,15 @@ base_literal {\n\
     entry -> ident:ident -> return\n\
     entry -> object_literal:object -> return\n\
     entry -> array_literal:array -> return\n\
-    entry -> "(":brace -> function_literal:function -> ")":brace -> return\n\
-    entry -> "(":brace -> proto_literal:proto -> ")":brace -> return\n\
-    entry -> "(":brace -> generator_literal:function -> ")":brace -> return\n\
     entry -> require_literal:require -> return\n\
     entry -> parent_literal:parent -> return\n\
     entry -> resource_literal:resource -> return\n\
     entry -> yield_literal:yield -> return\n\
+    entry -> "(":brace -> complex_literal -> ")":brace -> return\n\
 }\n\
 \n\
 complex_literal {\n\
+    // not directly usable in expressions\n\
     entry -> function_literal:function -> return\n\
     entry -> proto_literal:proto -> return\n\
     entry -> new_proto_literal:newproto -> return\n\
@@ -981,12 +988,16 @@ var Async;\n\
             this.sync = 0;\n\
 \n\
             if (typeof arg === \'function\') {\n\
-                arg(this.boundCallback);\n\
+                try {\n\
+                    arg(this.boundCallback);\n\
+                } catch (e) {\n\
+                    return this.generator.throw(e);\n\
+                }\n\
             } else {\n\
                 this.waitAll(arg);\n\
             }\n\
 \n\
-            // check if the function returned before or after calling its callback (did it call the callback directly or did it defer)\n\
+            // check if the function returned before or after the callback was invoked\n\
 \n\
             if (this.sync === 0) {\n\
                 this.sync = -1;\n\
@@ -1008,9 +1019,13 @@ var Async;\n\
             var arg = args[id];\n\
             if (typeof arg === \'function\') {\n\
                 this.waiting++;\n\
-                arg(this._waitAllCallback.bind(this, id));\n\
+                try {\n\
+                    arg(this._waitAllCallback.bind(this, id));\n\
+                } catch (e) {\n\
+                    return this.generator.throw(e);\n\
+                }\n\
             } else {\n\
-                this.generator.throw(new Async.AsyncError(\'Property \' + id + \' of yielding object is not a function\'));\n\
+                return this.generator.throw(new Async.AsyncError(\'Property \' + id + \' of yielding object is not a function\'));\n\
             }\n\
         }\n\
     };\n\
@@ -1019,12 +1034,12 @@ var Async;\n\
 \n\
         var numArgs = arguments.length;\n\
 \n\
-        if (err && numArgs >= 3) {\n\
+        if (err instanceof Error) {\n\
             return this.generator.throw(err);\n\
         }\n\
 \n\
         if (this.result.hasOwnProperty(originalId)) {\n\
-            this.generator.throw(new Async.AsyncError(\'Callback for item \' + originalId + \' of yield was invoked more than once\'));\n\
+            return this.generator.throw(new Async.AsyncError(\'Callback for item \' + originalId + \' of yield was invoked more than once\'));\n\
         }\n\
 \n\
         // add this callbacks result to set of results\n\
@@ -1043,7 +1058,7 @@ var Async;\n\
 \n\
         var numArgs = arguments.length;\n\
 \n\
-        if (err && numArgs >= 2) {\n\
+        if (err instanceof Error) {\n\
             return this.generator.throw(err);\n\
         }\n\
 \n\
@@ -2647,8 +2662,8 @@ module('src/language_parser/capture_node.adria', function(module, resource) {
             return this.children.splice(from, to - from + 1);
         };
         ___self.prototype.nest = function nest(from, to, Constructor) {
+            Constructor = (Constructor !== undefined ? Constructor : (this.constructor));
             var node, id, child;
-            Constructor = (Constructor === undefined ? this.constructor : Constructor);
             node = new Constructor(this.key, this.value);
             node.children = this.children.splice(from, to - from + 1, node);
             node.parent = this;
@@ -2952,7 +2967,7 @@ module('src/language_parser.adria', function(module, resource) {
     module.exports = LanguageParser;
 });
 module('src/targets/adria_node.adria', function(module, resource) {
-    var path, SourceNode, LanguageParser, CaptureNode, Transform, util, Set, AdriaNode, AccessOperationProtocall, ConstLiteral, Scope, Module, InvokeOperation, AsyncWrapOperation, FunctionLiteral, GeneratorLiteral, FunctionStatement, GeneratorStatement, AsyncLiteral, AsyncStatement, FunctionParamList, BaseLiteral, DoWhileStatement, WhileStatement, IfStatement, SwitchStatement, ForCountStatement, ForInStatement, ObjectLiteral, ProtoBodyProperty, ArrayLiteral, Expression, ProtoLiteral, ProtoStatement, NewProtoLiteral, ProtoBodyItem, ReturnStatement, FlowStatement, YieldLiteral, AwaitLiteral, catchSpecificsId, CatchSpecifics, CatchAll, TryCatchFinallyStatement, ThrowStatement, AssertStatement, Statement, InterruptibleStatement, ResourceLiteral, RequireLiteral, ModuleStatement, ExportStatement, GlobalDef, ParentLiteral, Ident, Name, VarDef;
+    var path, SourceNode, LanguageParser, CaptureNode, Transform, util, Set, AdriaNode, AccessOperationProtocall, ConstLiteral, Scope, Module, InvokeOperation, AsyncWrapOperation, FunctionLiteral, GeneratorLiteral, FunctionStatement, GeneratorStatement, AsyncLiteral, AsyncStatement, FunctionParamList, BaseLiteral, DoWhileStatement, WhileStatement, IfStatement, SwitchStatement, ForCountStatement, ForInStatement, ObjectLiteral, ProtoBodyProperty, ArrayLiteral, Expression, ProtoLiteral, ProtoStatement, NewProtoLiteral, ProtoBodyItem, ReturnStatement, FlowStatement, YieldLiteral, catchSpecificsId, CatchSpecifics, CatchAll, TryCatchFinallyStatement, ThrowStatement, AssertStatement, Statement, InterruptibleStatement, ResourceLiteral, RequireLiteral, ModuleStatement, ExportStatement, GlobalDef, ParentLiteral, Ident, Name, VarDef;
     path = require('path');
     SourceNode = require('source-map').SourceNode;
     LanguageParser = __require('src/language_parser.adria');
@@ -3018,7 +3033,8 @@ module('src/targets/adria_node.adria', function(module, resource) {
                 'parseFloat',
                 'parseInt',
                 'console',
-                'debugger'
+                'debugger',
+                'Async'
             ]),
             node: new Set([ 'process' ]),
             web: new Set([ 'window', 'document', 'performance' ])
@@ -3227,6 +3243,31 @@ module('src/targets/adria_node.adria', function(module, resource) {
             var result;
             result = this.csn();
             result.add('(');
+            this.params = [  ];
+            this.each(function(node, first) {
+                if (first === false) {
+                    result.add(', ');
+                }
+                result.add(node.toSourceNode());
+            });
+            result.add(')');
+            return result;
+        };
+        return ___self;
+    })(AdriaNode);
+    AsyncWrapOperation = (function(___parent) {
+        var ___self = function AsyncWrapOperation() {
+            ___parent.apply(this, arguments);
+        }
+        ___self.prototype = Object.create(___parent.prototype);
+        ___self.prototype.constructor = ___self;
+        ___self.prototype.params = null;
+        ___self.prototype.toSourceNode = function toSourceNode() {
+            var id, result;
+            id = 0;
+            result = this.csn();
+            this.params = [  ];
+            result.add('(');
             this.each(function(node, first) {
                 if (first === false) {
                     result.add(', ');
@@ -3234,7 +3275,8 @@ module('src/targets/adria_node.adria', function(module, resource) {
                 if (node.value === '#') {
                     result.add('___callback');
                 } else {
-                    result.add(node.toSourceNode());
+                    result.add('___' + id++);
+                    this.params.push(node.toSourceNode().toString());
                 }
             });
             result.add(')');
@@ -3242,7 +3284,6 @@ module('src/targets/adria_node.adria', function(module, resource) {
         };
         return ___self;
     })(AdriaNode);
-    AsyncWrapOperation = InvokeOperation;
     FunctionLiteral = (function(___parent) {
         var ___self = function FunctionLiteral(key, value) {
             this.defaultArgs = [  ];
@@ -3670,10 +3711,10 @@ module('src/targets/adria_node.adria', function(module, resource) {
             });
         };
         ___self.prototype.toSourceNode = function toSourceNode() {
-            var children, propertyAssignSplit, isWrapped, result, id, child;
+            var children, propertyAssignSplit, wrapper, result, id, child, locals, params;
             children = this.children;
             propertyAssignSplit = -1;
-            isWrapped = this.get('wrap').isNode();
+            wrapper = this.get('wrap');
             result = this.csn();
             for (id in children) {
                 child = children[id];
@@ -3741,8 +3782,17 @@ module('src/targets/adria_node.adria', function(module, resource) {
                     result.add(')');
                 }
             }
-            if (isWrapped) {
-                result = this.csn([ '(function(___callback) { return ', result, '; }).bind(this)' ]);
+            if (wrapper.isNode()) {
+                locals = '';
+                params = wrapper.params.join(', ');
+                for (id = 0; id < wrapper.params.length;id++) {
+                    locals += '___' + id + ', ';
+                }
+                result = this.csn([
+                    '(function(' + locals + '___callback) { return ',
+                    result,
+                    '; }).bind(this' + (wrapper.params.length > 0 ? ', ' + params : '') + ')'
+                ]);
             }
             return result;
         };
@@ -3908,22 +3958,6 @@ module('src/targets/adria_node.adria', function(module, resource) {
             type = this.get('type');
             result.add([ type.csn(type.value), ' ' ]);
             result.add(this.get('value').toSourceNode());
-            return result;
-        };
-        return ___self;
-    })(AdriaNode);
-    AwaitLiteral = (function(___parent) {
-        var ___self = function AwaitLiteral() {
-            ___parent.apply(this, arguments);
-        }
-        ___self.prototype = Object.create(___parent.prototype);
-        ___self.prototype.constructor = ___self;
-        ___self.prototype.toSourceNode = function toSourceNode() {
-            var result;
-            result = this.csn();
-            result.add('yield Async.wrap(');
-            result.add(this.get('value').toSourceNode());
-            result.add(', this)');
             return result;
         };
         return ___self;
@@ -4275,7 +4309,6 @@ module('src/targets/adria_node.adria', function(module, resource) {
     module.exports.ReturnStatement = ReturnStatement;
     module.exports.FlowStatement = FlowStatement;
     module.exports.YieldLiteral = YieldLiteral;
-    module.exports.AwaitLiteral = AwaitLiteral;
     module.exports.CatchSpecifics = CatchSpecifics;
     module.exports.CatchAll = CatchAll;
     module.exports.TryCatchFinallyStatement = TryCatchFinallyStatement;
@@ -4675,14 +4708,19 @@ module('main.adria', function(module, resource) {
     run = function run(pipeData) {
         var transform;
         debugger;
-        if (target === 'adria') {
-            transform = new AdriaTransform(pipeData);
-        } else if (target === 'adriadebug') {
-            transform = new AdriaDebugTransform(pipeData);
-        } else {
-            throw new Error('Unsupported target "' + target + '".');
+        try {
+            if (target === 'adria') {
+                transform = new AdriaTransform(pipeData);
+            } else if (target === 'adriadebug') {
+                transform = new AdriaDebugTransform(pipeData);
+            } else {
+                throw new Error('Unsupported target "' + target + '".');
+            }
+            transform.run();
+        } catch (e) {
+            console.log(e.message);
+            process.exit(1);
         }
-        transform.run();
     };
     if (piped) {
         pipeData = '';

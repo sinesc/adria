@@ -47,13 +47,13 @@ util.processOptions(null, {
 var run = function(pipeData) {
 
     var transform;
-    
+
     // put a break here. "break on any exception" can be enabled after this statement.
     // enabling "break on any exception" earlier will introduce you to node exception hell
-    
+
     debugger;
-    
-    //try {
+
+    try {
 
         if (target === 'adria') {
             transform = new AdriaTransform(pipeData);
@@ -65,11 +65,11 @@ var run = function(pipeData) {
 
         transform.run();
 
-    //} catch (e) {
+    } catch (e) {
 
-    //    console.log(e.message);
-    //    process.exit(1);
-    //}
+        console.log(e.message);
+        process.exit(1);
+    }
 };
 
 // process stdin or run directly
