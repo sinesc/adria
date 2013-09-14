@@ -37,13 +37,14 @@ module AdriaDebugTransform = proto(AdriaTransform) {
 
         AdriaTransform->constructor(piped);
 
-        this.options.nocache = true;
+        this.options['no-cache'] = true;
+        this.options['no-scan'] = true;
     },
 
     run: function() {
 
         var options = this.options;
-    
+
         // create a prototype parser to clone from (to avoid training overhead)
 
         this.protoParser = new AdriaDebugParser(this);

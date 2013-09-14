@@ -97,7 +97,7 @@ access_operation {
     entry -> access_operation_types_assignable -> property_assignment_operation -> return
     entry -> access_operation_types_assignable -> assignment_operation -> return
 
-    invoke_operation:call -> invoke_operation:call    
+    invoke_operation:call -> invoke_operation:call
     invoke_operation:call -> async_wrap_operation:wrap
 }
 

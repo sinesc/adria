@@ -238,10 +238,10 @@ module CaptureNode = proto {
     },
 
     /**
-     * adds given stringnode to this node
+     * adds given CaptureNode to this node
      *
-     * @param StringNode child new node to add
-     * @return StringNode given StringNode
+     * @param CaptureNode child new node to add
+     * @return CaptureNode given CaptureNode
      */
     add: function(child) {
 
@@ -330,6 +330,41 @@ module CaptureNode = proto {
     },
 
     /**
+      * extracts a set of this node's children and returns them
+      *
+      * @param from start inclusive child index
+      * @param to end inclusive child index
+      */
+    extract: function(from, to) {
+
+        return this.children.splice(from, to - from + 1);
+    },
+
+    /**
+      * moves a set of this node's children into a single child node and places it where the set used to be
+      *
+      * @param from inclusive start child index
+      * @param to inclusive end child index
+      * @param Constructor optional constructor for the new node, defaults to parent type
+      */
+    nest: function(from, to, Constructor) {
+
+        Constructor = (Constructor === undefined ? this.constructor : Constructor);
+
+        var node = new Constructor(this.key, this.value);
+
+        node.children = this.children.splice(from, to - from + 1, node);
+        node.parent = this;
+        node.tpl = this.tpl;
+        node.row = node.children[0].row;
+        node.col = node.children[0].col;
+
+        for (var id, child in node.children) {
+            child.parent = node;
+        }
+    },
+
+    /**
      * returns a newline and optionally increases or decreases indentation for the following lines
      *
      * @param indent change in indentation
@@ -399,6 +434,20 @@ module CaptureNode = proto {
         if (this.children instanceof Array) {
             for (var id, child in this.children) {
                 child.scan(state);
+            }
+        }
+    },
+
+    /**
+     * recursively calls children for preprocessing purposes
+     *
+     * @param state userdefined preprocessing state object passed to every child
+     */
+    preprocess: function(state) {
+
+        if (this.children instanceof Array) {
+            for (var id, child in this.children) {
+                child.preprocess(state);
             }
         }
     },

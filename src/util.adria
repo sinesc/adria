@@ -258,6 +258,10 @@ export Set = proto {
         }
     },
 
+    lacks: function(value) {
+        return this.has(value) === false;
+    },
+
     /**
      * returns key missing in this set to equal another set or array
      *

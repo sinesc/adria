@@ -21,35 +21,31 @@
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 var AdriaParser = require('./adria_parser');
-var CaptureNode = require('../language_parser/capture_node');
+var AdriaNode = require('./adria_node');
 
 /**
- * AST node that returns XML like output for AST debugging purposes
- *
- * @see CaptureNode
+ * Extend AdriaNode with XML-yielding toString function
  */
-var XMLNode = proto(CaptureNode) {
+//!todo find better solution without sacrificing the inclusion of precendence-changes caused by the nodes themselves
+AdriaNode::toString = function() {
 
-    toString: function() {
+    var indent = String.repeat(this.depth() * 4, ' ');
+    var result = "";
 
-        var indent = String.repeat(this.depth() * 4, ' ');
-        var result = "";
+    for (var childId in this.children) {
 
-        for (var childId in this.children) {
+        var node = this.children[childId];
 
-            var node = this.children[childId];
-
-            if (node.isLeaf()) {
-                result += indent + "<" + node.key + " value=\"" + node.value.replace(/\"/g, '\\"') + "\" />\n";
-            } else {
-                result += indent + "<" + node.key + " value=\"" + node.value.replace(/\"/g, '\\"') + "\">\n";
-                result += node.toString();
-                result += indent + "</" + node.key + ">\n";
-            }
+        if (node.isLeaf()) {
+            result += indent + "<" + node.key + " value=\"" + node.value.replace(/\"/g, '\\"') + "\" />\n";
+        } else {
+            result += indent + "<" + node.key + " value=\"" + node.value.replace(/\"/g, '\\"') + "\">\n";
+            result += node.toString();
+            result += indent + "</" + node.key + ">\n";
         }
+    }
 
-        return result;
-    },
+    return result;
 };
 
 /**
@@ -60,8 +56,4 @@ var XMLNode = proto(CaptureNode) {
 module AdriaDebugParser = proto(AdriaParser) {
 
     outputMethod: 'toString',
-
-    mapType: function(capture_name, block_name) {
-        return XMLNode;
-    },
 };

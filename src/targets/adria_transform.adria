@@ -66,6 +66,7 @@ module AdriaTransform = proto (Transform) {
         options['no-map'] = (options['no-map'] === undefined ? false : options['no-map']);
         options['no-framework'] = (options['no-framework'] === undefined ? false : options['no-framework']);
         options['no-blanks'] = (options['no-blanks'] === undefined ? false : options['no-blanks']);
+        options['no-scan'] = (options['no-scan'] === undefined ? false : options['no-scan']);
         options.fileExt = (options.fileExt === undefined ? '.adria' : options.fileExt);
         options.platform = (options.platform === undefined ? 'web' : options.platform);
 
@@ -140,6 +141,7 @@ module AdriaTransform = proto (Transform) {
 
         // generate result
 
+        parser.preprocess({ });
         var result = parser.output();
 
         // add globals and requires to transform
@@ -162,8 +164,9 @@ module AdriaTransform = proto (Transform) {
 
         // scan module for undefined variables
 
-        var scanResult = { };
-        parser.scan(scanResult);
+        if (this.options['no-scan'] !== true) {
+            parser.scan({ });
+        }
 
         // push module after all dependencies have been resolved
 

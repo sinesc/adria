@@ -124,7 +124,9 @@ var Async;
 
     Async.prototype._waitAllCallback = function(originalId, err, val) {
 
-        if (err) {
+        var numArgs = arguments.length;
+
+        if (err && numArgs >= 3) {
             return this.generator.throw(err);
         }
 
@@ -134,7 +136,7 @@ var Async;
 
         // add this callbacks result to set of results
 
-        this.result[originalId] = val;
+        this.result[originalId] = (numArgs === 2 ? err : val);
         this.waiting--;
 
         // yield result when all is done
@@ -146,11 +148,13 @@ var Async;
 
     Async.prototype.callback = function(err, val) {
 
-        if (err) {
+        var numArgs = arguments.length;
+
+        if (err && numArgs >= 2) {
             return this.generator.throw(err);
         }
 
-        this.result = val;
+        this.result = (numArgs === 1 ? err : val);
 
         if (this.sync === 0) {
             this.sync = 1;

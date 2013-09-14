@@ -112,7 +112,7 @@ module AdriaParser = proto(LanguageParser) {
             return AdriaNode[typeName];
         }
 
-        return LanguageParser->mapType(captureName, blockName);
+        return AdriaNode;
     },
 
     /**
