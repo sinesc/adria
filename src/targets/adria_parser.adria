@@ -77,10 +77,10 @@ module AdriaParser = proto(LanguageParser) {
             Tokenizer.prefab.delimited(null, '/*', '*/'),
             Tokenizer.prefab.regex(null, /^\/\/.*/),
             Tokenizer.prefab.breaker(),
-            Tokenizer.prefab.regex('REGEXP', /^\/([^\/]*?(?:[^\n\\]|\\\\)+?)+?\/[a-z]*/),
+            Tokenizer.prefab.regex('REGEXP', /^\/(?:(?=(\\?))\1.)*?\/[a-z]*/, /^(\(|=|==|===|\+|!=|!==|,|;|\:)$/),
             Tokenizer.prefab.set('DELIM', [ ';', '.', ',', '(', ')', '[', ']', '{', '}', '!==', '!=', '!', '++', '--', '#' ]),
             Tokenizer.prefab.group('DELIM', [ '=', '&', '|', '<', '>', ':', '?', '+', '-', '*', '/', '%' ]),
-            Tokenizer.prefab.regex('IDENT', /^[a-zA-Z_\$][a-zA-Z0-9_\$]*/, matchKeywords),
+            Tokenizer.prefab.regex('IDENT', /^[a-zA-Z_\$][a-zA-Z0-9_\$]*/, null, matchKeywords),
             Tokenizer.prefab.number('NUMERIC'),
             Tokenizer.prefab.regex('STRING', /^(["'])(?:(?=(\\?))\2[\s\S])*?\1/),
         ], [ 'KEYWORD' ]);

@@ -75,6 +75,7 @@ module Tokenizer = proto {
         var row = 1;
         var definition = this.definition;
         var match, found;
+        var lastMatch = null;
 
         // tokenize string
 
@@ -86,12 +87,13 @@ module Tokenizer = proto {
 
             for (var id, processor in this.definition) {
 
-                match = processor.func(data, startPos);
+                match = processor.func(data, startPos, lastMatch);
 
                 if (match !== null) {
 
                     if (match.data !== null && match.name !== null) {
                         result.add(match.data, this.Type[match.name], startPos, col, row);
+                        lastMatch = match.data;
                     }
 
                     row += match.containedRows;
@@ -106,7 +108,6 @@ module Tokenizer = proto {
 
             if (found !== true) {
                 throw new Error(filename + ': no match found at row ' + row + ', column ' + col + ': "' + data.substr(startPos).split(/\r?\n/)[0] + '"');
-                return result;
             }
         }
 
@@ -129,13 +130,13 @@ function Match(name, data, endPosition, containedRows, lastRowLen) {
  * predefined tokenizer functions
  */
 Tokenizer.prefab = new (function() {
-    var regexFunc = function(name, regex, callback) {
+    var regexFunc = function(name, regex, lastRegex = null, callback = null) {
         return {
             name: name,
-            func: function(data, start) {
+            func: function(data, start, lastMatch) {
                 var result = regex.exec(data.substr(start)); // XRegExp.exec(data, regex, start, 'sticky');
 
-                if (result !== null) {
+                if (result !== null && (lastRegex === null || lastRegex.exec(lastMatch) !== null)) {
                     var rows = result[0].occurances('\n');
                     var lastBreak = result[0].lastIndexOf('\n');
                     var lastRowLen = result[0].length - (lastBreak + 1);
@@ -175,9 +176,9 @@ Tokenizer.prefab = new (function() {
         return regexFunc(name, regex);
     };
 
-    this.regex = function(name, regex, callback) {
+    this.regex = function(name, regex, lastRegex, callback) {
 
-        return regexFunc(name, regex, callback);
+        return regexFunc(name, regex, lastRegex, callback);
     };
 
     var excludeFunc = function(match) {
@@ -191,7 +192,7 @@ Tokenizer.prefab = new (function() {
 
     this.exclude = function(name, regex, exclude) {
 
-        return regexFunc(name, regex, excludeFunc.bind(exclude));
+        return regexFunc(name, regex, null, excludeFunc.bind(exclude));
     };
 
     this.set = function(name, matches) {

@@ -2184,20 +2184,22 @@ module('src/tokenizer.adria', function(module, resource) {
         };
         ___self.prototype.process = function process(data, filename) {
             filename = (filename !== undefined ? filename : ('unnamed'));
-            var startPos, result, col, row, definition, match, found, id, processor;
+            var startPos, result, col, row, definition, match, found, lastMatch, id, processor;
             startPos = 0;
             result = new Result(this);
             col = 1;
             row = 1;
             definition = this.definition;
+            lastMatch = null;
             while (startPos < data.length) {
                 found = false;
                 for (id in this.definition) {
                     processor = this.definition[id];
-                    match = processor.func(data, startPos);
+                    match = processor.func(data, startPos, lastMatch);
                     if (match !== null) {
                         if (match.data !== null && match.name !== null) {
                             result.add(match.data, this.Type[match.name], startPos, col, row);
+                            lastMatch = match.data;
                         }
                         row += match.containedRows;
                         col = (match.containedRows === 0 ? col + match.lastRowLen : match.lastRowLen + 1);
@@ -2208,7 +2210,6 @@ module('src/tokenizer.adria', function(module, resource) {
                 }
                 if (found !== true) {
                     throw new Error(filename + ': no match found at row ' + row + ', column ' + col + ': "' + data.substr(startPos).split(/\r?\n/)[0] + '"');
-                    return result;
                 }
             }
             return result;
@@ -2224,13 +2225,15 @@ module('src/tokenizer.adria', function(module, resource) {
     }
     Tokenizer.prefab = new (function() {
         var regexFunc, regexEscape, excludeFunc;
-        regexFunc = function regexFunc(name, regex, callback) {
+        regexFunc = function regexFunc(name, regex, lastRegex, callback) {
+            lastRegex = (lastRegex !== undefined ? lastRegex : (null));
+            callback = (callback !== undefined ? callback : (null));
             return {
                 name: name,
-                func: function(data, start) {
+                func: function(data, start, lastMatch) {
                     var result, rows, lastBreak, lastRowLen, match;
                     result = regex.exec(data.substr(start));
-                    if (result !== null) {
+                    if (result !== null && (lastRegex === null || lastRegex.exec(lastMatch) !== null)) {
                         rows = result[0].occurances('\n');
                         lastBreak = result[0].lastIndexOf('\n');
                         lastRowLen = result[0].length - (lastBreak + 1);
@@ -2261,8 +2264,8 @@ module('src/tokenizer.adria', function(module, resource) {
             regex = new RegExp('^(' + regexEscape(start) + '[\\s\\S]*?' + regexEscape(end) + ')');
             return regexFunc(name, regex);
         };
-        this.regex = function regex(name, regex, callback) {
-            return regexFunc(name, regex, callback);
+        this.regex = function regex(name, regex, lastRegex, callback) {
+            return regexFunc(name, regex, lastRegex, callback);
         };
         excludeFunc = function excludeFunc(match) {
             if (this.indexOf(match.data) !== -1) {
@@ -2271,7 +2274,7 @@ module('src/tokenizer.adria', function(module, resource) {
             return match;
         };
         this.exclude = function exclude(name, regex, exclude) {
-            return regexFunc(name, regex, excludeFunc.bind(exclude));
+            return regexFunc(name, regex, null, excludeFunc.bind(exclude));
         };
         this.set = function set(name, matches) {
             var escaped, id, regex;
@@ -4390,10 +4393,10 @@ module('src/targets/adria_parser.adria', function(module, resource) {
                 Tokenizer.prefab.delimited(null, '/*', '*/'),
                 Tokenizer.prefab.regex(null, /^\/\/.*/),
                 Tokenizer.prefab.breaker(),
-                Tokenizer.prefab.regex('REGEXP', /^\/([^\/]*?(?:[^\n\\]|\\\\)+?)+?\/[a-z]*/),
+                Tokenizer.prefab.regex('REGEXP', /^\/(?:(?=(\\?))\1.)*?\/[a-z]*/, /^(\(|=|==|===|\+|!=|!==|,|;|\:)$/),
                 Tokenizer.prefab.set('DELIM', [ ';', '.', ',', '(', ')', '[', ']', '{', '}', '!==', '!=', '!', '++', '--', '#' ]),
                 Tokenizer.prefab.group('DELIM', [ '=', '&', '|', '<', '>', ':', '?', '+', '-', '*', '/', '%' ]),
-                Tokenizer.prefab.regex('IDENT', /^[a-zA-Z_\$][a-zA-Z0-9_\$]*/, matchKeywords),
+                Tokenizer.prefab.regex('IDENT', /^[a-zA-Z_\$][a-zA-Z0-9_\$]*/, null, matchKeywords),
                 Tokenizer.prefab.number('NUMERIC'),
                 Tokenizer.prefab.regex('STRING', /^(["'])(?:(?=(\\?))\2[\s\S])*?\1/)
             ], [ 'KEYWORD' ]);
