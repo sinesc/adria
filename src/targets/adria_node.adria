@@ -41,7 +41,7 @@ module AdriaNode = proto (CaptureNode) {
             'setTimeout', 'clearTimeout', 'setInterval', 'clearInterval',
             'isFinite', 'isNaN', 'parseFloat', 'parseInt',
             'console', 'debugger',
-            'Async',
+            'application', 'Async',
         ]),
         node: new Set([ 'process' ]),
         web: new Set([ 'window', 'document', 'performance' ]),
@@ -939,9 +939,9 @@ export Expression = proto (AdriaNode) {
             }
 
             result = this.csn([
-                '(function(' + locals + '___callback) { return ',
-                result,
-                '; }).bind(this' + (wrapper.params.length > 0 ? ', ' + params : '') + ')'
+                '(function(' + locals + '___callback) {', this.nl(1),
+                'try { return ', result, '; } catch (___exc) { ___callback(___exc); }', this.nl(-1),
+                '}).bind(this' + (wrapper.params.length > 0 ? ', ' + params : '') + ')'
             ]);
         }
 

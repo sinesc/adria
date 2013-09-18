@@ -30,6 +30,7 @@ var AdriaDebugTransform = require('./src/targets/adriadebug_transform');
 
 var target  = 'adria';
 var piped = false;
+var debug = false;
 
 util.processOptions(null, {
     'target': function(type) {
@@ -38,37 +39,47 @@ util.processOptions(null, {
     '_switch': function(param) {
         if (param === 'pipe') {
             piped = true;
+        } else if (param === 'debug') {
+            debug = true;
         }
     }
 });
 
 // transformation performer
 
-var run = function(pipeData) {
+var handle = function() {
 
     var transform;
 
-    // put a break here. "break on any exception" can be enabled after this statement.
-    // enabling "break on any exception" earlier will introduce you to node exception hell
+    if (target === 'adria') {
+        transform = new AdriaTransform(pipeData);
+    } else if (target === 'adriadebug') {
+        transform = new AdriaDebugTransform(pipeData);
+    } else {
+        throw new Error('Unsupported target "' + target+ '".');
+    }
 
-    debugger;
+    transform.run();
+};
 
-    try {
+var run = function(pipeData) {
 
-        if (target === 'adria') {
-            transform = new AdriaTransform(pipeData);
-        } else if (target === 'adriadebug') {
-            transform = new AdriaDebugTransform(pipeData);
-        } else {
-            throw new Error('Unsupported target "' + target+ '".');
+    if (debug) {
+
+        // put a break here. "break on any exception" can be enabled after this statement.
+        // enabling "break on any exception" earlier will introduce you to node exception hell
+
+        debugger;
+        handle();
+
+    } else {
+
+        try {
+            handle();
+        } catch (e) {
+            console.log(e.message);
+            process.exit(1);
         }
-
-        transform.run();
-
-    } catch (e) {
-
-        console.log(e.message);
-        process.exit(1);
     }
 };
 

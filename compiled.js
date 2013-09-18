@@ -3037,6 +3037,7 @@ module('src/targets/adria_node.adria', function(module, resource) {
                 'parseInt',
                 'console',
                 'debugger',
+                'application',
                 'Async'
             ]),
             node: new Set([ 'process' ]),
@@ -3792,9 +3793,13 @@ module('src/targets/adria_node.adria', function(module, resource) {
                     locals += '___' + id + ', ';
                 }
                 result = this.csn([
-                    '(function(' + locals + '___callback) { return ',
+                    '(function(' + locals + '___callback) {',
+                    this.nl(1),
+                    'try { return ',
                     result,
-                    '; }).bind(this' + (wrapper.params.length > 0 ? ', ' + params : '') + ')'
+                    '; } catch (___exc) { ___callback(___exc); }',
+                    this.nl(-1),
+                    '}).bind(this' + (wrapper.params.length > 0 ? ', ' + params : '') + ')'
                 ]);
             }
             return result;
@@ -4691,13 +4696,14 @@ module('src/targets/adriadebug_transform.adria', function(module, resource) {
     module.exports = AdriaDebugTransform;
 });
 module('main.adria', function(module, resource) {
-    var util, AdriaTransform, AdriaDebugTransform, target, piped, run, pipeData;
+    var util, AdriaTransform, AdriaDebugTransform, target, piped, debug, handle, run, pipeData;
     __require('src/prototype.adria');
     util = __require('src/util.adria');
     AdriaTransform = __require('src/targets/adria_transform.adria');
     AdriaDebugTransform = __require('src/targets/adriadebug_transform.adria');
     target = 'adria';
     piped = false;
+    debug = false;
     util.processOptions(null, {
         'target': function(type) {
             target = type;
@@ -4705,24 +4711,33 @@ module('main.adria', function(module, resource) {
         '_switch': function(param) {
             if (param === 'pipe') {
                 piped = true;
+            } else if (param === 'debug') {
+                debug = true;
             }
         }
     });
-    run = function run(pipeData) {
+    handle = function handle() {
         var transform;
-        debugger;
-        try {
-            if (target === 'adria') {
-                transform = new AdriaTransform(pipeData);
-            } else if (target === 'adriadebug') {
-                transform = new AdriaDebugTransform(pipeData);
-            } else {
-                throw new Error('Unsupported target "' + target + '".');
+        if (target === 'adria') {
+            transform = new AdriaTransform(pipeData);
+        } else if (target === 'adriadebug') {
+            transform = new AdriaDebugTransform(pipeData);
+        } else {
+            throw new Error('Unsupported target "' + target + '".');
+        }
+        transform.run();
+    };
+    run = function run(pipeData) {
+        if (debug) {
+            debugger;
+            handle();
+        } else {
+            try {
+                handle();
+            } catch (e) {
+                console.log(e.message);
+                process.exit(1);
             }
-            transform.run();
-        } catch (e) {
-            console.log(e.message);
-            process.exit(1);
         }
     };
     if (piped) {
