@@ -1,5 +1,3 @@
 #!/bin/bash
 set -e
-COMPILE_ROOT=`pwd`
-cd /root/dev/adria/
-node --harmony out.js --base $COMPILE_ROOT "$@"
+node --harmony /root/dev/adria/out.js "$@"

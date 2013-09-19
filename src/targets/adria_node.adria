@@ -1474,10 +1474,10 @@ export ImportStatement = proto (AdriaNode) {
 
     toSourceNode: function() {
 
-        var locals = this.findScope().locals;
+        var implicits = this.findScope().implicits;
 
         this.eachKey('item', function(node) {
-            locals.add(node.value);
+            implicits.add(node.value);
         });
 
         return this.csn();

@@ -4310,10 +4310,10 @@ module('src/targets/adria_node.adria', function(module, resource) {
         ___self.prototype = Object.create(___parent.prototype);
         ___self.prototype.constructor = ___self;
         ___self.prototype.toSourceNode = function toSourceNode() {
-            var locals;
-            locals = this.findScope().locals;
+            var implicits;
+            implicits = this.findScope().implicits;
             this.eachKey('item', function(node) {
-                locals.add(node.value);
+                implicits.add(node.value);
             });
             return this.csn();
         };
