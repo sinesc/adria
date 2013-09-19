@@ -11,6 +11,10 @@ export_statement {
     entry -> "export" -> dec_def -> return
 }
 
+import_statement {
+    entry -> "import" -> dec_list -> return
+}
+
 var_def {
     entry -> "var" -> dec_def_list -> return
 }
@@ -96,6 +100,8 @@ statement {
     entry -> try_catch_finally_statement:try_catch_finally -> return
     entry -> proto_statement:proto -> return
     entry -> generator_statement:generator -> return
+
+    entry -> import_statement:import -> t -> return
 }
 
 /*
@@ -118,4 +124,9 @@ dec_def {
 dec_def_list {
     entry -> dec_def:item -> return
     dec_def:item -> "," -> dec_def:item
+}
+
+dec_list {
+    entry -> ident:item -> return
+    ident:item -> "," -> ident:item
 }

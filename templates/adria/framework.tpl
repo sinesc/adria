@@ -78,6 +78,14 @@ var Async;
     Async.prototype.sync = 0;
     Async.prototype.result = undefined;
     Async.prototype.waiting = 0;
+    Async.prototype.terminated = false;
+
+    Async.prototype.throw = function(e) {
+        if (this.terminated === false) {
+            this.terminated = true;
+            this.generator.throw(e);
+        }
+    };
 
     Async.prototype.next = function() {
         var arg;
@@ -87,14 +95,14 @@ var Async;
             arg = arg.value;
             this.sync = 0;
 
-            if (typeof arg === 'function') {
-                try {
+            try {
+                if (typeof arg === 'function') {
                     arg(this.boundCallback);
-                } catch (e) {
-                    return this.generator.throw(e);
+                } else {
+                    this.waitAll(arg);
                 }
-            } else {
-                this.waitAll(arg);
+            } catch (e) {
+                return this.throw(e);
             }
 
             // check if the function returned before or after the callback was invoked
@@ -119,13 +127,9 @@ var Async;
             var arg = args[id];
             if (typeof arg === 'function') {
                 this.waiting++;
-                try {
-                    arg(this._waitAllCallback.bind(this, id));
-                } catch (e) {
-                    return this.generator.throw(e);
-                }
+                arg(this._waitAllCallback.bind(this, id));
             } else {
-                return this.generator.throw(new Async.AsyncError('Property ' + id + ' of yielding object is not a function'));
+                throw new Async.AsyncError('Property ' + id + ' of yielding object is not a function');
             }
         }
     };
@@ -135,11 +139,11 @@ var Async;
         var numArgs = arguments.length;
 
         if (err instanceof Error) {
-            return this.generator.throw(err);
+            return this.throw(err);
         }
 
         if (this.result.hasOwnProperty(originalId)) {
-            return this.generator.throw(new Async.AsyncError('Callback for item ' + originalId + ' of yield was invoked more than once'));
+            return this.throw(new Async.AsyncError('Callback for item ' + originalId + ' of yield was invoked more than once'));
         }
 
         // add this callbacks result to set of results
@@ -159,14 +163,14 @@ var Async;
         var numArgs = arguments.length;
 
         if (err instanceof Error) {
-            return this.generator.throw(err);
+            return this.throw(err);
         }
 
         this.result = (numArgs === 1 ? err : val);
 
         if (this.sync === 0) {
             this.sync = 1;
-        } else {
+        } else if (this.terminated === false) {
             this.next();
         }
     };<rem></if></rem>

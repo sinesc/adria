@@ -60,19 +60,26 @@ var Async;
     Async.prototype.sync = 0;
     Async.prototype.result = undefined;
     Async.prototype.waiting = 0;
+    Async.prototype.terminated = false;
+    Async.prototype.throw = function(e) {
+        if (this.terminated === false) {
+            this.terminated = true;
+            this.generator.throw(e);
+        }
+    };
     Async.prototype.next = function() {
         var arg;
         while ((arg = this.generator.next(this.result)).done === false) {
             arg = arg.value;
             this.sync = 0;
-            if (typeof arg === 'function') {
-                try {
+            try {
+                if (typeof arg === 'function') {
                     arg(this.boundCallback);
-                } catch (e) {
-                    return this.generator.throw(e);
+                } else {
+                    this.waitAll(arg);
                 }
-            } else {
-                this.waitAll(arg);
+            } catch (e) {
+                return this.throw(e);
             }
             // check if the function returned before or after the callback was invoked
             if (this.sync === 0) {
@@ -92,23 +99,19 @@ var Async;
             var arg = args[id];
             if (typeof arg === 'function') {
                 this.waiting++;
-                try {
-                    arg(this._waitAllCallback.bind(this, id));
-                } catch (e) {
-                    return this.generator.throw(e);
-                }
+                arg(this._waitAllCallback.bind(this, id));
             } else {
-                return this.generator.throw(new Async.AsyncError('Property ' + id + ' of yielding object is not a function'));
+                throw new Async.AsyncError('Property ' + id + ' of yielding object is not a function');
             }
         }
     };
     Async.prototype._waitAllCallback = function(originalId, err, val) {
         var numArgs = arguments.length;
         if (err instanceof Error) {
-            return this.generator.throw(err);
+            return this.throw(err);
         }
         if (this.result.hasOwnProperty(originalId)) {
-            return this.generator.throw(new Async.AsyncError('Callback for item ' + originalId + ' of yield was invoked more than once'));
+            return this.throw(new Async.AsyncError('Callback for item ' + originalId + ' of yield was invoked more than once'));
         }
         // add this callbacks result to set of results
         this.result[originalId] = (numArgs === 2 ? err : val);
@@ -121,12 +124,12 @@ var Async;
     Async.prototype.callback = function(err, val) {
         var numArgs = arguments.length;
         if (err instanceof Error) {
-            return this.generator.throw(err);
+            return this.throw(err);
         }
         this.result = (numArgs === 1 ? err : val);
         if (this.sync === 0) {
             this.sync = 1;
-        } else {
+        } else if (this.terminated === false) {
             this.next();
         }
     };
@@ -789,6 +792,10 @@ export_statement {\n\
     entry -> "export" -> dec_def -> return\n\
 }\n\
 \n\
+import_statement {\n\
+    entry -> "import" -> dec_list -> return\n\
+}\n\
+\n\
 var_def {\n\
     entry -> "var" -> dec_def_list -> return\n\
 }\n\
@@ -874,6 +881,8 @@ statement {\n\
     entry -> try_catch_finally_statement:try_catch_finally -> return\n\
     entry -> proto_statement:proto -> return\n\
     entry -> generator_statement:generator -> return\n\
+\n\
+    entry -> import_statement:import -> t -> return\n\
 }\n\
 \n\
 /*\n\
@@ -896,6 +905,11 @@ dec_def {\n\
 dec_def_list {\n\
     entry -> dec_def:item -> return\n\
     dec_def:item -> "," -> dec_def:item\n\
+}\n\
+\n\
+dec_list {\n\
+    entry -> ident:item -> return\n\
+    ident:item -> "," -> ident:item\n\
 }\n\
 ');
 resource('templates/adria/framework.tpl', 'var application;\n\
@@ -978,6 +992,14 @@ var Async;\n\
     Async.prototype.sync = 0;\n\
     Async.prototype.result = undefined;\n\
     Async.prototype.waiting = 0;\n\
+    Async.prototype.terminated = false;\n\
+\n\
+    Async.prototype.throw = function(e) {\n\
+        if (this.terminated === false) {\n\
+            this.terminated = true;\n\
+            this.generator.throw(e);\n\
+        }\n\
+    };\n\
 \n\
     Async.prototype.next = function() {\n\
         var arg;\n\
@@ -987,14 +1009,14 @@ var Async;\n\
             arg = arg.value;\n\
             this.sync = 0;\n\
 \n\
-            if (typeof arg === \'function\') {\n\
-                try {\n\
+            try {\n\
+                if (typeof arg === \'function\') {\n\
                     arg(this.boundCallback);\n\
-                } catch (e) {\n\
-                    return this.generator.throw(e);\n\
+                } else {\n\
+                    this.waitAll(arg);\n\
                 }\n\
-            } else {\n\
-                this.waitAll(arg);\n\
+            } catch (e) {\n\
+                return this.throw(e);\n\
             }\n\
 \n\
             // check if the function returned before or after the callback was invoked\n\
@@ -1019,13 +1041,9 @@ var Async;\n\
             var arg = args[id];\n\
             if (typeof arg === \'function\') {\n\
                 this.waiting++;\n\
-                try {\n\
-                    arg(this._waitAllCallback.bind(this, id));\n\
-                } catch (e) {\n\
-                    return this.generator.throw(e);\n\
-                }\n\
+                arg(this._waitAllCallback.bind(this, id));\n\
             } else {\n\
-                return this.generator.throw(new Async.AsyncError(\'Property \' + id + \' of yielding object is not a function\'));\n\
+                throw new Async.AsyncError(\'Property \' + id + \' of yielding object is not a function\');\n\
             }\n\
         }\n\
     };\n\
@@ -1035,11 +1053,11 @@ var Async;\n\
         var numArgs = arguments.length;\n\
 \n\
         if (err instanceof Error) {\n\
-            return this.generator.throw(err);\n\
+            return this.throw(err);\n\
         }\n\
 \n\
         if (this.result.hasOwnProperty(originalId)) {\n\
-            return this.generator.throw(new Async.AsyncError(\'Callback for item \' + originalId + \' of yield was invoked more than once\'));\n\
+            return this.throw(new Async.AsyncError(\'Callback for item \' + originalId + \' of yield was invoked more than once\'));\n\
         }\n\
 \n\
         // add this callbacks result to set of results\n\
@@ -1059,14 +1077,14 @@ var Async;\n\
         var numArgs = arguments.length;\n\
 \n\
         if (err instanceof Error) {\n\
-            return this.generator.throw(err);\n\
+            return this.throw(err);\n\
         }\n\
 \n\
         this.result = (numArgs === 1 ? err : val);\n\
 \n\
         if (this.sync === 0) {\n\
             this.sync = 1;\n\
-        } else {\n\
+        } else if (this.terminated === false) {\n\
             this.next();\n\
         }\n\
     };<rem></if></rem>\n\
@@ -2970,7 +2988,7 @@ module('src/language_parser.adria', function(module, resource) {
     module.exports = LanguageParser;
 });
 module('src/targets/adria_node.adria', function(module, resource) {
-    var path, SourceNode, LanguageParser, CaptureNode, Transform, util, Set, AdriaNode, AccessOperationProtocall, ConstLiteral, Scope, Module, InvokeOperation, AsyncWrapOperation, FunctionLiteral, GeneratorLiteral, FunctionStatement, GeneratorStatement, AsyncLiteral, AsyncStatement, FunctionParamList, BaseLiteral, DoWhileStatement, WhileStatement, IfStatement, SwitchStatement, ForCountStatement, ForInStatement, ObjectLiteral, ProtoBodyProperty, ArrayLiteral, Expression, ProtoLiteral, ProtoStatement, NewProtoLiteral, ProtoBodyItem, ReturnStatement, FlowStatement, YieldLiteral, catchSpecificsId, CatchSpecifics, CatchAll, TryCatchFinallyStatement, ThrowStatement, AssertStatement, Statement, InterruptibleStatement, ResourceLiteral, RequireLiteral, ModuleStatement, ExportStatement, GlobalDef, ParentLiteral, Ident, Name, VarDef;
+    var path, SourceNode, LanguageParser, CaptureNode, Transform, util, Set, AdriaNode, AccessOperationProtocall, ConstLiteral, Scope, Module, InvokeOperation, AsyncWrapOperation, FunctionLiteral, GeneratorLiteral, FunctionStatement, GeneratorStatement, AsyncLiteral, AsyncStatement, FunctionParamList, BaseLiteral, DoWhileStatement, WhileStatement, IfStatement, SwitchStatement, ForCountStatement, ForInStatement, ObjectLiteral, ProtoBodyProperty, ArrayLiteral, Expression, ProtoLiteral, ProtoStatement, NewProtoLiteral, ProtoBodyItem, ReturnStatement, FlowStatement, YieldLiteral, catchSpecificsId, CatchSpecifics, CatchAll, TryCatchFinallyStatement, ThrowStatement, AssertStatement, Statement, InterruptibleStatement, ResourceLiteral, RequireLiteral, ModuleStatement, ExportStatement, GlobalDef, ParentLiteral, Ident, Name, VarDef, ImportStatement;
     path = require('path');
     SourceNode = require('source-map').SourceNode;
     LanguageParser = __require('src/language_parser.adria');
@@ -4285,6 +4303,22 @@ module('src/targets/adria_node.adria', function(module, resource) {
         };
         return ___self;
     })(AdriaNode);
+    ImportStatement = (function(___parent) {
+        var ___self = function ImportStatement() {
+            ___parent.apply(this, arguments);
+        }
+        ___self.prototype = Object.create(___parent.prototype);
+        ___self.prototype.constructor = ___self;
+        ___self.prototype.toSourceNode = function toSourceNode() {
+            var locals;
+            locals = this.findScope().locals;
+            this.eachKey('item', function(node) {
+                locals.add(node.value);
+            });
+            return this.csn();
+        };
+        return ___self;
+    })(AdriaNode);
     module.exports = AdriaNode;
     module.exports.AccessOperationProtocall = AccessOperationProtocall;
     module.exports.ConstLiteral = ConstLiteral;
@@ -4333,6 +4367,7 @@ module('src/targets/adria_node.adria', function(module, resource) {
     module.exports.Ident = Ident;
     module.exports.Name = Name;
     module.exports.VarDef = VarDef;
+    module.exports.ImportStatement = ImportStatement;
 });
 module('src/targets/adria_parser.adria', function(module, resource) {
     var fs, util, LanguageParser, AdriaNode, Tokenizer, AdriaParser;
