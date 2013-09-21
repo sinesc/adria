@@ -2988,8 +2988,9 @@ module('src/language_parser.adria', function(module, resource) {
     module.exports = LanguageParser;
 });
 module('src/targets/adria_node.adria', function(module, resource) {
-    var path, SourceNode, LanguageParser, CaptureNode, Transform, util, Set, AdriaNode, AccessOperationProtocall, ConstLiteral, Scope, Module, InvokeOperation, AsyncWrapOperation, FunctionLiteral, GeneratorLiteral, FunctionStatement, GeneratorStatement, AsyncLiteral, AsyncStatement, FunctionParamList, BaseLiteral, DoWhileStatement, WhileStatement, IfStatement, SwitchStatement, ForCountStatement, ForInStatement, ObjectLiteral, ProtoBodyProperty, ArrayLiteral, Expression, ProtoLiteral, ProtoStatement, NewProtoLiteral, ProtoBodyItem, ReturnStatement, FlowStatement, YieldLiteral, catchSpecificsId, CatchSpecifics, CatchAll, TryCatchFinallyStatement, ThrowStatement, AssertStatement, Statement, InterruptibleStatement, ResourceLiteral, RequireLiteral, ModuleStatement, ExportStatement, GlobalDef, ParentLiteral, Ident, Name, VarDef, ImportStatement;
+    var path, fs, SourceNode, LanguageParser, CaptureNode, Transform, util, Set, AdriaNode, AccessOperationProtocall, ConstLiteral, Scope, Module, InvokeOperation, AsyncWrapOperation, FunctionLiteral, GeneratorLiteral, FunctionStatement, GeneratorStatement, AsyncLiteral, AsyncStatement, FunctionParamList, BaseLiteral, DoWhileStatement, WhileStatement, IfStatement, SwitchStatement, ForCountStatement, ForInStatement, ObjectLiteral, ProtoBodyProperty, ArrayLiteral, Expression, ProtoLiteral, ProtoStatement, NewProtoLiteral, ProtoBodyItem, ReturnStatement, FlowStatement, YieldLiteral, catchSpecificsId, CatchSpecifics, CatchAll, TryCatchFinallyStatement, ThrowStatement, AssertStatement, Statement, InterruptibleStatement, AdriaFileNode, ResourceLiteral, RequireLiteral, ModuleStatement, ExportStatement, GlobalDef, ParentLiteral, Ident, Name, VarDef, ImportStatement;
     path = require('path');
+    fs = require('fs');
     SourceNode = require('source-map').SourceNode;
     LanguageParser = __require('src/language_parser.adria');
     CaptureNode = LanguageParser.CaptureNode;
@@ -3145,15 +3146,6 @@ module('src/targets/adria_node.adria', function(module, resource) {
                 }
             }
             return result;
-        };
-        ___self.prototype.isRelativePath = function isRelativePath(filename) {
-            return filename.slice(0, 2) === './' || filename.slice(0, 3) === '../';
-        };
-        ___self.prototype.makeBaseRelative = function makeBaseRelative(filename) {
-            var parser, absName;
-            parser = this.parser();
-            absName = path.dirname(parser.file) + '/' + filename;
-            return path.relative(parser.transform.options.basePath, absName);
         };
         return ___self;
     })(CaptureNode);
@@ -4136,6 +4128,40 @@ module('src/targets/adria_node.adria', function(module, resource) {
         return ___self;
     })(AdriaNode);
     InterruptibleStatement = Statement;
+    AdriaFileNode = (function(___parent) {
+        var ___self = function AdriaFileNode() {
+            ___parent.apply(this, arguments);
+        }
+        ___self.prototype = Object.create(___parent.prototype);
+        ___self.prototype.constructor = ___self;
+        ___self.prototype.isRelativePath = function isRelativePath(filename) {
+            return filename.slice(0, 2) === './' || filename.slice(0, 3) === '../';
+        };
+        ___self.prototype.makeBaseRelative = function makeBaseRelative(filename, parser) {
+            var absName;
+            absName = path.dirname(parser.file) + '/' + filename;
+            return path.relative(parser.transform.options.basePath, absName);
+        };
+        ___self.prototype.resolvePath = function resolvePath(fileName, parser) {
+            var options, relname, id;
+            options = parser.transform.options;
+            if (this.isRelativePath(fileName)) {
+                relname = this.makeBaseRelative(fileName, parser);
+                if (fs.existsSync(options.basePath + relname)) {
+                    return path.normalize(relname);
+                }
+            } else {
+                for (id in options.paths) {
+                    relname = options.paths[id] + fileName;
+                    if (fs.existsSync(options.basePath + relname)) {
+                        return path.normalize(relname);
+                    }
+                }
+            }
+            return null;
+        };
+        return ___self;
+    })(AdriaNode);
     ResourceLiteral = (function(___parent) {
         var ___self = function ResourceLiteral() {
             ___parent.apply(this, arguments);
@@ -4143,21 +4169,25 @@ module('src/targets/adria_node.adria', function(module, resource) {
         ___self.prototype = Object.create(___parent.prototype);
         ___self.prototype.constructor = ___self;
         ___self.prototype.toSourceNode = function toSourceNode() {
-            var parser, options, fileNode, fileName, result;
+            var parser, options, fileNode, fileName, resolvedName, result;
             parser = this.parser();
             options = parser.transform.options;
             fileNode = this.get('file');
             fileName = fileNode.toSourceNode().toString().slice(1, -1);
-            fileName = this.makeBaseRelative(fileName);
-            parser.resultData.resources.add(fileName);
+            resolvedName = this.resolvePath(fileName, parser);
+            if (resolvedName !== null) {
+                parser.resultData.resources.add(resolvedName);
+            } else {
+                throw new Error('Could not find resource ' + fileName + ' (required by ' + parser.file + ')');
+            }
             result = this.csn();
             result.add('resource(');
-            result.add(fileNode.csn("'" + fileName + "'"));
+            result.add(fileNode.csn("'" + resolvedName + "'"));
             result.add(')');
             return result;
         };
         return ___self;
-    })(AdriaNode);
+    })(AdriaFileNode);
     RequireLiteral = (function(___parent) {
         var ___self = function RequireLiteral() {
             ___parent.apply(this, arguments);
@@ -4165,20 +4195,22 @@ module('src/targets/adria_node.adria', function(module, resource) {
         ___self.prototype = Object.create(___parent.prototype);
         ___self.prototype.constructor = ___self;
         ___self.prototype.toSourceNode = function toSourceNode() {
-            var parser, options, fileNode, moduleName, result, requireFunction;
+            var parser, options, fileNode, moduleName, result, requireFunction, resolvedName;
             parser = this.parser();
             options = parser.transform.options;
             fileNode = this.get('file');
             moduleName = fileNode.toSourceNode().toString().slice(1, -1);
             result = this.csn();
             requireFunction = 'require';
-            if (options.platform === 'node' && this.isRelativePath(moduleName)) {
-                moduleName = util.normalizeExtension(this.makeBaseRelative(moduleName), options.fileExt);
+            resolvedName = this.resolvePath(util.normalizeExtension(moduleName, options.fileExt), parser);
+            if (resolvedName !== null) {
+                moduleName = resolvedName;
                 parser.resultData.requires.add(moduleName);
-                requireFunction = '__require';
-            } else if (options.platform !== 'node') {
-                moduleName = util.normalizeExtension(this.makeBaseRelative(moduleName), options.fileExt);
-                parser.resultData.requires.add(moduleName);
+                if (options.platform === 'node') {
+                    requireFunction = '__require';
+                }
+            } else if (options.platform !== 'node' || moduleName.hasPostfix(options.fileExt)) {
+                throw new Error('Could not find module ' + moduleName + ' (required by ' + parser.file + ')');
             }
             result.add(requireFunction + '(');
             result.add(fileNode.csn("'" + moduleName + "'"));
@@ -4186,7 +4218,7 @@ module('src/targets/adria_node.adria', function(module, resource) {
             return result;
         };
         return ___self;
-    })(AdriaNode);
+    })(AdriaFileNode);
     ModuleStatement = (function(___parent) {
         var ___self = function ModuleStatement() {
             ___parent.apply(this, arguments);
@@ -4540,28 +4572,12 @@ module('src/targets/adria_transform.adria', function(module, resource) {
                 }
             });
         };
-        ___self.prototype.resolveModule = function resolveModule(filename) {
-            var fullname, paths, current, id;
-            fullname = this.options.basePath + filename;
-            if (fs.existsSync(fullname) !== true) {
-                paths = this.options.paths;
-                current = fullname;
-                for (id in paths) {
-                    current = this.options.basePath + paths[id] + filename;
-                    if (fs.existsSync(current)) {
-                        fullname = current;
-                        break ;
-                    }
-                }
-            }
-            return path.normalize(fullname);
-        };
         ___self.prototype.buildModule = function buildModule(moduleName, data) {
             var parser, result, requires, name;
             parser = this.protoParser.clone();
             parser.moduleName = moduleName;
             if (data === undefined) {
-                parser.loadSource(this.resolveModule(moduleName));
+                parser.loadSource(this.options.basePath + moduleName);
             } else {
                 parser.setSource(moduleName, data);
             }

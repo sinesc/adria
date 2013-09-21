@@ -21,6 +21,7 @@
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 var path = require('path');
+var fs = require('fs');
 var SourceNode = require('source-map').SourceNode;
 var LanguageParser = require('../language_parser');
 var CaptureNode = LanguageParser.CaptureNode;
@@ -211,29 +212,6 @@ module AdriaNode = proto (CaptureNode) {
         return result;
     },
 
-    /**
-     * relative nodejs paths have to be prefixed with ./ or ../
-     *
-     * @param filename
-     * @param boolean true if path is a relative nodejs path
-     */
-    isRelativePath: function(filename) {
-        return filename.slice(0, 2) === './' || filename.slice(0, 3) === '../';
-    },
-
-    /**
-     * makes a filename relative to the current file's path relative to the
-     * compilation basepath instead
-     *
-     * @param filename a path relative to the current file
-     * @return a path relative to basePath
-     */
-    makeBaseRelative: function(filename) {
-
-        var parser = this.parser();
-        var absName = path.dirname(parser.file) + '/' + filename;
-        return path.relative(parser.transform.options.basePath, absName);
-    },
 };
 
 export AccessOperationProtocall = proto (AdriaNode) {
@@ -1313,7 +1291,58 @@ export Statement = proto (AdriaNode) {
 
 export InterruptibleStatement = Statement;
 
-export ResourceLiteral = proto (AdriaNode) {
+var AdriaFileNode = proto (AdriaNode) {
+
+    /**
+     * relative nodejs paths have to be prefixed with ./ or ../
+     *
+     * @param filename
+     * @param boolean true if path is a relative nodejs path
+     */
+    isRelativePath: function(filename) {
+        return filename.slice(0, 2) === './' || filename.slice(0, 3) === '../';
+    },
+
+    makeBaseRelative: function(filename, parser) {
+
+        var absName = path.dirname(parser.file) + '/' + filename;
+        return path.relative(parser.transform.options.basePath, absName);
+    },
+
+    resolvePath: function(fileName, parser) {
+
+        var options = parser.transform.options;
+        var relname;
+
+        if (this.isRelativePath(fileName)) {
+
+            // check project base
+
+            relname = this.makeBaseRelative(fileName, parser);
+
+            if (fs.existsSync(options.basePath + relname)) {
+                return path.normalize(relname);
+            }
+
+        } else {
+
+            // try paths
+
+            for (var id in options.paths) {
+
+                relname = options.paths[id] + fileName;
+                
+                if (fs.existsSync(options.basePath + relname)) {
+                    return path.normalize(relname);
+                }
+            }
+        }
+
+        return null;
+    },
+};
+
+export ResourceLiteral = proto (AdriaFileNode) {
 
     toSourceNode: function() {
 
@@ -1322,18 +1351,23 @@ export ResourceLiteral = proto (AdriaNode) {
         var fileNode = this.get('file');
         var fileName = fileNode.toSourceNode().toString().slice(1, -1);
 
-        fileName = this.makeBaseRelative(fileName);
-        parser.resultData.resources.add(fileName);
+        var resolvedName = this.resolvePath(fileName, parser);
+
+        if (resolvedName !== null) {
+            parser.resultData.resources.add(resolvedName);
+        } else {
+            throw new Error('Could not find resource ' + fileName + ' (required by ' + parser.file + ')');
+        }
 
         var result = this.csn();
         result.add('resource(');
-        result.add(fileNode.csn("'" + fileName + "'"));
+        result.add(fileNode.csn("'" + resolvedName + "'"));
         result.add(')');
         return result;
     },
 };
 
-export RequireLiteral = proto (AdriaNode) {
+export RequireLiteral = proto (AdriaFileNode) {
 
     toSourceNode: function() {
 
@@ -1344,18 +1378,22 @@ export RequireLiteral = proto (AdriaNode) {
         var result = this.csn();
         var requireFunction = 'require';
 
-        // nodejs: don't embed include-path files. web: include all files
+        // check if the require is an Adria module and needs to be included
 
-        if (options.platform === 'node' && this.isRelativePath(moduleName)) {
+        var resolvedName = this.resolvePath(util.normalizeExtension(moduleName, options.fileExt), parser);
 
-            moduleName = util.normalizeExtension(this.makeBaseRelative(moduleName), options.fileExt);
+        if (resolvedName !== null) {
+
+            moduleName = resolvedName;
             parser.resultData.requires.add(moduleName);
-            requireFunction = '__require';
 
-        } else if (options.platform !== 'node') {
+            if (options.platform === 'node') {
+                requireFunction = '__require';
+            }
 
-            moduleName = util.normalizeExtension(this.makeBaseRelative(moduleName), options.fileExt);
-            parser.resultData.requires.add(moduleName);
+        } else if (options.platform !== 'node' || moduleName.hasPostfix(options.fileExt)) {
+
+            throw new Error('Could not find module ' + moduleName + ' (required by ' + parser.file + ')');
         }
 
         result.add(requireFunction + '(');

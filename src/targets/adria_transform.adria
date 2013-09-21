@@ -94,7 +94,7 @@ module AdriaTransform = proto (Transform) {
      * @param filename
      * @return absolute path (including filename) to module
      */
-    resolveModule: function(filename) {
+    /*resolveModule: function(filename) {
 
         var fullname = this.options.basePath + filename;
 
@@ -117,7 +117,7 @@ module AdriaTransform = proto (Transform) {
         }
 
         return path.normalize(fullname);
-    },
+    },*/
 
     /**
      * build a module and its dependencies recursively and push the
@@ -134,7 +134,7 @@ module AdriaTransform = proto (Transform) {
         parser.moduleName = moduleName;
 
         if (data === undefined) {
-            parser.loadSource(this.resolveModule(moduleName));
+            parser.loadSource(this.options.basePath + moduleName);
         } else {
             parser.setSource(moduleName, data);
         }
