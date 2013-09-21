@@ -89,37 +89,6 @@ module AdriaTransform = proto (Transform) {
     },
 
     /**
-     * returns the full path to given filename
-     *
-     * @param filename
-     * @return absolute path (including filename) to module
-     */
-    /*resolveModule: function(filename) {
-
-        var fullname = this.options.basePath + filename;
-
-        // check if file exists, if not scan path
-
-        if (fs.existsSync(fullname) !== true) {
-
-            var paths = this.options.paths;
-            var current = fullname;
-
-            for (var id in paths) {
-
-                current = this.options.basePath + paths[id] + filename;
-
-                if (fs.existsSync(current)) {
-                    fullname = current;
-                    break;
-                }
-            }
-        }
-
-        return path.normalize(fullname);
-    },*/
-
-    /**
      * build a module and its dependencies recursively and push the
      * result onto AdriaTransform::modules
      *
@@ -162,15 +131,9 @@ module AdriaTransform = proto (Transform) {
         this.globals = this.globals.merge(parser.resultData.globals);
         this.resources = this.resources.merge(parser.resultData.resources);
 
-        // scan module for undefined variables
-
-        if (this.options['no-scan'] !== true) {
-            parser.scan({ });
-        }
-
         // push module after all dependencies have been resolved
 
-        this.modules.push({ filename: parser.file, sourceCode: parser.sourceCode, result: result });
+        this.modules.push({ filename: parser.file, sourceCode: parser.sourceCode, result: result, parser: parser }); //!todo filename/sourceCode can now be taken from parser
     },
 
     /**
@@ -218,9 +181,9 @@ module AdriaTransform = proto (Transform) {
 
         // merge modules
 
-        for (var id, module in this.modules) {
-            tmpNode = node.add(new SourceNode(null, null, module.filename, module.result));
-            tmpNode.setSourceContent(module.filename, module.sourceCode);
+        for (var id, currentModule in this.modules) {
+            tmpNode = node.add(new SourceNode(null, null, currentModule.filename, currentModule.result));
+            tmpNode.setSourceContent(currentModule.filename, currentModule.sourceCode);
         }
 
         if (options['no-framework'] === false) {
@@ -228,6 +191,13 @@ module AdriaTransform = proto (Transform) {
         }
 
         return node;
+    },
+
+    scan: function() {
+
+        for (var id, currentModule in this.modules) {
+            currentModule.parser.scan({ });
+        }
     },
 
     /**
@@ -250,6 +220,12 @@ module AdriaTransform = proto (Transform) {
 
         for (var id in files) {
             this.buildModule(util.normalizeExtension(files[id], this.options.fileExt));
+        }
+
+        // scan modules for undefined variables
+
+        if (this.options['no-scan'] !== true) {
+            this.scan();
         }
 
         // result

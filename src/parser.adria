@@ -149,6 +149,10 @@ module Parser = proto {
         var tokens = this.tokenizer.process(source, this.file);
         util.log('Parser', 'done', -2);
 
+        if (tokens.length === 0) {
+            throw new Error(path.normalize(this.file) + ': File is empty.');
+        }
+
         var node = this.definition.getInitialBlock();
         var stack = [];
         var len = tokens.length;

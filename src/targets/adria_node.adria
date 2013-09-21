@@ -294,7 +294,6 @@ export Module = proto (Scope) {
         }
 
         var code = Scope->toSourceNode();
-        //var locals = this.locals.toArray();
         var exports = this.exports.toArray();
         var file = parser.file;
         var result;
@@ -308,10 +307,6 @@ export Module = proto (Scope) {
             if (parser.transform.options['tweak-exports']) {
                 result.add('var exports = module.exports;' + this.nl());
             }
-
-            //if (locals.length > 0) {
-            //    result.add('var ' + locals.join(', ') + ';' + this.nl());
-            //}
 
             result.add(code);
 

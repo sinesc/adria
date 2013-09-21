@@ -2069,6 +2069,9 @@ module('src/parser.adria', function(module, resource) {
             util.log('Parser', 'tokenizing', 2);
             tokens = this.tokenizer.process(source, this.file);
             util.log('Parser', 'done', -2);
+            if (tokens.length === 0) {
+                throw new Error(path.normalize(this.file) + ': File is empty.');
+            }
             node = this.definition.getInitialBlock();
             stack = [  ];
             len = tokens.length;
@@ -4450,6 +4453,8 @@ module('src/targets/adria_parser.adria', function(module, resource) {
                 'require',
                 'assert',
                 'resource',
+                'module',
+                'export',
                 'delete',
                 'new',
                 'instanceof',
@@ -4593,17 +4598,15 @@ module('src/targets/adria_transform.adria', function(module, resource) {
             this.requires = this.requires.merge(parser.resultData.requires);
             this.globals = this.globals.merge(parser.resultData.globals);
             this.resources = this.resources.merge(parser.resultData.resources);
-            if (this.options['no-scan'] !== true) {
-                parser.scan({  });
-            }
             this.modules.push({
                 filename: parser.file,
                 sourceCode: parser.sourceCode,
-                result: result
+                result: result,
+                parser: parser
             });
         };
         ___self.prototype.generateOutputTree = function generateOutputTree() {
-            var options, node, tpl, fw, tmpNode, fileName, contents, wrapped, id, module;
+            var options, node, tpl, fw, tmpNode, fileName, contents, wrapped, id, currentModule;
             options = this.options;
             node = new SourceNode(null, null);
             tpl = new Template();
@@ -4628,14 +4631,21 @@ module('src/targets/adria_transform.adria', function(module, resource) {
                 }
             }
             for (id in this.modules) {
-                module = this.modules[id];
-                tmpNode = node.add(new SourceNode(null, null, module.filename, module.result));
-                tmpNode.setSourceContent(module.filename, module.sourceCode);
+                currentModule = this.modules[id];
+                tmpNode = node.add(new SourceNode(null, null, currentModule.filename, currentModule.result));
+                tmpNode.setSourceContent(currentModule.filename, currentModule.sourceCode);
             }
             if (options['no-framework'] === false) {
                 node.add('\n})();');
             }
             return node;
+        };
+        ___self.prototype.scan = function scan() {
+            var id, currentModule;
+            for (id in this.modules) {
+                currentModule = this.modules[id];
+                currentModule.parser.scan({  });
+            }
         };
         ___self.prototype.run = function run() {
             var files, id, node, options, jsFile, mapFile, result, mapLink;
@@ -4647,6 +4657,9 @@ module('src/targets/adria_transform.adria', function(module, resource) {
             files = this.options.files;
             for (id in files) {
                 this.buildModule(util.normalizeExtension(files[id], this.options.fileExt));
+            }
+            if (this.options['no-scan'] !== true) {
+                this.scan();
             }
             node = this.generateOutputTree();
             options = this.options;
