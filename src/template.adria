@@ -20,7 +20,7 @@
  * IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-var XRegExp = require('./xregexp');
+var XRegExp = require('xregexp').XRegExp;
 var fs      = require('fs');
 var Tags    = require('./template/tags');
 

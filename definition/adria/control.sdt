@@ -35,7 +35,7 @@ flow_statement {
 if_statement {
     entry -> "if" -> "(" -> expression:condition -> ")" -> block:if_body -> return
     block:if_body -> "else" -> if_statement:else_if -> return
-    block:if_body -> "else" -> block:else_body -> return
+    "else" -> block:else_body -> return
 }
 
 /*

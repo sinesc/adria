@@ -21,7 +21,6 @@
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 var fs = require('fs');
-var XRegExp = require('./xregexp');
 var util = require('./util');
 var Parser = require('./parser');
 var DefinitionParser = require('./definition_parser');
@@ -197,7 +196,7 @@ module LanguageParser = proto(Parser) {
 
                     assert(numChars >= 3);
 
-                    node.match          = XRegExp('^' + XRegExp.escape(name.slice(1, numChars -1)) + '$', 's');
+                    node.match          = new RegExp('^' + RegExp.escape(name.slice(1, numChars -1)) + '$');
                     node.tokenType      = -1;
                     node.type           = 0;
                     node.description    = name.slice(1, numChars -1);
@@ -208,7 +207,7 @@ module LanguageParser = proto(Parser) {
 
                     assert(numChars >= 3);
 
-                    node.match          = XRegExp(name.slice(1, numChars -1), 's');
+                    node.match          = new RegExp(name.slice(1, numChars -1));
                     node.tokenType      = -1;
                     node.type           = 0;
                     node.description    = name.slice(1, numChars -1);

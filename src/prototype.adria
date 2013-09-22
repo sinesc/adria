@@ -151,12 +151,6 @@ String::padLeft = function(paddedLength, padChar) {
     return padChar.repeat(paddedLength - this.length) + this.valueOf();
 };
 
-String::padRight = function(paddedLength, padChar) {
-
-    padChar = (padChar !== undefined ? padChar : ' ');
-    return this.valueOf() + padChar.repeat(paddedLength - this.length);
-};
-
 
 /*
  * random string (static)
@@ -201,4 +195,9 @@ String::stripPostfix = function(postfix) {
 String::hasPostfix = function(postfix) {
 
     return (this.substr(-postfix.length) === postfix);
+};
+
+RegExp.escape = function(string) {
+
+    return string.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&');
 };

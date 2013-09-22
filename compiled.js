@@ -1,7 +1,6 @@
 (function() {
 var __require;
 var resource;
-var application;
 var module;
 var window = global;
 (function() {
@@ -22,16 +21,6 @@ var window = global;
     };
     resource = function(name, data) {
         resources[name] = data;
-    };
-    application = function(Constructor /*, params... */) {
-        function Application() {
-            application = this;
-            Constructor.apply(this, Array.prototype.slice.call(arguments));
-        };
-        Application.prototype = Constructor.prototype;
-        var args = Array.prototype.slice.call(arguments);
-        args[0] = null;
-        return new (Function.prototype.bind.apply(Application, args));
     };
     __require = function(file) {
         return modules[file].exports;
@@ -74,7 +63,7 @@ flow_statement {\n\
 if_statement {\n\
     entry -> "if" -> "(" -> expression:condition -> ")" -> block:if_body -> return\n\
     block:if_body -> "else" -> if_statement:else_if -> return\n\
-    block:if_body -> "else" -> block:else_body -> return\n\
+    "else" -> block:else_body -> return\n\
 }\n\
 \n\
 /*\n\
@@ -1069,10 +1058,6 @@ module('src/prototype.adria', function(module, resource) {
         padChar = (padChar !== undefined ? padChar : ' ');
         return padChar.repeat(paddedLength - this.length) + this.valueOf();
     };
-    String.prototype.padRight = function padRight(paddedLength, padChar) {
-        padChar = (padChar !== undefined ? padChar : ' ');
-        return this.valueOf() + padChar.repeat(paddedLength - this.length);
-    };
     String.random = function random(length, chars) {
         var chars, numChars, result, i, rnum;
         chars = (chars === undefined ? '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ' : chars);
@@ -1100,6 +1085,9 @@ module('src/prototype.adria', function(module, resource) {
     };
     String.prototype.hasPostfix = function hasPostfix(postfix) {
         return (this.substr(-postfix.length) === postfix);
+    };
+    RegExp.escape = function escape(string) {
+        return string.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&');
     };
 });
 module('src/util.adria', function(module, resource) {
@@ -1339,21 +1327,6 @@ module('src/util.adria', function(module, resource) {
     module.exports.normalizeExtension = normalizeExtension;
     module.exports.md5 = md5;
 });
-module('src/xregexp.adria', function(module, resource) {
-    var XRegExp;
-    XRegExp = require('xregexp').XRegExp;
-    if (parseInt(XRegExp.version) < 3) {
-        console.log('XRegExp version 3 or above strongly recommended.');
-        console.log('If it is not yet available in NPM, get it here');
-        console.log('   https://github.com/slevithan/xregexp');
-        console.log('and either replace xregexp-all.js in node_modules/xregexp');
-        console.log('or copy/rename it to adria/src/xregexp.js (replace this file)');
-        console.log('Comment/remove process.exit(); in adria/src/xregexp.js to proceed');
-        console.log('anyway (tokenizing will be about 15-20 times slower)');
-        process.exit();
-    }
-    module.exports = XRegExp;
-});
 module('src/template/tags.adria', function(module, resource) {
     var Util, Tags;
     Util = __require('src/util.adria');
@@ -1475,7 +1448,7 @@ module('src/template/tags.adria', function(module, resource) {
 });
 module('src/template.adria', function(module, resource) {
     var XRegExp, fs, Tags, Template;
-    XRegExp = __require('src/xregexp.adria');
+    XRegExp = require('xregexp').XRegExp;
     fs = require('fs');
     Tags = __require('src/template/tags.adria');
     Template = (function() {
@@ -1919,9 +1892,8 @@ module('src/parser/definition.adria', function(module, resource) {
     module.exports.Node = Node;
 });
 module('src/parser.adria', function(module, resource) {
-    var path, XRegExp, util, GeneratorState, Definition, Parser;
+    var path, util, GeneratorState, Definition, Parser;
     path = require('path');
-    XRegExp = __require('src/xregexp.adria');
     util = __require('src/util.adria');
     GeneratorState = __require('src/parser/generator_state.adria');
     Definition = __require('src/parser/definition.adria');
@@ -2092,8 +2064,7 @@ module('src/tokenizer/result.adria', function(module, resource) {
     module.exports = Result;
 });
 module('src/tokenizer.adria', function(module, resource) {
-    var XRegExp, Enum, Result, Tokenizer;
-    XRegExp = __require('src/xregexp.adria');
+    var Enum, Result, Tokenizer;
     Enum = __require('src/util.adria').Enum;
     Result = __require('src/tokenizer/result.adria');
     Tokenizer = (function() {
@@ -2178,7 +2149,7 @@ module('src/tokenizer.adria', function(module, resource) {
             };
         };
         regexEscape = function regexEscape(regexString) {
-            return XRegExp.escape(regexString).replace('/', '\\/');
+            return RegExp.escape(regexString).replace('/', '\\/');
         };
         this.breaker = function breaker() {
             return regexFunc(null, /^(\s+)/);
@@ -2268,8 +2239,7 @@ module('src/definition_parser/path.adria', function(module, resource) {
     module.exports = Path;
 });
 module('src/definition_parser.adria', function(module, resource) {
-    var XRegExp, util, Parser, Tokenizer, Path, DefinitionParser;
-    XRegExp = __require('src/xregexp.adria');
+    var util, Parser, Tokenizer, Path, DefinitionParser;
     util = __require('src/util.adria');
     Parser = __require('src/parser.adria');
     Tokenizer = __require('src/tokenizer.adria');
@@ -2367,16 +2337,16 @@ module('src/definition_parser.adria', function(module, resource) {
             Type = this.tokenizer.Type;
             block_root = new Parser.Definition.Node();
             this.definition.createBlock(null, block_root);
-            blockname = block_root.createAndAdd(Type.WORD, XRegExp('.+', 's'), 'block_name');
+            blockname = block_root.createAndAdd(Type.WORD, /[\S\s]+/, 'block_name');
             body = blockname.createAndAdd(Type.DELIM, '{', '', '{');
-            node1a = body.createAndAdd(Type.WORD | Type.STRING, XRegExp('.+', 's'), 'source_name');
+            node1a = body.createAndAdd(Type.WORD | Type.STRING, /[\S\s]+/, 'source_name');
             node1b = node1a.createAndAdd(Type.DELIM, ':', '', ':');
-            node1c = node1b.createAndAdd(Type.WORD, XRegExp('.+', 's'), 'source_capture');
+            node1c = node1b.createAndAdd(Type.WORD, /[\S\s]+/, 'source_capture');
             node1d = node1c.createAndAdd(Type.DELIM, '[', '', '[');
-            node1e = node1d.createAndAdd(Type.WORD, XRegExp('.+', 's'), 'source_label');
+            node1e = node1d.createAndAdd(Type.WORD, /[\S\s]+/, 'source_label');
             node1f = node1e.createAndAdd(Type.DELIM, ']', '', ']');
             node1g = node1f.createAndAdd(Type.DELIM, '?', '', '?');
-            node1h = node1g.createAndAdd(Type.STRING, XRegExp('.+', 's'), 'source_condition');
+            node1h = node1g.createAndAdd(Type.STRING, /[\S\s]+/, 'source_condition');
             node1a.add(node1d);
             node1a.add(node1g);
             node1c.add(node1g);
@@ -2384,14 +2354,14 @@ module('src/definition_parser.adria', function(module, resource) {
             node1h.add(path1a);
             node1f.add(path1a);
             node1c.add(path1a);
-            node2a = path1a.createAndAdd(Type.WORD | Type.STRING, XRegExp('.+', 's'), 'target_name');
+            node2a = path1a.createAndAdd(Type.WORD | Type.STRING, /[\S\s]+/, 'target_name');
             node2b = node2a.createAndAdd(Type.DELIM, ':', '', ':');
-            node2c = node2b.createAndAdd(Type.WORD, XRegExp('.+', 's'), 'target_capture');
+            node2c = node2b.createAndAdd(Type.WORD, /[\S\s]+/, 'target_capture');
             node2d = node2c.createAndAdd(Type.DELIM, '[', '', '[');
-            node2e = node2d.createAndAdd(Type.WORD, XRegExp('.+', 's'), 'target_label');
+            node2e = node2d.createAndAdd(Type.WORD, /[\S\s]+/, 'target_label');
             node2f = node2e.createAndAdd(Type.DELIM, ']', '', ']');
             node2g = node2f.createAndAdd(Type.DELIM, '?', '', '?');
-            node2h = node2g.createAndAdd(Type.STRING, XRegExp('.+', 's'), 'target_condition');
+            node2h = node2g.createAndAdd(Type.STRING, /[\S\s]+/, 'target_condition');
             node2a.add(node2d);
             node2a.add(node2g);
             node2c.add(node2g);
@@ -2739,9 +2709,8 @@ module('src/language_parser/capture_node.adria', function(module, resource) {
     module.exports = CaptureNode;
 });
 module('src/language_parser.adria', function(module, resource) {
-    var fs, XRegExp, util, Parser, DefinitionParser, CaptureNode, LanguageParser;
+    var fs, util, Parser, DefinitionParser, CaptureNode, LanguageParser;
     fs = require('fs');
-    XRegExp = __require('src/xregexp.adria');
     util = __require('src/util.adria');
     Parser = __require('src/parser.adria');
     DefinitionParser = __require('src/definition_parser.adria');
@@ -2822,12 +2791,12 @@ module('src/language_parser.adria', function(module, resource) {
                 default:
                     numChars = name.length;
                     if (name[0] == '\"') {
-                        node.match = XRegExp('^' + XRegExp.escape(name.slice(1, numChars - 1)) + '$', 's');
+                        node.match = new RegExp('^' + RegExp.escape(name.slice(1, numChars - 1)) + '$');
                         node.tokenType = -1;
                         node.type = 0;
                         node.description = name.slice(1, numChars - 1);
                     } else if (name[0] == '\'') {
-                        node.match = XRegExp(name.slice(1, numChars - 1), 's');
+                        node.match = new RegExp(name.slice(1, numChars - 1));
                         node.tokenType = -1;
                         node.type = 0;
                         node.description = name.slice(1, numChars - 1);

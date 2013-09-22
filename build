@@ -1,12 +1,12 @@
 #!/bin/bash
 set -e
 echo "building compiler..."
-adria $@ --no-cache --no-blanks --platform node --no-map --tweak-nostrict --out out.js main.adria
+adria $@ --no-application --no-cache --no-blanks --platform node --no-map --tweak-nostrict --out out.js main.adria
 ls -l out.js
 echo "recompiling compiler with compiler..."
-self-adria $@ --no-cache --no-blanks --platform node --no-map --tweak-nostrict --out out.js main.adria
+self-adria $@ --no-application --no-cache --no-blanks --platform node --no-map --tweak-nostrict --out out.js main.adria
 ls -l out.js
 echo "ok. again..."
-self-adria $@ --no-cache --no-blanks --platform node --no-map --tweak-nostrict --out out.js main.adria
+self-adria $@ --no-application --no-cache --no-blanks --platform node --no-map --tweak-nostrict --out out.js main.adria
 ls -l out.js
 echo "done."

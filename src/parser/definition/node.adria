@@ -76,7 +76,11 @@ module Node = proto {
 
         assert(node instanceof Node);
 
-if (this.hasChild(node)) { return; } //!todo shouldn't be required
+        // definition parsing only detects duplicate pairs, prevent duplicate node insertion
+        
+        if (this.hasChild(node)) {
+            return;
+        }
 
         var children = this.children;
 

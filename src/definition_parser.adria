@@ -20,7 +20,6 @@
  * IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-var XRegExp = require('./xregexp');
 var util = require('./util');
 var Parser = require('./parser');
 var Tokenizer = require('./tokenizer');
@@ -210,20 +209,20 @@ module DefinitionParser = proto (Parser) {
 
         // entry point is an identifier
 
-        var blockname = block_root.createAndAdd(Type.WORD, XRegExp('.+', 's'), 'block_name');
+        var blockname = block_root.createAndAdd(Type.WORD, /[\S\s]+/, 'block_name');
         var body = blockname.createAndAdd(Type.DELIM, '{', '', '{');
 
         // inside the body, an identifier 'source_name' is expected first (with optional secondary identifier
         // 'source_capture' and optional 'source_label')
 
-        var node1a = body.createAndAdd(Type.WORD | Type.STRING, XRegExp('.+', 's'), 'source_name');
+        var node1a = body.createAndAdd(Type.WORD | Type.STRING, /[\S\s]+/, 'source_name');
         var node1b = node1a.createAndAdd(Type.DELIM, ':', '', ':');
-        var node1c = node1b.createAndAdd(Type.WORD, XRegExp('.+', 's'), 'source_capture');
+        var node1c = node1b.createAndAdd(Type.WORD, /[\S\s]+/, 'source_capture');
         var node1d = node1c.createAndAdd(Type.DELIM, '[', '', '[');
-        var node1e = node1d.createAndAdd(Type.WORD, XRegExp('.+', 's'), 'source_label');
+        var node1e = node1d.createAndAdd(Type.WORD, /[\S\s]+/, 'source_label');
         var node1f = node1e.createAndAdd(Type.DELIM, ']', '', ']');
         var node1g = node1f.createAndAdd(Type.DELIM, '?', '', '?');
-        var node1h = node1g.createAndAdd(Type.STRING, XRegExp('.+', 's'), 'source_condition');
+        var node1h = node1g.createAndAdd(Type.STRING, /[\S\s]+/, 'source_condition');
         node1a.add(node1d); // name[label]
         node1a.add(node1g); // name?condition
         node1c.add(node1g); // name[label]?condition
@@ -237,14 +236,14 @@ module DefinitionParser = proto (Parser) {
 
         // at least one path to another identifier has to be defined
 
-        var node2a = path1a.createAndAdd(Type.WORD | Type.STRING, XRegExp('.+', 's'), 'target_name');
+        var node2a = path1a.createAndAdd(Type.WORD | Type.STRING, /[\S\s]+/, 'target_name');
         var node2b = node2a.createAndAdd(Type.DELIM, ':', '', ':');
-        var node2c = node2b.createAndAdd(Type.WORD, XRegExp('.+', 's'), 'target_capture');
+        var node2c = node2b.createAndAdd(Type.WORD, /[\S\s]+/, 'target_capture');
         var node2d = node2c.createAndAdd(Type.DELIM, '[', '', '[');
-        var node2e = node2d.createAndAdd(Type.WORD, XRegExp('.+', 's'), 'target_label');
+        var node2e = node2d.createAndAdd(Type.WORD, /[\S\s]+/, 'target_label');
         var node2f = node2e.createAndAdd(Type.DELIM, ']', '', ']');
         var node2g = node2f.createAndAdd(Type.DELIM, '?', '', '?');
-        var node2h = node2g.createAndAdd(Type.STRING, XRegExp('.+', 's'), 'target_condition');
+        var node2h = node2g.createAndAdd(Type.STRING, /[\S\s]+/, 'target_condition');
         node2a.add(node2d); // name[label]
         node2a.add(node2g); // name?condition
         node2c.add(node2g); // name[label]?condition

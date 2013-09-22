@@ -20,7 +20,6 @@
  * IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-var XRegExp = require('./xregexp');
 var Enum    = require('./util').Enum;
 
 export Result = require('./tokenizer/result');
@@ -134,7 +133,7 @@ Tokenizer.prefab = new (function() {
         return {
             name: name,
             func: function(data, start, lastMatch) {
-                var result = regex.exec(data.substr(start)); // XRegExp.exec(data, regex, start, 'sticky');
+                var result = regex.exec(data.substr(start));
 
                 if (result !== null && (lastRegex === null || lastRegex.exec(lastMatch) !== null)) {
                     var rows = result[0].occurances('\n');
@@ -156,7 +155,7 @@ Tokenizer.prefab = new (function() {
     };
 
     var regexEscape = function(regexString) {
-        return XRegExp.escape(regexString).replace('/', '\\/');
+        return RegExp.escape(regexString).replace('/', '\\/');
     };
 
     this.breaker = function() {
