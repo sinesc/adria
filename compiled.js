@@ -1,9 +1,9 @@
 (function() {
-var application;
 var __require;
 var resource;
+var application;
 var module;
-var Async;
+var window = global;
 (function() {
     var resources = { };
     var modules = { };
@@ -36,103 +36,6 @@ var Async;
     __require = function(file) {
         return modules[file].exports;
     }; 
-    //!todo make builtin, requireable module?
-    Async = function Async(generator) {
-        this.generator = generator;
-        this.boundCallback = this.callback.bind(this);
-        this.next();
-    }
-    Async.wrap = function(func, context) {
-        return function() {
-            var args = Array.prototype.slice.call(arguments);
-            return function(callback) {
-                args.push(callback);
-                func.apply(context, args);
-            };
-        };
-    };
-    Async.AsyncError = function AsyncError(message, fileName, lineNumber) {
-        Error.call(this, message, fileName, lineNumber);
-    };
-    Async.AsyncError.prototype = Object.create(Error.prototype);
-    Async.AsyncError.prototype.constructor = Async.AsyncError;
-    Async.prototype.generator = null;
-    Async.prototype.sync = 0;
-    Async.prototype.result = undefined;
-    Async.prototype.waiting = 0;
-    Async.prototype.terminated = false;
-    Async.prototype.throw = function(e) {
-        if (this.terminated === false) {
-            this.terminated = true;
-            this.generator.throw(e);
-        }
-    };
-    Async.prototype.next = function() {
-        var arg;
-        while ((arg = this.generator.next(this.result)).done === false) {
-            arg = arg.value;
-            this.sync = 0;
-            try {
-                if (typeof arg === 'function') {
-                    arg(this.boundCallback);
-                } else {
-                    this.waitAll(arg);
-                }
-            } catch (e) {
-                return this.throw(e);
-            }
-            // check if the function returned before or after the callback was invoked
-            if (this.sync === 0) {
-                this.sync = -1;
-                break;
-            }
-        }
-    };
-    Async.prototype.waitAll = function(args) {
-        var arg;
-        if (args instanceof Array) {
-            this.result = new Array(args.length);
-        } else if (args instanceof Object) {
-            this.result = { };
-        }
-        for (var id in args) {
-            var arg = args[id];
-            if (typeof arg === 'function') {
-                this.waiting++;
-                arg(this._waitAllCallback.bind(this, id));
-            } else {
-                throw new Async.AsyncError('Property ' + id + ' of yielding object is not a function');
-            }
-        }
-    };
-    Async.prototype._waitAllCallback = function(originalId, err, val) {
-        var numArgs = arguments.length;
-        if (err instanceof Error) {
-            return this.throw(err);
-        }
-        if (this.result.hasOwnProperty(originalId)) {
-            return this.throw(new Async.AsyncError('Callback for item ' + originalId + ' of yield was invoked more than once'));
-        }
-        // add this callbacks result to set of results
-        this.result[originalId] = (numArgs === 2 ? err : val);
-        this.waiting--;
-        // yield result when all is done
-        if (this.waiting === 0) {
-            this.callback(null, this.result);
-        }
-    };
-    Async.prototype.callback = function(err, val) {
-        var numArgs = arguments.length;
-        if (err instanceof Error) {
-            return this.throw(err);
-        }
-        this.result = (numArgs === 1 ? err : val);
-        if (this.sync === 0) {
-            this.sync = 1;
-        } else if (this.terminated === false) {
-            this.next();
-        }
-    };
 })();
 resource('definition/adria/control.sdt', '\n\
 /*\n\
@@ -912,61 +815,9 @@ dec_list {\n\
     ident:item -> "," -> ident:item\n\
 }\n\
 ');
-resource('templates/adria/framework.tpl', 'var application;\n\
-var <if platform == \'node\'>__</if>require;\n\
-var resource;\n\
-var module;<if enableAssert>\n\
-var assert;</if><if globals.length != 0>\n\
-var <each global in globals><global><if ! each.last>, </if></each>;</if>\n\
-var Async;\n\
-(function() {\n\
-    var resources = { };\n\
-    var modules = { };\n\
-    var getResource = function(name) {<if enableAssert>\n\
-        if (resources[name] === undefined) {\n\
-            throw Error(\'missing resource \' + name);\n\
-        }\n\
-        </if>\n\
-        return resources[name];\n\
-    };\n\
-    var Module = function(name, func) {\n\
-        this.name = name;\n\
-        this.exports = { };\n\
-        func(this, getResource);\n\
-    };\n\
-    Module.prototype.exports = null;\n\
-    Module.prototype.name = \'\';\n\
-    module = function(name, func) {\n\
-        modules[name] = new Module(name, func);\n\
-    };\n\
-    resource = function(name, data) {\n\
-        resources[name] = data;\n\
-    };\n\
-    application = function(Constructor /*, params... */) {\n\
-        function Application() {\n\
-            application = this;\n\
-            Constructor.apply(this, Array.prototype.slice.call(arguments));\n\
-        };\n\
-        Application.prototype = Constructor.prototype;\n\
-        var args = Array.prototype.slice.call(arguments);\n\
-        args[0] = null;\n\
-        return new (Function.prototype.bind.apply(Application, args));\n\
-    };\n\
-    <if platform == \'node\'>__</if>require = function(file) {<if enableAssert>\n\
-        if (modules[file] === undefined) {\n\
-            throw Error(\'missing dependency \' + file);\n\
-        }\n\
-        </if>\n\
-        return modules[file].exports;\n\
-    }; <if enableAssert>\n\
-    assert = function(assertion, message) {\n\
-        if (assertion !== true) {\n\
-            throw new Error(\'assertion failed: \' + message);\n\
-        }\n\
-    };</if><rem><if enableAsync></rem>\n\
+resource('templates/adria/async.tpl', 'module(\'async.adria\', function(module, resource) {\n\
 \n\
-    //!todo make builtin, requireable module?\n\
-    Async = function Async(generator) {\n\
+    var Async = function Async(generator) {\n\
         this.generator = generator;\n\
         this.boundCallback = this.callback.bind(this);\n\
         this.next();\n\
@@ -1087,7 +938,64 @@ var Async;\n\
         } else if (this.terminated === false) {\n\
             this.next();\n\
         }\n\
-    };<rem></if></rem>\n\
+    };\n\
+\n\
+    ___Async = Async;\n\
+    module.exports = Async;\n\
+});\n\
+');
+resource('templates/adria/framework.tpl', 'var <if platform == \'node\'>__</if>require;\n\
+var resource;<if enableApplication>\n\
+var application;</if>\n\
+var module;<if platform == \'node\'>\n\
+var window = global;</if><if enableAssert>\n\
+var assert;</if><if globals.length != 0>\n\
+var <each global in globals><global><if ! each.last>, </if></each>;</if>\n\
+(function() {\n\
+    var resources = { };\n\
+    var modules = { };\n\
+    var getResource = function(name) {<if enableAssert>\n\
+        if (resources[name] === undefined) {\n\
+            throw Error(\'missing resource \' + name);\n\
+        }\n\
+        </if>\n\
+        return resources[name];\n\
+    };\n\
+    var Module = function(name, func) {\n\
+        this.name = name;\n\
+        this.exports = { };\n\
+        func(this, getResource);\n\
+    };\n\
+    Module.prototype.exports = null;\n\
+    Module.prototype.name = \'\';\n\
+    module = function(name, func) {\n\
+        modules[name] = new Module(name, func);\n\
+    };\n\
+    resource = function(name, data) {\n\
+        resources[name] = data;\n\
+    };<if enableApplication>\n\
+    application = function(Constructor /*, params... */) {\n\
+        function Application() {\n\
+            application = this;\n\
+            Constructor.apply(this, Array.prototype.slice.call(arguments));\n\
+        };\n\
+        Application.prototype = Constructor.prototype;\n\
+        var args = Array.prototype.slice.call(arguments);\n\
+        args[0] = null;\n\
+        return new (Function.prototype.bind.apply(Application, args));\n\
+    };</if>\n\
+    <if platform == \'node\'>__</if>require = function(file) {<if enableAssert>\n\
+        if (modules[file] === undefined) {\n\
+            throw Error(\'missing dependency \' + file);\n\
+        }\n\
+        </if>\n\
+        return modules[file].exports;\n\
+    }; <if enableAssert>\n\
+    assert = function(assertion, message) {\n\
+        if (assertion !== true) {\n\
+            throw new Error(\'assertion failed: \' + message);\n\
+        }\n\
+    };</if>\n\
 })();\n\
 ');
 module('src/prototype.adria', function(module, resource) {
@@ -3222,30 +3130,22 @@ module('src/targets/adria_node.adria', function(module, resource) {
         ___self.prototype.toSourceNode = function toSourceNode() {
             var parser, code, exports, file, result, id;
             parser = this.parser();
-            if (parser.transform.options['no-framework'] === false) {
-                this.nl(1);
-            }
+            this.nl(1);
             code = Scope.prototype.toSourceNode.call(this);
             exports = this.exports.toArray();
             file = parser.file;
-            if (parser.transform.options['no-framework'] === false) {
-                result = this.csn('module(\'' + parser.moduleName + '\', function(module, resource) {' + this.nl());
-                if (parser.transform.options['tweak-exports']) {
-                    result.add('var exports = module.exports;' + this.nl());
-                }
-                result.add(code);
-                if (parser.transform.options['no-framework'] === false) {
-                    if (this.moduleExport !== null) {
-                        result.add('module.exports = ' + this.moduleExport + ';' + this.nl());
-                    }
-                    for (id in exports) {
-                        result.add('module.exports.' + exports[id] + ' = ' + exports[id] + ';' + this.nl());
-                    }
-                    result.add(this.nl(-1) + '});' + this.nl());
-                }
-            } else {
-                result = this.csn(code);
+            result = this.csn('module(\'' + parser.moduleName + '\', function(module, resource) {' + this.nl());
+            if (parser.transform.options['tweak-exports']) {
+                result.add('var exports = module.exports;' + this.nl());
             }
+            result.add(code);
+            if (this.moduleExport !== null) {
+                result.add('module.exports = ' + this.moduleExport + ';' + this.nl());
+            }
+            for (id in exports) {
+                result.add('module.exports.' + exports[id] + ' = ' + exports[id] + ';' + this.nl());
+            }
+            result.add(this.nl(-1) + '});' + this.nl());
             return result;
         };
         return ___self;
@@ -3373,7 +3273,10 @@ module('src/targets/adria_node.adria', function(module, resource) {
         ___self.prototype = Object.create(___parent.prototype);
         ___self.prototype.constructor = ___self;
         ___self.prototype.toSourceNode = function toSourceNode() {
-            var result;
+            var parser, result;
+            parser = this.parser();
+            parser.resultData.globals.add('___Async');
+            parser.transform.usedBuiltins.add('async.adria');
             result = this.csn();
             result.add('(function() {' + this.nl(1));
             result.add([
@@ -3387,7 +3290,7 @@ module('src/targets/adria_node.adria', function(module, resource) {
                 this.get('param_list').toSourceNode(),
                 ') {' + this.nl(1)
             ]);
-            result.add('return new Async(___self.apply(this, arguments));' + this.nl(-1));
+            result.add('return new ___Async(___self.apply(this, arguments));' + this.nl(-1));
             result.add('};' + this.nl(-1));
             result.add('})()');
             return result;
@@ -4205,15 +4108,20 @@ module('src/targets/adria_node.adria', function(module, resource) {
             moduleName = fileNode.toSourceNode().toString().slice(1, -1);
             result = this.csn();
             requireFunction = 'require';
-            resolvedName = this.resolvePath(util.normalizeExtension(moduleName, options.fileExt), parser);
-            if (resolvedName !== null) {
-                moduleName = resolvedName;
-                parser.resultData.requires.add(moduleName);
-                if (options.platform === 'node') {
-                    requireFunction = '__require';
+            resolvedName = util.normalizeExtension(moduleName, options.fileExt);
+            if (parser.transform.builtins[resolvedName] !== undefined) {
+                parser.transform.usedBuiltins.add(resolvedName);
+            } else {
+                resolvedName = this.resolvePath(util.normalizeExtension(moduleName, options.fileExt), parser);
+                if (resolvedName !== null) {
+                    moduleName = resolvedName;
+                    parser.resultData.requires.add(moduleName);
+                    if (options.platform === 'node') {
+                        requireFunction = '__require';
+                    }
+                } else if (options.platform !== 'node' || moduleName.hasPostfix(options.fileExt)) {
+                    throw new Error('Could not find module ' + moduleName + ' (required by ' + parser.file + ')');
                 }
-            } else if (options.platform !== 'node' || moduleName.hasPostfix(options.fileExt)) {
-                throw new Error('Could not find module ' + moduleName + ' (required by ' + parser.file + ')');
             }
             result.add(requireFunction + '(');
             result.add(fileNode.csn("'" + moduleName + "'"));
@@ -4544,12 +4452,14 @@ module('src/targets/adria_transform.adria', function(module, resource) {
             this.requires = new util.Set();
             this.resources = new util.Set();
             this.requiresDone = new util.Set();
+            this.usedBuiltins = new util.Set();
             this.modules = [  ];
             this.sourceCode = {  };
             options = this.options;
             options['no-link'] = (options['no-link'] === undefined ? false : options['no-link']);
             options['no-map'] = (options['no-map'] === undefined ? false : options['no-map']);
-            options['no-framework'] = (options['no-framework'] === undefined ? false : options['no-framework']);
+            options['no-application'] = (options['no-application'] === undefined ? false : options['no-application']);
+            options['no-closure'] = (options['no-closure'] === undefined ? false : options['no-closure']);
             options['no-blanks'] = (options['no-blanks'] === undefined ? false : options['no-blanks']);
             options['no-scan'] = (options['no-scan'] === undefined ? false : options['no-scan']);
             options.fileExt = (options.fileExt === undefined ? '.adria' : options.fileExt);
@@ -4563,9 +4473,11 @@ module('src/targets/adria_transform.adria', function(module, resource) {
         ___self.prototype.requires = null;
         ___self.prototype.modules = null;
         ___self.prototype.resources = null;
+        ___self.prototype.usedBuiltins = null;
         ___self.prototype.requiresDone = null;
         ___self.prototype.sourceCode = null;
         ___self.prototype.protoParser = null;
+        ___self.prototype.builtins = { 'async.adria': resource('templates/adria/async.tpl') };
         ___self.prototype.initOptions = function initOptions() {
             Transform.prototype.initOptions.call(this, this);
             this.defineOptions({
@@ -4606,36 +4518,43 @@ module('src/targets/adria_transform.adria', function(module, resource) {
             });
         };
         ___self.prototype.generateOutputTree = function generateOutputTree() {
-            var options, node, tpl, fw, tmpNode, fileName, contents, wrapped, id, currentModule;
+            var options, node, tpl, fw, tmpNode, fileName, contents, wrapped, usedBuiltins, id, name, currentModule;
             options = this.options;
             node = new SourceNode(null, null);
             tpl = new Template();
             tpl.assign('globals', this.globals.toArray());
+            tpl.assign('builtins', this.usedBuiltins.toArray());
             tpl.assign('enableAssert', options.assert);
+            tpl.assign('enableApplication', options['no-application'] !== true);
             tpl.assign('platform', options.platform);
-            if (options['no-framework'] === false) {
+            if (options['no-closure'] !== true) {
                 node.add('(function() {\n');
             }
             if (options['tweak-nostrict'] !== true) {
                 node.add('"use strict";\n');
             }
-            if (options['no-framework'] === false) {
-                fw = tpl.fetch(resource('templates/adria/framework.tpl'));
-                tmpNode = node.add(new SourceNode(1, 0, 'adria-framework.js', fw));
-                tmpNode.setSourceContent('adria-framework.js', fw);
-                for (fileName in this.resources.data) {
-                    contents = fs.readFileSync(options.basePath + fileName, 'UTF-8');
-                    wrapped = 'resource(\'' + fileName + '\', \'' + contents.jsify("'") + '\');\n';
-                    tmpNode = node.add(new SourceNode(null, null, fileName, wrapped));
-                    tmpNode.setSourceContent(fileName, contents);
-                }
+            fw = tpl.fetch(resource('templates/adria/framework.tpl'));
+            tmpNode = node.add(new SourceNode(1, 0, 'adria-framework.js', fw));
+            tmpNode.setSourceContent('adria-framework.js', fw);
+            for (fileName in this.resources.data) {
+                contents = fs.readFileSync(options.basePath + fileName, 'UTF-8');
+                wrapped = 'resource(\'' + fileName + '\', \'' + contents.jsify("'") + '\');\n';
+                tmpNode = node.add(new SourceNode(null, null, fileName, wrapped));
+                tmpNode.setSourceContent(fileName, contents);
+            }
+            usedBuiltins = this.usedBuiltins.toArray();
+            for (id in usedBuiltins) {
+                name = usedBuiltins[id];
+                fw = tpl.fetch(this.builtins[name]);
+                tmpNode = node.add(new SourceNode(1, 0, name.replace('.adria', '.js'), fw));
+                tmpNode.setSourceContent(name.replace('.adria', '.js'), fw);
             }
             for (id in this.modules) {
                 currentModule = this.modules[id];
                 tmpNode = node.add(new SourceNode(null, null, currentModule.filename, currentModule.result));
                 tmpNode.setSourceContent(currentModule.filename, currentModule.sourceCode);
             }
-            if (options['no-framework'] === false) {
+            if (options['no-closure'] !== true) {
                 node.add('\n})();');
             }
             return node;

@@ -289,44 +289,31 @@ export Module = proto (Scope) {
 
         var parser = this.parser();
 
-        if (parser.transform.options['no-framework'] === false) {
-            this.nl(1);
-        }
+        this.nl(1);
 
         var code = Scope->toSourceNode();
         var exports = this.exports.toArray();
         var file = parser.file;
-        var result;
 
-        if (parser.transform.options['no-framework'] === false) {
+        var result = this.csn('module(\'' + parser.moduleName + '\', function(module, resource) {' + this.nl());
 
-            result = this.csn('module(\'' + parser.moduleName + '\', function(module, resource) {' + this.nl());
+        // tweak: commonJS module.exports shortcut
 
-            // tweak: commonJS module.exports shortcut
-
-            if (parser.transform.options['tweak-exports']) {
-                result.add('var exports = module.exports;' + this.nl());
-            }
-
-            result.add(code);
-
-            if (parser.transform.options['no-framework'] === false) {
-
-                if (this.moduleExport !== null) {
-                    result.add('module.exports = ' + this.moduleExport + ';' + this.nl());
-                }
-
-                for (var id in exports) {
-                    result.add('module.exports.' + exports[id] + ' = ' + exports[id] + ';' + this.nl());
-                }
-
-                result.add(this.nl(-1) + '});' + this.nl());
-            }
-
-        } else {
-
-            result = this.csn(code);
+        if (parser.transform.options['tweak-exports']) {
+            result.add('var exports = module.exports;' + this.nl());
         }
+
+        result.add(code);
+
+        if (this.moduleExport !== null) {
+            result.add('module.exports = ' + this.moduleExport + ';' + this.nl());
+        }
+
+        for (var id in exports) {
+            result.add('module.exports.' + exports[id] + ' = ' + exports[id] + ';' + this.nl());
+        }
+
+        result.add(this.nl(-1) + '});' + this.nl());
 
         return result;
     },
@@ -458,11 +445,17 @@ export AsyncLiteral = proto (FunctionLiteral) {
 
     toSourceNode: function() {
 
+        // include Async module
+
+        var parser = this.parser();
+        parser.resultData.globals.add('___Async');
+        parser.transform.usedBuiltins.add('async.adria');
+
         var result = this.csn();
         result.add('(function() {' + this.nl(1));
         result.add([ 'var ___self = ', FunctionLiteral->toSourceNode(), ';', this.nl() ]);
         result.add([ 'return function(', this.get('param_list').toSourceNode(), ') {' + this.nl(1) ]);
-        result.add('return new Async(___self.apply(this, arguments));' + this.nl(-1));
+        result.add('return new ___Async(___self.apply(this, arguments));' + this.nl(-1));
         result.add('};'+ this.nl(-1));
         result.add('})()');
         return result;
@@ -1326,7 +1319,7 @@ var AdriaFileNode = proto (AdriaNode) {
             for (var id in options.paths) {
 
                 relname = options.paths[id] + fileName;
-                
+
                 if (fs.existsSync(options.basePath + relname)) {
                     return path.normalize(relname);
                 }
@@ -1372,23 +1365,37 @@ export RequireLiteral = proto (AdriaFileNode) {
         var moduleName = fileNode.toSourceNode().toString().slice(1, -1);
         var result = this.csn();
         var requireFunction = 'require';
+        var resolvedName;
 
-        // check if the require is an Adria module and needs to be included
+        // check builtins
 
-        var resolvedName = this.resolvePath(util.normalizeExtension(moduleName, options.fileExt), parser);
+        resolvedName = util.normalizeExtension(moduleName, options.fileExt);
 
-        if (resolvedName !== null) {
+        if (parser.transform.builtins[resolvedName] !== undefined) {
 
-            moduleName = resolvedName;
-            parser.resultData.requires.add(moduleName);
+            // module is builtin, set flag for inclusion by transform
 
-            if (options.platform === 'node') {
-                requireFunction = '__require';
+            parser.transform.usedBuiltins.add(resolvedName);
+
+        } else {
+
+            // check if the require is an Adria module and needs to be included
+
+            resolvedName = this.resolvePath(util.normalizeExtension(moduleName, options.fileExt), parser);
+
+            if (resolvedName !== null) {
+
+                moduleName = resolvedName;
+                parser.resultData.requires.add(moduleName);
+
+                if (options.platform === 'node') {
+                    requireFunction = '__require';
+                }
+
+            } else if (options.platform !== 'node' || moduleName.hasPostfix(options.fileExt)) {
+
+                throw new Error('Could not find module ' + moduleName + ' (required by ' + parser.file + ')');
             }
-
-        } else if (options.platform !== 'node' || moduleName.hasPostfix(options.fileExt)) {
-
-            throw new Error('Could not find module ' + moduleName + ' (required by ' + parser.file + ')');
         }
 
         result.add(requireFunction + '(');

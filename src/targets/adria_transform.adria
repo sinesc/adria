@@ -39,13 +39,18 @@ module AdriaTransform = proto (Transform) {
     /**
      * populated by globals node, names of application-wide globals
      */
-    globals: null,
-    requires: null,
-    modules: null,
-    resources: null,
+    globals     : null,
+    requires    : null,
+    modules     : null,
+    resources   : null,
+    usedBuiltins: null,
     requiresDone: null,
-    sourceCode: null,
-    protoParser: null,
+    sourceCode  : null,
+    protoParser : null,
+
+    builtins: {
+        'async.adria': resource('../../templates/adria/async.tpl'),
+    },
 
     constructor: function(piped) {
 
@@ -55,6 +60,7 @@ module AdriaTransform = proto (Transform) {
         this.requires       = new util.Set();
         this.resources      = new util.Set();
         this.requiresDone   = new util.Set();
+        this.usedBuiltins   = new util.Set();
         this.modules        = [ ];
         this.sourceCode     = { };
 
@@ -64,7 +70,8 @@ module AdriaTransform = proto (Transform) {
 
         options['no-link'] = (options['no-link'] === undefined ? false : options['no-link']);
         options['no-map'] = (options['no-map'] === undefined ? false : options['no-map']);
-        options['no-framework'] = (options['no-framework'] === undefined ? false : options['no-framework']);
+        options['no-application'] = (options['no-application'] === undefined ? false : options['no-application']);
+        options['no-closure'] = (options['no-closure'] === undefined ? false : options['no-closure']);
         options['no-blanks'] = (options['no-blanks'] === undefined ? false : options['no-blanks']);
         options['no-scan'] = (options['no-scan'] === undefined ? false : options['no-scan']);
         options.fileExt = (options.fileExt === undefined ? '.adria' : options.fileExt);
@@ -146,14 +153,16 @@ module AdriaTransform = proto (Transform) {
         var tpl = new Template();
 
         tpl.assign('globals', this.globals.toArray());
+        tpl.assign('builtins', this.usedBuiltins.toArray());
         tpl.assign('enableAssert', options.assert);
+        tpl.assign('enableApplication', options['no-application'] !== true);
         tpl.assign('platform', options.platform);
 
         // wrap with application and merge
 
         var fw, tmpNode;
 
-        if (options['no-framework'] === false) {
+        if (options['no-closure'] !== true) {
             node.add('(function() {\n');
         }
 
@@ -163,20 +172,27 @@ module AdriaTransform = proto (Transform) {
             node.add('"use strict";\n');
         }
 
-        if (options['no-framework'] === false) {
+        fw = tpl.fetch(resource('../../templates/adria/framework.tpl'));
+        tmpNode = node.add(new SourceNode(1, 0, 'adria-framework.js', fw));
+        tmpNode.setSourceContent('adria-framework.js', fw);
 
-            fw = tpl.fetch(resource('../../templates/adria/framework.tpl'));
-            tmpNode = node.add(new SourceNode(1, 0, 'adria-framework.js', fw));
-            tmpNode.setSourceContent('adria-framework.js', fw);
+        // merge resources
 
-            // merge resources
+        for (var fileName in this.resources.data) {
+            var contents = fs.readFileSync(options.basePath + fileName, 'UTF-8');
+            var wrapped = 'resource(\'' + fileName + '\', \'' + contents.jsify("'") + '\');\n';
+            tmpNode = node.add(new SourceNode(null, null, fileName, wrapped));
+            tmpNode.setSourceContent(fileName, contents);
+        }
 
-            for (var fileName in this.resources.data) {
-                var contents = fs.readFileSync(options.basePath + fileName, 'UTF-8');
-                var wrapped = 'resource(\'' + fileName + '\', \'' + contents.jsify("'") + '\');\n';
-                tmpNode = node.add(new SourceNode(null, null, fileName, wrapped));
-                tmpNode.setSourceContent(fileName, contents);
-            }
+        // merge builtins
+
+        var usedBuiltins = this.usedBuiltins.toArray();
+
+        for (var id, name in usedBuiltins) {
+            fw = tpl.fetch(this.builtins[name]);
+            tmpNode = node.add(new SourceNode(1, 0, name.replace('.adria', '.js'), fw));
+            tmpNode.setSourceContent(name.replace('.adria', '.js'), fw);
         }
 
         // merge modules
@@ -186,7 +202,7 @@ module AdriaTransform = proto (Transform) {
             tmpNode.setSourceContent(currentModule.filename, currentModule.sourceCode);
         }
 
-        if (options['no-framework'] === false) {
+        if (options['no-closure'] !== true) {
             node.add('\n})();');
         }
 

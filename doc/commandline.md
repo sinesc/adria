@@ -19,10 +19,10 @@ Command                 | Description
 ------------------------|------------------------------------------------------------
 `--target <target>`     | sets the transcompilation target. currently supported:
                         | `adria`         compile from adria to javascript
-                        | `adriadebug`    compile from adria to AST-XML
+                        | `adriadebug`    compile from adria to an XML-like representation of the AST
 `--pipe`                | read from stdin instead of or in addtition to a file
 `--base <path>`         | sets project root path (set by shell script to cwd)
-`--path <path>`         | additional include path to look for files (for multiple paths, use `--path` each time)
+`--path <path>`         | additional include path to look for files. paths are relative to base, for multiple paths, use `--path` each time
 `--out <filename>`      | output filename, relative to base
 
 ### Targets adria and adriadebug
@@ -30,9 +30,11 @@ Command                 | Description
 Command                     | Description
 ----------------------------|------------------------------------------------------------
 `--file-extension <string>` | default file extension to use when none is given (excluding dot)
-`--no-framework`            | plain output, don't wrap in application/module code
-`--platform <web/node>`     | `node`: include relative requires only, don't overwrite node's require function
-                            | `web`: include all requires
+`--no-closure`              | don't wrap entire output in a closure
+`--no-application`          | don't include `application`
+`--platform <web/node>`     | `node`: required when generated code is to be run in a nodeJS environment
+                            | `web`: required when generated code is to be run in a webbrowser environment
+`--no-scan`                 | don't check for undefined variables
 `--no-map`                  | don't write sourcemap
 `--no-link`                 | don't link sourcemap to generated Javascript
 `--tweak-exports`           | add exports variable to module scope (CommonJS compatibility)
