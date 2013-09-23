@@ -24,7 +24,7 @@ var fs = require('fs');
 var path = require('path');
 var util = require('../util');
 var SourceNode = require('source-map').SourceNode;
-var Template = require('../template');
+var Template = require('../template2');
 var Transform = require('../transform');
 var AdriaParser = require('./adria_parser');
 
