@@ -45,24 +45,26 @@ String::snakeToCamel = (function() {
 })();
 
 /**
- * escape string for use in javascript source code
- * @param quoteType either " or ', string will not be enclosed, just be escaped for use in given quote-type, omit parameter to escape for both quote-types
+ * escapes string for use in javascript source code
+ *
+ * @param mode either " or ', if neither, string will be escaped for both cases
+ * @return escapedString
  */
 String::jsify = function(quoteType) {
 
     if (quoteType === "'") {
         return this.replace(/([\\'])/g, "\\$1").replace(/\r?\n/g, '\\n\\\n').replace(/\0/g, "\\0");
     } else if (quoteType === '"') {
-        return this.replace(/([\\"])/g, "\\$1").replace(/\r?\n/g, '\\\n').replace(/\0/g, "\\0");
+        return this.replace(/([\\"])/g, "\\$1").replace(/\r?\n/g, '\\n\\\n').replace(/\0/g, "\\0");
     } else {
-        return this.replace(/([\\"'])/g, "\\$1").replace(/\r?\n/g, '\\\n').replace(/\0/g, "\\0");
+        return this.replace(/([\\"'])/g, "\\$1").replace(/\r?\n/g, '\\n\\\n').replace(/\0/g, "\\0");
     }
 };
 
-/*
- * string format
+/**
+ * formats this string with given arguments
+ * !todo used just once, either refactore more code to use or drop it. first case: update from astdlib
  */
-
 String::format = function() {
 
     var args = Array::slice.call(arguments);
@@ -87,11 +89,12 @@ String::format = function() {
     });
 };
 
-
-/*
- * repeat string
+/**
+ * repeats this string count times and returns the result
+ *
+ * @param count
+ * @return repeatedString
  */
-
 String::repeat = function(count) {
 
     if (count < 1) {
@@ -122,12 +125,25 @@ String::repeat = function(count) {
     return result;
 };
 
+/**
+ * repeats the given string count times and returns the result
+ *
+ * @param count
+ * @param string
+ * @return repeatedString
+ */
 String.repeat = function(count, string) {
 
     string = (string === undefined ? ' ' : string);
     return string.repeat(count);
 };
 
+/**
+ * returns number of occurances of a given search string in this string
+ *
+ * @param search
+ * @return count
+ */
 String::occurances = function(search) {
 
     var count = 0;
@@ -141,21 +157,26 @@ String::occurances = function(search) {
     return count;
 };
 
-/*
- * pad string
+/**
+ * starting from the left, pads the string to paddedLength using given padChar
+ *
+ * @param paddedLength
+ * @param padChar
+ * @return paddedString
  */
-
 String::padLeft = function(paddedLength, padChar) {
 
     padChar = (padChar !== undefined ? padChar : ' ');
     return padChar.repeat(paddedLength - this.length) + this.valueOf();
 };
 
-
-/*
- * random string (static)
+/**
+ * returns a random string of given length composed of given chars
+ *
+ * @param length
+ * @param chars
+ * @return randomString
  */
-
 String.random = function(length, chars) {
 
     var chars       = (chars === undefined ? '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ' : chars);
@@ -170,6 +191,13 @@ String.random = function(length, chars) {
     return result;
 };
 
+/**
+ * removes given postfix or one of an array of postfixes from a string and
+ * returns the new string
+ *
+ * @param postfix string or array of strings
+ * @return strippedString
+ */
 String::stripPostfix = function(postfix) {
 
     var len;
@@ -192,11 +220,23 @@ String::stripPostfix = function(postfix) {
     return (this.substr(-len) === postfix ? this.substr(0, this.length - len) : this.valueOf());
 };
 
+/**
+ * returns whether this string has given postfix
+ *
+ * @param postfix
+ * @return bool
+ */
 String::hasPostfix = function(postfix) {
 
     return (this.substr(-postfix.length) === postfix);
 };
 
+/**
+ * escape given string for use as literal regexp match
+ *
+ * @param string
+ * @return escapedString
+ */
 RegExp.escape = function(string) {
 
     return string.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&');

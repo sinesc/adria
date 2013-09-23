@@ -70,7 +70,7 @@ module Template = proto {
             // handle string, statement, expression
 
             if (match[1] === undefined && match[2] === undefined) {
-                jsString += 'result += "' + match[0].jsify('"').replace(/\\$/gm, '\\n\\') + '";\n';
+                jsString += 'result += "' + match[0].jsify('"') + '";\n';
             } else if (match[1] !== undefined) {
                 jsString += match[0].slice(2, -2) + '\n';
             } else if (match[2] !== undefined) {
