@@ -31,7 +31,7 @@ module Template = proto {
     data        : null,
     regexp      : null,
 
-    constructor: function(delimiterOpen = '<', delimiterClose = '>', delimiterStatement = '!', delimiterExpression = '=') {
+    constructor: function(delimiterOpen = '<', delimiterClose = '>', delimiterStatement = ':', delimiterExpression = '=') {
 
         this.data = { };
 
@@ -91,7 +91,6 @@ module Template = proto {
 
         var finalString = '(function(data) { ' + varDefs + tplString + 'return result; })(this)';
 
-    console.log(finalString);
         return (function() {
             return eval(finalString);
         }).call(this.data);

@@ -933,21 +933,21 @@ resource('templates/adria/async.tpl', 'module(\'async.adria\', function(module, 
     module.exports = Async;\n\
 });\n\
 ');
-resource('templates/adria/framework.tpl', 'var <if platform == \'node\'>__</if>require;\n\
-var resource;<if enableApplication>\n\
-var application;</if>\n\
-var module;<if platform == \'node\'>\n\
-var window = global;</if><if enableAssert>\n\
-var assert;</if><if globals.length != 0>\n\
-var <each global in globals><global><if ! each.last>, </if></each>;</if>\n\
+resource('templates/adria/framework.tpl', 'var <:if (platform == \'node\') { :>__<: } :>require;\n\
+var resource;<:if (enableApplication) { :>\n\
+var application;<: } :>\n\
+var module;<: if (platform == \'node\') { :>\n\
+var window = global;<: } :><: if (enableAssert) { :>\n\
+var assert;<: } :><: if (globals.length != 0) { :>\n\
+var <= globals.join(\', \') =>;<: } :>\n\
 (function() {\n\
     var resources = { };\n\
     var modules = { };\n\
-    var getResource = function(name) {<if enableAssert>\n\
+    var getResource = function(name) {<: if (enableAssert) { :>\n\
         if (resources[name] === undefined) {\n\
             throw Error(\'missing resource \' + name);\n\
         }\n\
-        </if>\n\
+        <: } :>\n\
         return resources[name];\n\
     };\n\
     var Module = function(name, func) {\n\
@@ -962,7 +962,7 @@ var <each global in globals><global><if ! each.last>, </if></each>;</if>\n\
     };\n\
     resource = function(name, data) {\n\
         resources[name] = data;\n\
-    };<if enableApplication>\n\
+    };<: if (enableApplication) { :>\n\
     application = function(Constructor /*, params... */) {\n\
         function Application() {\n\
             application = this;\n\
@@ -972,19 +972,19 @@ var <each global in globals><global><if ! each.last>, </if></each>;</if>\n\
         var args = Array.prototype.slice.call(arguments);\n\
         args[0] = null;\n\
         return new (Function.prototype.bind.apply(Application, args));\n\
-    };</if>\n\
-    <if platform == \'node\'>__</if>require = function(file) {<if enableAssert>\n\
+    };<: } :>\n\
+    <: if (platform == \'node\') { :>__<: } :>require = function(file) {<: if (enableAssert) { :>\n\
         if (modules[file] === undefined) {\n\
             throw Error(\'missing dependency \' + file);\n\
         }\n\
-        </if>\n\
+        <: } :>\n\
         return modules[file].exports;\n\
-    }; <if enableAssert>\n\
+    }; <: if (enableAssert) { :>\n\
     assert = function(assertion, message) {\n\
         if (assertion !== true) {\n\
             throw new Error(\'assertion failed: \' + message);\n\
         }\n\
-    };</if>\n\
+    };<: } :>\n\
 })();\n\
 ');
 module('src/prototype.adria', function(module, resource) {
@@ -1327,180 +1327,57 @@ module('src/util.adria', function(module, resource) {
     module.exports.normalizeExtension = normalizeExtension;
     module.exports.md5 = md5;
 });
-module('src/template/tags.adria', function(module, resource) {
-    var Util, Tags;
-    Util = __require('src/util.adria');
-    Tags = function Tags() {
-        this.ifDepth = 0;
-        this.eachDepth = 0;
-        this.remDepth = 0;
-        this.resultVar = '';
-    };
-    Tags.prototype.supports = function supports(tagName) {
-        return (this['tag:' + tagName] !== undefined);
-    };
-    Tags.prototype.tag = function tag(tagName, params) {
-        if (typeof this['tag:' + tagName] !== 'function') {
-            throw new Error('unknown tag ' + tagName + ' called');
-        }
-        return this['tag:' + tagName](params);
-    };
-    Tags.prototype.text = function text(string) {
-        var repl;
-        repl = string.replace(/\\/g, '\\\\').replace(/\n/g, '\\n').replace(/\*\//g, '*\\/').replace(/'/g, '\\\'');
-        return this.resultVar + ' += \'' + repl + '\';\n';
-    };
-    Tags.prototype.fallback = function fallback() {
-        return 'out';
-    };
-    Tags.prototype.begin = function begin() {
-        this.ifDepth = 0;
-        this.eachDepth = 0;
-        this.remDepth = 0;
-        this.resultVar = '__r' + String.random(8);
-        return '(function() { var ' + this.resultVar + ' = \'\'; with (this) {\n';
-    };
-    Tags.prototype.end = function end() {
-        if (this.ifDepth > 0) {
-            throw new Error('unclosed if-tag(s)');
-        } else if (this.eachDepth > 0) {
-            throw new Error('unclosed each-tag(s)');
-        } else if (this.remDepth > 0) {
-            throw new Error('unclosed rem-tag(s)');
-        }
-        return '} return ' + this.resultVar + '; }).call(this);';
-    };
-    Tags.prototype['tag:out'] = function(params) {
-        return this.resultVar + ' += (typeof ' + params + ' !== \'undefined\' ? ' + params + ' : \'\');\n';
-    };
-    Tags.prototype['tag:if'] = function(params) {
-        this.ifDepth += 1;
-        return 'if (' + params + ') {\n';
-    };
-    Tags.prototype['tag:else'] = function() {
-        if (this.ifDepth === 0) {
-            throw new Error('else: no matching if found');
-        }
-        return '} else {\n';
-    };
-    Tags.prototype['tag:elseif'] = function(params) {
-        if (this.ifDepth === 0) {
-            throw new Error('elseif: no matching if found');
-        }
-        return '} else if (' + params + ') {\n';
-    };
-    Tags.prototype['tag:/if'] = function() {
-        if (this.ifDepth === 0) {
-            throw new Error('/if: no matching if found');
-        }
-        this.ifDepth -= 1;
-        return '}\n';
-    };
-    Tags.prototype['tag:each'] = function(params) {
-        var hash, options;
-        params = params.split(' ');
-        if (params[1] !== 'in') {
-            throw new Error('each: syntax error');
-        }
-        hash = String.random(6);
-        options = {
-            name: params[0],
-            from: params[2],
-            id: '__i' + hash,
-            keys: '__k' + hash,
-            len: '__l' + hash
-        };
-        this.eachDepth += 1;
-        return '(function() { \
-                if ($from instanceof Object !== true) return; \
-                var $keys = ($from instanceof Array ? null : Object.keys($from)); \
-                var $len = ($keys === null ? $from.length : $keys.length); \
-                for (var $id = 0; $id < $len; $id++) { \
-                    var $name = $from[($keys === null ? $id : $keys[$id])];\
-                    var each = { first: ($id === 0), last: ($id === $len -1), key: ($keys === null ? $id : $keys[$id]) };\n'.format(options);
-    };
-    Tags.prototype['tag:/each'] = function(params) {
-        if (this.eachDepth === 0) {
-            throw new Error('/each: no matching each found');
-        }
-        this.eachDepth -= 1;
-        return '}})();\n';
-    };
-    Tags.prototype['tag:rem'] = function(params) {
-        if (this.remDepth > 0) {
-            throw new Error('rem: nested comments not supported');
-        }
-        if (params) {
-            return '/* ' + params + ' */';
-        } else {
-            this.remDepth += 1;
-            return '/* ';
-        }
-    };
-    Tags.prototype['tag:/rem'] = function() {
-        if (this.remDepth === 0) {
-            throw new Error('/rem: no matching each found');
-        }
-        this.remDepth -= 1;
-        return ' */';
-    };
-    module.exports = Tags;
-});
 module('src/template.adria', function(module, resource) {
-    var XRegExp, fs, Tags, Template;
-    XRegExp = require('xregexp').XRegExp;
+    var fs, Template;
     fs = require('fs');
-    Tags = __require('src/template/tags.adria');
     Template = (function() {
-        var ___self = function Template(tags, delimiterOpen, delimiterClose) {
-            tags = (tags === undefined ? new Tags() : tags);
-            delimiterOpen = (delimiterOpen === undefined ? '<' : delimiterOpen);
-            delimiterClose = (delimiterClose === undefined ? '>' : delimiterClose);
-            this.tags = tags;
+        var ___self = function Template(delimiterOpen, delimiterClose, delimiterStatement, delimiterExpression) {
+            delimiterOpen = (delimiterOpen !== undefined ? delimiterOpen : ('<'));
+            delimiterClose = (delimiterClose !== undefined ? delimiterClose : ('>'));
+            delimiterStatement = (delimiterStatement !== undefined ? delimiterStatement : (':'));
+            delimiterExpression = (delimiterExpression !== undefined ? delimiterExpression : ('='));
+            var openStatement, closeStatement, openExpression, closeExpression, statement, expression, text;
             this.data = {  };
-            this.delimiter = {
-                open: XRegExp.escape(delimiterOpen),
-                close: XRegExp.escape(delimiterClose)
-            };
+            openStatement = RegExp.escape(delimiterOpen) + RegExp.escape(delimiterStatement);
+            closeStatement = RegExp.escape(delimiterStatement) + RegExp.escape(delimiterClose);
+            openExpression = RegExp.escape(delimiterOpen) + RegExp.escape(delimiterExpression);
+            closeExpression = RegExp.escape(delimiterExpression) + RegExp.escape(delimiterClose);
+            statement = '(' + openStatement + ').+?' + closeStatement;
+            expression = '(' + openExpression + ').+?' + closeExpression;
+            text = '(?:(?!' + openStatement + '|' + openExpression + ')[\\s\\S])+';
+            this.regexp = new RegExp(statement + '|' + expression + '|' + text, 'g');
         };
         ___self.prototype.basePath = 'templates/';
+        ___self.prototype.data = null;
+        ___self.prototype.regexp = null;
         ___self.prototype.assign = function assign(name, value) {
             this.data[name] = value;
         };
         ___self.prototype.parse = function parse(input) {
-            var self, tplString, lastIndex, lastTail, delim, regex;
-            self = this;
-            tplString = '';
-            lastIndex = 0;
-            lastTail = '';
-            delim = this.delimiter;
-            regex = XRegExp(' (?<head>  [\\ \\t]*)' + delim.open + '(?<ident> /?[a-z_][a-z0-9_\\[\\]\\.]+) \\s* (?<params>.*?)' + delim.close + '(?<tail>  \\n){0,1}', 'xis');
-            input = input.replace(/\r/g, '');
-            tplString += self.tags.begin();
-            XRegExp.forEach(input, regex, function(match, i) {
-                if (i == 0 && match.index > 0) {
-                    tplString += self.tags.text(lastTail + input.substring(0, match.index) + match.head);
-                } else if (i > 0) {
-                    tplString += self.tags.text(lastTail + input.substring(lastIndex, match.index) + match.head);
+            var regexp, match, jsString;
+            regexp = this.regexp;
+            jsString = '';
+            while (match = regexp.exec(input)) {
+                if (match[1] === undefined && match[2] === undefined) {
+                    jsString += 'result += "' + match[0].jsify('"').replace(/\\$/gm, '\\n\\') + '";\n';
+                } else if (match[1] !== undefined) {
+                    jsString += match[0].slice(2, -2) + '\n';
+                } else if (match[2] !== undefined) {
+                    jsString += 'result += ' + match[0].slice(2, -2) + ';\n';
                 }
-                lastIndex = match.index + match[0].length;
-                lastTail = (match.tail !== undefined ? match.tail : '');
-                if (match.params === '' && match.ident !== '' && self.tags.supports(match.ident) !== true) {
-                    match.params = match.ident;
-                    match.ident = self.tags.fallback();
-                }
-                if (self.tags.supports(match.ident) !== true) {
-                    throw new Error('unsupported tag ' + match.ident + ' encountered');
-                }
-                tplString += self.tags.tag(match.ident, match.params);
-            });
-            tplString += self.tags.text(lastTail + input.substring(lastIndex));
-            tplString += self.tags.end();
-            return tplString;
+            }
+            return jsString;
         };
         ___self.prototype.exec = function exec(tplString) {
+            var varDefs, name, value, finalString;
+            varDefs = 'var result = "";\n';
+            for (name in this.data) {
+                value = this.data[name];
+                varDefs += 'var ' + name + ' = data.' + name + ';\n';
+            }
+            finalString = '(function(data) { ' + varDefs + tplString + 'return result; })(this)';
             return (function() {
-                return eval(tplString);
+                return eval(finalString);
             }).call(this.data);
         };
         ___self.prototype.fetch = function fetch(input) {
@@ -1513,7 +1390,6 @@ module('src/template.adria', function(module, resource) {
         };
         return ___self;
     })();
-    Template.Tags = Tags;
     module.exports = Template;
 });
 module('src/cache.adria', function(module, resource) {
