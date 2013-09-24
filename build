@@ -1,14 +1,14 @@
 #!/bin/bash
 set -e
 echo "building compiler..."
-adria $@ --no-application --no-cache --no-blanks --platform node --no-map --out out.js main.adria
+adria $@ --no-application --no-cache --no-blanks --platform node --no-map --out compiled/ngadria.js main.adria
 echo "recompiling compiler with compiler..."
-self-adria $@ --no-application --no-cache --no-blanks --platform node --no-map --out out.js main.adria
-md5sum out.js
+./ngadria $@ --no-application --no-cache --no-blanks --platform node --no-map --out compiled/ngadria.js main.adria
+md5sum compiled/ngadria.js
 echo "ok. again..."
-self-adria $@ --no-application --no-cache --no-blanks --platform node --no-map --out out.js main.adria
-md5sum out.js
+./ngadria $@ --no-application --no-cache --no-blanks --platform node --no-map --out compiled/ngadria.js main.adria
+md5sum compiled/ngadria.js
 echo "done."
 head -n22 main.adria > ef38u4985uijf.tmp
-cat out.js >> ef38u4985uijf.tmp
-mv ef38u4985uijf.tmp out.js
+cat compiled/ngadria.js >> ef38u4985uijf.tmp
+mv ef38u4985uijf.tmp compiled/ngadria.js

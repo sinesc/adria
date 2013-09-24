@@ -1,0 +1,3 @@
+#!/bin/bash
+set -e
+node --harmony /root/dev/adria/compiled/ngadria.js "$@"

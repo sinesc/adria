@@ -57,8 +57,8 @@ console.log('start sleeping');
 ### Default parameters
 
 ```javascript
-function print(greet, who = 'World!') {
-    console.log(greeting + ' ' + output);
+function print(greeting, who = 'World!') {
+    console.log(greeting + ' ' + who);
 }
 ```
 

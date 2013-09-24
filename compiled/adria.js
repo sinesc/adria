@@ -2836,10 +2836,11 @@ module('src/targets/adria_node.adria', function(module, resource) {
                 'console',
                 'debugger',
                 'application',
-                'Async'
+                'Async',
+                'window'
             ]),
-            node: new Set([ 'process' ]),
-            web: new Set([ 'window', 'document', 'performance' ])
+            node: new Set([ 'process', 'Buffer' ]),
+            web: new Set([ 'document', 'performance' ])
         };
         ___self.prototype.findScope = function findScope() {
             return this.ancestor(null, 'scope|module');

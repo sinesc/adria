@@ -43,9 +43,10 @@ module AdriaNode = proto (CaptureNode) {
             'isFinite', 'isNaN', 'parseFloat', 'parseInt',
             'console', 'debugger',
             'application', 'Async',
+            'window',
         ]),
-        node: new Set([ 'process' ]),
-        web: new Set([ 'window', 'document', 'performance' ]),
+        node: new Set([ 'process', 'Buffer', ]),
+        web: new Set([ 'document', 'performance' ]),
     },
 
     /**
