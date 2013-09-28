@@ -48,6 +48,22 @@ module AdriaParser = proto(LanguageParser) {
     },
 
     /**
+     * returns new instance suitable for parsing
+     */
+    clone: function() {
+
+        var parser = parent->clone();
+
+        parser.resultData = {
+            globals: new util.Set(),
+            requires: new util.Set(),
+            resources: new util.Set(),
+        };
+
+        return parser;
+    },
+
+    /**
      * initialize a tokenizer, load definition files into a trainer and call parent's trainself, which
      * will use the trainer to genererate the definition for this parser
      */

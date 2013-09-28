@@ -125,17 +125,17 @@ module AdriaNode = proto (CaptureNode) {
 
         // check if in a prototype, don't skip it if we are
 
-        result.add('var __p, __p0 = __p = (this === this.constructor.prototype ? this : Object.getPrototypeOf(this));' + this.nl());
+        result.add('var ___p, ___p0 = ___p = (this === this.constructor.prototype ? this : Object.getPrototypeOf(this));' + this.nl());
 
         // find self in protochain
 
-        result.add('while (__p !== null && (__p.' + lookupName + ' !== ' + ownName + ' || __p.hasOwnProperty(\'' + lookupName + '\') === false)) {' + this.nl(1));
-        result.add('__p = Object.getPrototypeOf(__p);' + this.nl(-1));
+        result.add('while (___p !== null && (___p.' + lookupName + ' !== ' + ownName + ' || ___p.hasOwnProperty(\'' + lookupName + '\') === false)) {' + this.nl(1));
+        result.add('___p = Object.getPrototypeOf(___p);' + this.nl(-1));
         result.add('}' + this.nl());
 
         // get parent prototype
 
-        result.add('__p = (__p !== null ? Object.getPrototypeOf(__p).constructor : __p0);' + this.nl());
+        result.add('___p = (___p !== null ? Object.getPrototypeOf(___p).constructor : ___p0);' + this.nl());
     },
 
     /**
@@ -1247,8 +1247,9 @@ export AssertStatement = proto (AdriaNode) {
         var result = this.csn();
 
         if (this.parser().transform.options.assert) {
+            var contents = AdriaNode->toSourceNode();
             result.add('assert(');
-            result.add(AdriaNode->toSourceNode());
+            result.add([ contents, ", '" + contents.toString().jsify("'") + "'" ]);
             result.add(');' + this.nl());
         }
 
@@ -1472,7 +1473,7 @@ export ParentLiteral = proto (AdriaNode) {
 
     toSourceNode: function() {
         this.ancestor('function').lookupParent = true;
-        return this.csn('__p');
+        return this.csn('___p');
     }
 };
 

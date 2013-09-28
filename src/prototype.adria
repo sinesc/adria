@@ -22,6 +22,20 @@
  */
 
 /**
+ * provides a base clone method, returning a new object of this type without
+ * calling the constructor. Chain to this method, then copy properties to the
+ * result object as required
+ *
+ * @return object
+ */
+Object::clone = property {
+    value: function() {
+        return Object.create(Object.getPrototypeOf(this));
+    },
+    writable: true,
+};
+
+/**
  * convert snake-cast to camel-case, i.e. test_function to testFunction or TestFunction
  *
  * @param upperFirst if true, uppercase first letter as well

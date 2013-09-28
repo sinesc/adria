@@ -103,55 +103,113 @@ module CaptureNode = proto {
      * @param results array of GeneratorState
      * @return CaptureNode root node of the capture tree
      */
-    fromResults: function(results, typeMapper) {
+    fromResults: (function() {
 
-        var root = new CaptureNode();
-        var current = root;
-        var lastStack = [];
-        var result, stack, diff, node;
+        /**
+         * compares two stacks and returns number of parent-acends and list of capture desends to get from
+         * lastStack to stack
+         *
+         * @param stack current stack
+         * @param lastStack stack at last processed token
+         * @param minStackLen the minimum size the stack had between the tokens for stack and lastStack
+         */
+        var stackDiff = function(stack, lastStack, minStackLen) {
 
-        // process each result
+            // find deepest capture node that is present in both current and last stack
 
-        for (var resultId in results) {
-            result = results[resultId];
-            stack = result.stack;
+            var deepestCommonCapture = -1;
+            var minLen = Math.min(stack.length, lastStack.length, minStackLen);
 
-            // diff stack against previous stack
-
-            diff = stackDiff(stack, lastStack, result.minStack);
-
-            // ascend as far as required
-
-            while (diff.ascend--) {
-                current = current.parent;
+            for (var i = 0; i < minLen; i++) {
+                if (stack[i].node === lastStack[i].node) {
+                    if (stack[i].node.capture !== '') {
+                        deepestCommonCapture = i;
+                    }
+                } else {
+                    break;
+                }
             }
 
-            // attach new nodes
+            // find number of captures between deepest common capture and deepest previous capture
+            // this is the number of nodes fromResults() needs to ascend before attaching new capture nodes
 
-            for (var nodeId in diff.create) {
-                node = diff.create[nodeId];
-                current = current.addNew(node.capture, node.name, typeMapper(node.capture, node.name));
-                current.row = result.token.pos.row;
-                current.col = result.token.pos.col;
+            var numCaptures = 0;
+            var lastLen = lastStack.length;
+
+            for (var i = deepestCommonCapture + 1; i < lastLen; i++) {
+                if (lastStack[i].node.capture !== '') {
+                    numCaptures++;
+                }
             }
 
-            // attach the actual match
+            // find all capture nodes below the deepest common capture
+            // fromResults() will have to create capture nodes for these
 
-            node = result.node;
+            var captures = [];
+            var len = stack.length;
 
-            if (node.capture !== '') {
-                var match = current.addNew(node.capture, result.token.data, typeMapper(node.capture, node.name));
-                match.row = result.token.pos.row;
-                match.col = result.token.pos.col;
+            for (var i = deepestCommonCapture + 1; i < len; i++) {
+                if (stack[i].node.capture !== '') {
+                    captures.push(stack[i].node);
+                }
             }
 
-            // lastStack for the next token
+            return { ascend: numCaptures, create: captures };
+        };
 
-            lastStack = stack;
-        }
+        /**
+         * the actual conversion function
+         */
+        return function fromResults(results, typeMapper) {
 
-        return root;
-    },
+            var root = new CaptureNode();
+            var current = root;
+            var lastStack = [];
+            var result, stack, diff, node;
+
+            // process each result
+
+            for (var resultId in results) {
+                result = results[resultId];
+                stack = result.stack;
+
+                // diff stack against previous stack
+
+                diff = stackDiff(stack, lastStack, result.minStack);
+
+                // ascend as far as required
+
+                while (diff.ascend--) {
+                    current = current.parent;
+                }
+
+                // attach new nodes
+
+                for (var nodeId in diff.create) {
+                    node = diff.create[nodeId];
+                    current = current.addNew(node.capture, node.name, typeMapper(node.capture, node.name));
+                    current.row = result.token.pos.row;
+                    current.col = result.token.pos.col;
+                }
+
+                // attach the actual match
+
+                node = result.node;
+
+                if (node.capture !== '') {
+                    var match = current.addNew(node.capture, result.token.data, typeMapper(node.capture, node.name));
+                    match.row = result.token.pos.row;
+                    match.col = result.token.pos.col;
+                }
+
+                // lastStack for the next token
+
+                lastStack = stack;
+            }
+
+            return root;
+        };
+    })(),
 
     isNode: function() {
         return this.col !== -1;
@@ -557,55 +615,3 @@ module CaptureNode = proto {
 CaptureNode::dummy = new CaptureNode('', '');
 CaptureNode::dummy.row = -1;
 CaptureNode::dummy.col = -1;
-
-/**
- * compares two stacks and returns number of parent-acends and list of capture desends to get from
- * lastStack to stack
- *
- * @param stack current stack
- * @param lastStack stack at last processed token
- * @param minStackLen the minimum size the stack had between the tokens for stack and lastStack
- */
-var stackDiff = function(stack, lastStack, minStackLen) {
-
-    // find deepest capture node that is present in both current and last stack
-
-    var deepestCommonCapture = -1;
-    var minLen = Math.min(stack.length, lastStack.length, minStackLen);
-
-    for (var i = 0; i < minLen; i++) {
-        if (stack[i].node === lastStack[i].node) {
-            if (stack[i].node.capture !== '') {
-                deepestCommonCapture = i;
-            }
-        } else {
-            break;
-        }
-    }
-
-    // find number of captures between deepest common capture and deepest previous capture
-    // this is the number of nodes fromResults() needs to ascend before attaching new capture nodes
-
-    var numCaptures = 0;
-    var lastLen = lastStack.length;
-
-    for (var i = deepestCommonCapture + 1; i < lastLen; i++) {
-        if (lastStack[i].node.capture !== '') {
-            numCaptures++;
-        }
-    }
-
-    // find all capture nodes below the deepest common capture
-    // fromResults() will have to create capture nodes for these
-
-    var captures = [];
-    var len = stack.length;
-
-    for (var i = deepestCommonCapture + 1; i < len; i++) {
-        if (stack[i].node.capture !== '') {
-            captures.push(stack[i].node);
-        }
-    }
-
-    return { ascend: numCaptures, create: captures };
-};

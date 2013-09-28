@@ -60,6 +60,11 @@ module LanguageParser = proto(Parser) {
     cacheData: null,
 
     /**
+     * @var Object the parent transform object
+     */
+    transform: null,
+
+    /**
      * @var String method used for output generation
      */
     outputMethod: 'toSourceNode',
@@ -74,18 +79,26 @@ module LanguageParser = proto(Parser) {
         Parser->constructor(transform);
 
         this.transform = transform;
+        this.includeTrace = transform.options.debug;
         this.resultData = { };
     },
 
     /**
-     * constructs new instance referencing source's definition and
-     * transform link
+     * returns a clone of this object
+     *
+     * @return object
      */
     clone: function() {
 
-        var parser = Parser->clone();
+        var parser = parent->clone();
+        parser.trainer = this.trainer;
+        parser.sourceCode = this.sourceCode;
+        parser.captureTree = this.captureTree;
+        parser.resultData = this.resultData;
+        parser.cacheData = this.cacheData;
         parser.transform = this.transform;
-        parser.source = this.source;
+        parser.outputMethod = this.outputMethod;
+        parser.includeTrace = this.includeTrace;
         return parser;
     },
 

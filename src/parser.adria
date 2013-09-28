@@ -51,6 +51,11 @@ module Parser = proto {
     file: 'unnamed',
 
     /**
+     * if true, error messages will include a AST stack trace
+     */
+    includeTrace: true,
+
+    /**
      * construct parser and set up new definition
      */
     constructor: function() {
@@ -58,19 +63,60 @@ module Parser = proto {
     },
 
     /**
-     * constructs new instance referencing source's definition
+     * returns a clone of this object
+     *
+     * @return object
      */
     clone: function() {
 
-        var OwnType = Object.getPrototypeOf(this).constructor;
-        var parser = new OwnType();
-
-        assert(parser instanceof Parser);
-
+        var parser = parent->clone();
         parser.definition = this.definition;
         parser.tokenizer = this.tokenizer;
-
+        parser.file = this.file;
+        parser.includeTrace = this.includeTrace;
         return parser;
+    },
+
+    /**
+     * returns debug trace of the definition node stack
+     *
+     * @param token
+     * @param node
+     * @param stack
+     */
+    trace: function(token, node, stack) {
+
+        // for output simplicy, add current node to stack
+
+        stack = stack.slice();
+        stack.push({ node: node, token: token });
+
+        var id = stack.length -1;
+        var result = '';
+        var done = 0;
+        var levelNode, levelToken;
+
+        while (id--) {
+            levelNode = stack[id].node;
+            levelToken = stack[id].token;
+
+            if (levelNode instanceof Object) {
+                result += (id + 1) + '. ' + levelNode.name + (levelNode.capture !== '' ? ':' + levelNode.capture : '') + (levelNode.label !== '' ? '[' + levelNode.label + ']' : '');
+            } else {
+                result += 'null entry on stack';
+            }
+
+            result += ' at ' + levelToken.pos.toString() + ': ' + levelToken.data + '\n';
+
+            // if after 15 items there are still more than 15 items on the stack, skip ahead to item 15
+
+            if (done++ > 15 && id > 15) {
+                id = 15;
+                result += '...\n';
+            }
+        }
+
+        return result;
     },
 
     /**
@@ -83,39 +129,15 @@ module Parser = proto {
      */
     errorMessage: function(token, node, stack) {
 
-        // for output simplicy, add current node to stack
+        var trace;
+        var message = '$file: Unexpected token "$tokenData" $position. Expected: $validNodes\n';
 
-        stack = stack.slice();
-        stack.push({ node: node, token: token });
-
-        // stacktrace (debugging)
-
-        var id = stack.length -1;
-        var trace = '';
-        var done = 0;
-        var levelNode, levelToken;
-
-        while (id--) {
-            levelNode = stack[id].node;
-            levelToken = stack[id].token;
-
-            if (levelNode instanceof Object) {
-                trace += (id + 1) + '. ' + levelNode.name + (levelNode.capture !== '' ? ':' + levelNode.capture : '') + (levelNode.label !== '' ? '[' + levelNode.label + ']' : '');
-            } else {
-                trace += 'null entry on stack';
-            }
-
-            trace += ' at ' + levelToken.pos.toString() + ': ' + levelToken.data + '\n';
-
-            // if after 15 items there are still more than 15 items on the stack, skip ahead to item 15
-
-            if (done++ > 15 && id > 15) {
-                id = 15;
-                trace += '...\n';
-            }
+        if (this.includeTrace) {
+            trace = this.trace(token, node, stack);
+            message += '\nTrace:\n$trace';
         }
 
-        return '$file: Unexpected token "$tokenData" $position. Expected: $validNodes\n\nTrace:\n$trace'.format({
+        return message.format({
             file        : path.normalize(this.file),
             tokenData   : token.data,
             position    : token.pos.toString(),
