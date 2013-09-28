@@ -1,0 +1,22 @@
+#!/bin/bash
+set -e
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+
+echo "changing working directory to $DIR"
+cd $DIR
+
+echo "adria compiling ngadria..."
+../bin/adria.js $@ --no-application --no-cache --no-blanks --platform node --no-map --base ../src/ --out ../bin/ngadria.js main.adria
+./shellwrap ../bin/ngadria.js
+
+echo "ngadria compiling ngadria..."
+../bin/ngadria.js $@ --no-application --no-cache --no-blanks --platform node --no-map --base ../src/ --out ../bin/ngadria.js main.adria
+./shellwrap ../bin/ngadria.js
+md5sum ../bin/ngadria.js
+
+echo "ok. again..."
+../bin/ngadria.js $@ --no-application --no-cache --no-blanks --platform node --no-map --base ../src/ --out ../bin/ngadria.js main.adria
+./shellwrap ../bin/ngadria.js
+md5sum ../bin/ngadria.js
+
+echo "done."

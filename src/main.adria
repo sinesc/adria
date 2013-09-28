@@ -20,11 +20,11 @@
  * IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-require('./src/prototype');
-var util = require('./src/util');
+require('./prototype');
+var util = require('./util');
 
-var AdriaTransform = require('./src/targets/adria_transform');
-var AdriaDebugTransform = require('./src/targets/adriadebug_transform');
+var AdriaTransform = require('./targets/adria_transform');
+var AdriaDebugTransform = require('./targets/adriadebug_transform');
 
 // process base command line
 
