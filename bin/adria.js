@@ -52,7 +52,7 @@ var window = global;
         return modules[file].exports;
     };
 })();
-resource('definition/adria/control.sdt', '\n\
+resource('../definition/adria/control.sdt', '\n\
 /*\n\
  * multipurpose code block\n\
  */\n\
@@ -189,7 +189,7 @@ try_catch_finally_statement {\n\
     catch_specifics:specifics -> finally:finally\n\
 }\n\
 ');
-resource('definition/adria/expression.sdt', '\n\
+resource('../definition/adria/expression.sdt', '\n\
 literal_expression {\n\
     entry -> complex_literal -> return\n\
     entry -> expression:expression -> return\n\
@@ -428,7 +428,7 @@ xfix_operator {\n\
     entry -> "++":xfix_op -> return\n\
     entry -> "--":xfix_op -> return\n\
 }');
-resource('definition/adria/literal.sdt', '\n\
+resource('../definition/adria/literal.sdt', '\n\
 /*\n\
  * object literal\n\
  */\n\
@@ -584,7 +584,7 @@ literal {\n\
     entry -> base_literal:base -> return //!todo where is extra base capture used?\n\
     entry -> complex_literal -> return\n\
 }');
-resource('definition/adria/proto.sdt', '\n\
+resource('../definition/adria/proto.sdt', '\n\
 proto_literal {\n\
 \n\
     // proto [ name ] [ ( [ parent ] ) ] body\n\
@@ -654,7 +654,7 @@ proto_body_property_data_item {\n\
     ":" -> literal_expression:value -> return\n\
 }\n\
 ');
-resource('definition/adria/root.sdt', '/*\n\
+resource('../definition/adria/root.sdt', '/*\n\
  * defined in DefinitionParser\n\
  *\n\
  * blockname {                  define a new definition block "blockname" containing textual representations of language definition nodes\n\
@@ -697,7 +697,7 @@ module {\n\
     statement:statement -> statement:statement\n\
 }\n\
 ');
-resource('definition/adria/statement.sdt', '\n\
+resource('../definition/adria/statement.sdt', '\n\
 /*\n\
  * declaration/definition\n\
  */\n\
@@ -830,13 +830,32 @@ dec_list {\n\
     ident:item -> "," -> ident:item\n\
 }\n\
 ');
-resource('templates/adria/async.tpl', 'module(\'async.adria\', function(module, resource) {\n\
+resource('../templates/adria/async.tpl', 'module(\'async.adria\', function(module, resource) {\n\
 \n\
-    var Async = function Async(generator) {\n\
+    <*\n\
+     * async error object\n\
+     *>\n\
+\n\
+    function AsyncError(message) {\n\
+        this.message = message;\n\
+        var stack = Error().stack.split(\'\\n\').slice(1);\n\
+        stack[0] = \'AsyncError: \' + message;\n\
+        this.stack = stack.join(\'\\n\');\n\
+    }\n\
+\n\
+    AsyncError.prototype = Object.create(Error.prototype);\n\
+    AsyncError.prototype.constructor = AsyncError;\n\
+\n\
+    <*\n\
+     * async object\n\
+     *>\n\
+\n\
+    function Async(generator) {\n\
         this.generator = generator;\n\
-        this.boundCallback = this.callback.bind(this);\n\
         this.next();\n\
     }\n\
+\n\
+    Async.AsyncError = AsyncError;\n\
 \n\
     Async.wrap = function(func, context) {\n\
         return function() {\n\
@@ -848,109 +867,169 @@ resource('templates/adria/async.tpl', 'module(\'async.adria\', function(module, 
         };\n\
     };\n\
 \n\
-    Async.AsyncError = function AsyncError(message, fileName, lineNumber) {\n\
-        Error.call(this, message, fileName, lineNumber);\n\
-    };\n\
-    Async.AsyncError.prototype = Object.create(Error.prototype);\n\
-    Async.AsyncError.prototype.constructor = Async.AsyncError;\n\
-\n\
     Async.prototype.generator = null;\n\
     Async.prototype.sync = 0;\n\
     Async.prototype.result = undefined;\n\
+    Async.prototype.error = undefined;\n\
     Async.prototype.waiting = 0;\n\
-    Async.prototype.terminated = false;\n\
+    Async.prototype.step = 0;\n\
 \n\
-    Async.prototype.throw = function(e) {\n\
-        if (this.terminated === false) {\n\
-            this.terminated = true;\n\
-            this.generator.throw(e);\n\
-        }\n\
+    <**\n\
+     * throw on following next() iteration and provide partial result via exception\n\
+     *\n\
+     * @param error\n\
+     *>\n\
+    Async.prototype.throw = function(error) {\n\
+\n\
+        error.partialResult = this.result;\n\
+        this.error = error;\n\
     };\n\
 \n\
+    <**\n\
+     * steps through the yields in the async function. at each yield either a result is returned or\n\
+     * an error is thrown. continues until the last yield was processed\n\
+     *>\n\
     Async.prototype.next = function() {\n\
         var arg;\n\
 \n\
-        while ((arg = this.generator.next(this.result)).done === false) {\n\
+        <* todo REFACTOR! *>\n\
 \n\
-            arg = arg.value;\n\
+        while ((arg = (this.error === undefined ? this.generator.next(this.result) : this.generator.throw(this.error))).done === false) {\n\
+\n\
             this.sync = 0;\n\
+            this.error = undefined;\n\
+            arg = arg.value;\n\
 \n\
             try {\n\
+\n\
                 if (typeof arg === \'function\') {\n\
-                    arg(this.boundCallback);\n\
+                    <: if (enableAssert) { :>assert(arg.prototype === undefined, \'Yielded function is not wrapped (forgot \\\'#\\\' ?)\');<: } :>\n\
+                    arg(this.callback.bind(this, this.step));\n\
                 } else {\n\
                     this.waitAll(arg);\n\
                 }\n\
+\n\
             } catch (e) {\n\
-                return this.throw(e);\n\
+\n\
+                <* yielded expression threw immediately, meaning we\'re synchronous *>\n\
+\n\
+                this.sync = 1;\n\
+                this.throw(e);\n\
             }\n\
 \n\
-            // check if the function returned before or after the callback was invoked\n\
+            <* check if the function returned before or after the callback was invoked\n\
+               synchronous: just continue looping, don\'t call next in callback to avoid recursion\n\
+               asynchronous: break here and have the callback call next() again when done *>\n\
 \n\
             if (this.sync === 0) {\n\
                 this.sync = -1;\n\
                 break;\n\
+            } else {\n\
+                this.step++;\n\
             }\n\
         }\n\
     };\n\
 \n\
+    <**\n\
+     * used by next to call multiple functions and wait for all of them to call back\n\
+     *\n\
+     * @param args an array or object of async-wrapped functions\n\
+     *>\n\
     Async.prototype.waitAll = function(args) {\n\
-        var arg;\n\
 \n\
         if (args instanceof Array) {\n\
             this.result = new Array(args.length);\n\
         } else if (args instanceof Object) {\n\
             this.result = { };\n\
+        } else {\n\
+            throw new AsyncError(\'Yielding invalid type \' + (typeof args));\n\
         }\n\
+\n\
+        this.waiting = 0;\n\
 \n\
         for (var id in args) {\n\
             var arg = args[id];\n\
             if (typeof arg === \'function\') {\n\
+                <: if (enableAssert) { :>assert(arg.prototype === undefined, \'Property \' + id + \' of yielded object is not a wrapped function (forgot \\\'#\\\' ?)\');<: } :>\n\
                 this.waiting++;\n\
-                arg(this._waitAllCallback.bind(this, id));\n\
+                arg(this.waitAllCallback.bind(this, this.step, id));\n\
             } else {\n\
-                throw new Async.AsyncError(\'Property \' + id + \' of yielding object is not a function\');\n\
+                throw new AsyncError(\'Property \' + id + \' of yielding object is not a function\');\n\
             }\n\
         }\n\
     };\n\
 \n\
-    Async.prototype._waitAllCallback = function(originalId, err, val) {\n\
+    <**\n\
+     * callback given to functions during waitAll. tracks number of returned functions and\n\
+     * calls the normal async callback when all returned or one excepted\n\
+     *\n\
+     * @param originalStep the step at which the original function was called\n\
+     * @param originalId the array or object key from the original yield\n\
+     * @param err typically nodejs callback provide an error as first parameter if there was one. we\'ll throw it\n\
+     * @param val the result\n\
+     *>\n\
+    Async.prototype.waitAllCallback = function(originalStep, originalId, err, val) {\n\
 \n\
-        var numArgs = arguments.length;\n\
+        <* check if callback is from the current step (may not be if a previous waitAll step threw) *>\n\
+\n\
+        if (this.step !== originalStep) {\n\
+<* console.log(\'discarded waitAllCallback\', originalStep, originalId, err, val); *>\n\
+            return;\n\
+        }\n\
+\n\
+        var error = null;\n\
 \n\
         if (err instanceof Error) {\n\
-            return this.throw(err);\n\
+\n\
+            error = err;\n\
+\n\
+        } else if (this.result.hasOwnProperty(originalId)) {\n\
+\n\
+            error = new AsyncError(\'Callback for item \' + originalId + \' of yield was invoked more than once\');\n\
+\n\
+        } else {\n\
+\n\
+            <* add this callbacks result to set of results *>\n\
+\n\
+            this.result[originalId] = (arguments.length === 3 ? err : val);\n\
+            this.waiting--;\n\
         }\n\
 \n\
-        if (this.result.hasOwnProperty(originalId)) {\n\
-            return this.throw(new Async.AsyncError(\'Callback for item \' + originalId + \' of yield was invoked more than once\'));\n\
-        }\n\
+        <* yield error or when all is done, result *>\n\
 \n\
-        // add this callbacks result to set of results\n\
-\n\
-        this.result[originalId] = (numArgs === 2 ? err : val);\n\
-        this.waiting--;\n\
-\n\
-        // yield result when all is done\n\
-\n\
-        if (this.waiting === 0) {\n\
-            this.callback(null, this.result);\n\
+        if (error !== null) {\n\
+            this.callback(originalStep, error);\n\
+        } else if (this.waiting === 0) {\n\
+            this.callback(originalStep, null, this.result);\n\
         }\n\
     };\n\
 \n\
-    Async.prototype.callback = function(err, val) {\n\
+    <**\n\
+     * callback given to singular functions\n\
+     *\n\
+     * @param originalStep the step at which the original function was called\n\
+     * @param err typically nodejs callback provide an error as first parameter if there was one. we\'ll throw it\n\
+     * @param val the result\n\
+     *>\n\
+    Async.prototype.callback = function(originalStep, err, val) {\n\
 \n\
-        var numArgs = arguments.length;\n\
+        <* check if callback is from the current step (may not be if a previous waitAll step threw) *>\n\
 \n\
-        if (err instanceof Error) {\n\
-            return this.throw(err);\n\
+        if (this.step !== originalStep) {\n\
+<* console.log(\'discarded callblack\', originalStep, err, val); *>\n\
+            return;\n\
         }\n\
 \n\
-        this.result = (numArgs === 1 ? err : val);\n\
+        if (err instanceof Error) {\n\
+            this.throw(err);\n\
+        } else {\n\
+            this.result = (arguments.length === 2 ? err : val);\n\
+        }\n\
 \n\
         if (this.sync === 0) {\n\
             this.sync = 1;\n\
-        } else if (this.terminated === false) {\n\
+        } else {\n\
+            this.step++;\n\
             this.next();\n\
         }\n\
     };\n\
@@ -959,7 +1038,7 @@ resource('templates/adria/async.tpl', 'module(\'async.adria\', function(module, 
     module.exports = Async;\n\
 });\n\
 ');
-resource('templates/adria/framework.tpl', 'var <:if (platform == \'node\') { :>__<: } :>require;\n\
+resource('../templates/adria/framework.tpl', 'var <:if (platform == \'node\') { :>__<: } :>require;\n\
 var resource;<:if (enableApplication) { :>\n\
 var application;<: } :>\n\
 var module;<: if (platform == \'node\') { :>\n\
@@ -1005,7 +1084,7 @@ var <= globals.join(\', \') =>;<: } :>\n\
         }\n\
         <: } :>\n\
         return modules[file].exports;\n\
-    }; <: if (enableAssert) { :>\n\
+    };<: if (enableAssert) { :>\n\
     assert = function(assertion, message) {\n\
         if (assertion !== true) {\n\
             throw new Error(\'assertion failed: \' + message);\n\
@@ -1013,7 +1092,7 @@ var <= globals.join(\', \') =>;<: } :>\n\
     };<: } :>\n\
 })();\n\
 ');
-module('src/prototype.adria', function(module, resource) {
+module('prototype.adria', function(module, resource) {
     Object.defineProperty(Object.prototype, 'clone', {
         value: function() {
             return Object.create(Object.getPrototypeOf(this));
@@ -1122,7 +1201,7 @@ module('src/prototype.adria', function(module, resource) {
         return string.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&');
     };
 });
-module('src/util.adria', function(module, resource) {
+module('util.adria', function(module, resource) {
     var sysutil, crypto, DebugLog, debugLog, indent, enabled, log, dump, Enumeration, Enum, Set, processOptions, home, normalizeExtension, md5;
     sysutil = require('util');
     crypto = require('crypto');
@@ -1359,29 +1438,34 @@ module('src/util.adria', function(module, resource) {
     module.exports.normalizeExtension = normalizeExtension;
     module.exports.md5 = md5;
 });
-module('src/template.adria', function(module, resource) {
+module('template.adria', function(module, resource) {
     var fs, Template;
     fs = require('fs');
     Template = (function() {
-        var ___self = function Template(delimiterOpen, delimiterClose, delimiterStatement, delimiterExpression) {
+        var ___self = function Template(delimiterOpen, delimiterClose, delimiterStatement, delimiterExpression, delimiterComment) {
             delimiterOpen = (delimiterOpen !== undefined ? delimiterOpen : ('<'));
             delimiterClose = (delimiterClose !== undefined ? delimiterClose : ('>'));
             delimiterStatement = (delimiterStatement !== undefined ? delimiterStatement : (':'));
             delimiterExpression = (delimiterExpression !== undefined ? delimiterExpression : ('='));
-            var openStatement, closeStatement, openExpression, closeExpression, statement, expression, text;
+            delimiterComment = (delimiterComment !== undefined ? delimiterComment : ('*'));
+            var openStatement, closeStatement, openExpression, closeExpression, openComment, closeComment, statement, expression, comment, text;
             this.data = {  };
             openStatement = RegExp.escape(delimiterOpen) + RegExp.escape(delimiterStatement);
             closeStatement = RegExp.escape(delimiterStatement) + RegExp.escape(delimiterClose);
             openExpression = RegExp.escape(delimiterOpen) + RegExp.escape(delimiterExpression);
             closeExpression = RegExp.escape(delimiterExpression) + RegExp.escape(delimiterClose);
+            openComment = RegExp.escape(delimiterOpen) + RegExp.escape(delimiterComment);
+            closeComment = RegExp.escape(delimiterComment) + RegExp.escape(delimiterClose);
             statement = '(' + openStatement + ').+?' + closeStatement;
             expression = '(' + openExpression + ').+?' + closeExpression;
-            text = '(?:(?!' + openStatement + '|' + openExpression + ')[\\s\\S])+';
-            this.regexp = new RegExp(statement + '|' + expression + '|' + text, 'g');
+            comment = '(' + openComment + ')[\\s\\S]+?' + closeComment;
+            text = '(?:(?!' + openStatement + '|' + openExpression + '|' + openComment + ')[\\s\\S])+';
+            this.regexp = new RegExp(statement + '|' + expression + '|' + comment + '|' + text, 'g');
         };
         ___self.prototype.basePath = 'templates/';
         ___self.prototype.data = null;
         ___self.prototype.regexp = null;
+        ___self.prototype.debug = false;
         ___self.prototype.assign = function assign(name, value) {
             this.data[name] = value;
         };
@@ -1390,12 +1474,14 @@ module('src/template.adria', function(module, resource) {
             regexp = this.regexp;
             jsString = '';
             while (match = regexp.exec(input)) {
-                if (match[1] === undefined && match[2] === undefined) {
+                if (match[1] === undefined && match[2] === undefined && match[3] === undefined) {
                     jsString += 'result += "' + match[0].jsify('"') + '";\n';
                 } else if (match[1] !== undefined) {
                     jsString += match[0].slice(2, -2) + '\n';
                 } else if (match[2] !== undefined) {
                     jsString += 'result += ' + match[0].slice(2, -2) + ';\n';
+                } else if (this.debug && match[3] !== undefined) {
+                    jsString += 'result += "/*' + match[0].slice(2, -2).jsify('"') + '*/";\n';
                 }
             }
             return jsString;
@@ -1424,11 +1510,11 @@ module('src/template.adria', function(module, resource) {
     })();
     module.exports = Template;
 });
-module('src/cache.adria', function(module, resource) {
+module('cache.adria', function(module, resource) {
     var fs, path, util, Cache;
     fs = require('fs');
     path = require('path');
-    util = __require('src/util.adria');
+    util = __require('util.adria');
     Cache = (function() {
         var ___self = function Cache() {
             this.checkBaseDir();
@@ -1502,10 +1588,10 @@ module('src/cache.adria', function(module, resource) {
     })();
     module.exports = Cache;
 });
-module('src/transform.adria', function(module, resource) {
+module('transform.adria', function(module, resource) {
     var util, Cache, Transform;
-    util = __require('src/util.adria');
-    Cache = __require('src/cache.adria');
+    util = __require('util.adria');
+    Cache = __require('cache.adria');
     Transform = (function() {
         var ___self = function Transform(piped) {
             this.options = { basePath: '', paths: [  ], files: [  ], outFile: null };
@@ -1566,7 +1652,7 @@ module('src/transform.adria', function(module, resource) {
     })();
     module.exports = Transform;
 });
-module('src/parser/generator_state.adria', function(module, resource) {
+module('parser/generator_state.adria', function(module, resource) {
     var GeneratorState;
     GeneratorState = (function() {
         var ___self = function GeneratorState() {}
@@ -1603,9 +1689,9 @@ module('src/parser/generator_state.adria', function(module, resource) {
     })();
     module.exports = GeneratorState;
 });
-module('src/parser/definition/node.adria', function(module, resource) {
+module('parser/definition/node.adria', function(module, resource) {
     var Enum, Type, StackItem, Node;
-    Enum = __require('src/util.adria').Enum;
+    Enum = __require('util.adria').Enum;
     Type = Enum([ 'NONE', 'BLOCK', 'JUMP', 'RETURN' ]);
     StackItem = (function() {
         var ___self = function StackItem(node, token) {
@@ -1766,9 +1852,9 @@ module('src/parser/definition/node.adria', function(module, resource) {
     module.exports.Type = Type;
     module.exports.StackItem = StackItem;
 });
-module('src/parser/definition.adria', function(module, resource) {
+module('parser/definition.adria', function(module, resource) {
     var Node, Definition;
-    Node = __require('src/parser/definition/node.adria');
+    Node = __require('parser/definition/node.adria');
     Definition = (function() {
         var ___self = function Definition(initialBlock) {
             this.blockRoot = {  };
@@ -1799,12 +1885,12 @@ module('src/parser/definition.adria', function(module, resource) {
     module.exports = Definition;
     module.exports.Node = Node;
 });
-module('src/parser.adria', function(module, resource) {
+module('parser.adria', function(module, resource) {
     var path, util, GeneratorState, Definition, Parser;
     path = require('path');
-    util = __require('src/util.adria');
-    GeneratorState = __require('src/parser/generator_state.adria');
-    Definition = __require('src/parser/definition.adria');
+    util = __require('util.adria');
+    GeneratorState = __require('parser/generator_state.adria');
+    Definition = __require('parser/definition.adria');
     Parser = (function() {
         var ___self = function Parser() {
             this.definition = new Definition('root');
@@ -1940,7 +2026,7 @@ module('src/parser.adria', function(module, resource) {
     module.exports = Parser;
     module.exports.Definition = Definition;
 });
-module('src/tokenizer/result.adria', function(module, resource) {
+module('tokenizer/result.adria', function(module, resource) {
     var Position, Token, Result;
     Position = (function() {
         var ___self = function Position(col, row) {
@@ -1987,10 +2073,10 @@ module('src/tokenizer/result.adria', function(module, resource) {
     })();
     module.exports = Result;
 });
-module('src/tokenizer.adria', function(module, resource) {
+module('tokenizer.adria', function(module, resource) {
     var Enum, Result, Tokenizer;
-    Enum = __require('src/util.adria').Enum;
-    Result = __require('src/tokenizer/result.adria');
+    Enum = __require('util.adria').Enum;
+    Result = __require('tokenizer/result.adria');
     Tokenizer = (function() {
         var ___self = function Tokenizer(definition, extra) {
             var legend, id;
@@ -2125,7 +2211,7 @@ module('src/tokenizer.adria', function(module, resource) {
     module.exports = Tokenizer;
     module.exports.Result = Result;
 });
-module('src/definition_parser/path.adria', function(module, resource) {
+module('definition_parser/path.adria', function(module, resource) {
     var Path, PathElement;
     Path = (function() {
         var ___self = function Path(sourceName, sourceCapture, sourceLabel, sourceCondition, targetName, targetCapture, targetLabel, targetCondition) {
@@ -2162,12 +2248,12 @@ module('src/definition_parser/path.adria', function(module, resource) {
     })();
     module.exports = Path;
 });
-module('src/definition_parser.adria', function(module, resource) {
+module('definition_parser.adria', function(module, resource) {
     var util, Parser, Tokenizer, Path, DefinitionParser;
-    util = __require('src/util.adria');
-    Parser = __require('src/parser.adria');
-    Tokenizer = __require('src/tokenizer.adria');
-    Path = __require('src/definition_parser/path.adria');
+    util = __require('util.adria');
+    Parser = __require('parser.adria');
+    Tokenizer = __require('tokenizer.adria');
+    Path = __require('definition_parser/path.adria');
     DefinitionParser = (function(___parent) {
         var ___self = function DefinitionParser() {
             Parser.prototype.constructor.call(this);
@@ -2309,10 +2395,10 @@ module('src/definition_parser.adria', function(module, resource) {
     })(Parser);
     module.exports = DefinitionParser;
 });
-module('src/language_parser/capture_node.adria', function(module, resource) {
+module('language_parser/capture_node.adria', function(module, resource) {
     var SourceNode, Template, CaptureNode;
     SourceNode = require('source-map').SourceNode;
-    Template = __require('src/template.adria');
+    Template = __require('template.adria');
     CaptureNode = (function() {
         var ___self = function CaptureNode(key, value) {
             this.key = key;
@@ -2620,6 +2706,7 @@ module('src/language_parser/capture_node.adria', function(module, resource) {
         };
         ___self.prototype.setTemplate = function setTemplate(fileName) {
             this.tpl = new Template();
+            this.tpl.debug = this.parser().transform.options.debug;
             this.tplFile = fileName;
         };
         ___self.prototype.processTemplate = function processTemplate() {
@@ -2635,13 +2722,13 @@ module('src/language_parser/capture_node.adria', function(module, resource) {
     CaptureNode.prototype.dummy.col = -1;
     module.exports = CaptureNode;
 });
-module('src/language_parser.adria', function(module, resource) {
+module('language_parser.adria', function(module, resource) {
     var fs, util, Parser, DefinitionParser, CaptureNode, LanguageParser;
     fs = require('fs');
-    util = __require('src/util.adria');
-    Parser = __require('src/parser.adria');
-    DefinitionParser = __require('src/definition_parser.adria');
-    CaptureNode = __require('src/language_parser/capture_node.adria');
+    util = __require('util.adria');
+    Parser = __require('parser.adria');
+    DefinitionParser = __require('definition_parser.adria');
+    CaptureNode = __require('language_parser/capture_node.adria');
     LanguageParser = (function(___parent) {
         var ___self = function LanguageParser(transform) {
             Parser.prototype.constructor.call(this, transform);
@@ -2807,15 +2894,15 @@ module('src/language_parser.adria', function(module, resource) {
     LanguageParser.CaptureNode = CaptureNode;
     module.exports = LanguageParser;
 });
-module('src/targets/adria_node.adria', function(module, resource) {
-    var path, fs, SourceNode, LanguageParser, CaptureNode, Transform, util, Set, AdriaNode, AccessOperationProtocall, ConstLiteral, Scope, Module, InvokeOperation, AsyncWrapOperation, FunctionLiteral, GeneratorLiteral, FunctionStatement, GeneratorStatement, AsyncLiteral, AsyncStatement, FunctionParamList, BaseLiteral, DoWhileStatement, WhileStatement, IfStatement, SwitchStatement, ForCountStatement, ForInStatement, ObjectLiteral, ProtoBodyProperty, ArrayLiteral, Expression, ProtoLiteral, ProtoStatement, NewProtoLiteral, ProtoBodyItem, ReturnStatement, FlowStatement, YieldLiteral, catchSpecificsId, CatchSpecifics, CatchAll, TryCatchFinallyStatement, ThrowStatement, AssertStatement, Statement, InterruptibleStatement, AdriaFileNode, ResourceLiteral, RequireLiteral, ModuleStatement, ExportStatement, GlobalDef, ParentLiteral, Ident, Name, VarDef, ImportStatement;
+module('targets/adria_node.adria', function(module, resource) {
+    var path, fs, SourceNode, LanguageParser, CaptureNode, Transform, util, Set, AdriaNode, AccessOperationProtocall, ConstLiteral, Scope, Module, InvokeOperation, AsyncWrapOperation, FunctionLiteral, FunctionStatement, GeneratorLiteral, GeneratorStatement, AsyncLiteral, AsyncStatement, FunctionParamList, BaseLiteral, DoWhileStatement, WhileStatement, IfStatement, SwitchStatement, ForCountStatement, ForInStatement, ObjectLiteral, ProtoBodyProperty, ArrayLiteral, Expression, ProtoLiteral, ProtoStatement, NewProtoLiteral, ProtoBodyItem, ReturnStatement, FlowStatement, YieldLiteral, catchSpecificsId, CatchSpecifics, CatchAll, TryCatchFinallyStatement, ThrowStatement, AssertStatement, Statement, InterruptibleStatement, AdriaFileNode, ResourceLiteral, RequireLiteral, ModuleStatement, ExportStatement, GlobalDef, ParentLiteral, Ident, Name, VarDef, ImportStatement;
     path = require('path');
     fs = require('fs');
     SourceNode = require('source-map').SourceNode;
-    LanguageParser = __require('src/language_parser.adria');
+    LanguageParser = __require('language_parser.adria');
     CaptureNode = LanguageParser.CaptureNode;
-    Transform = __require('src/transform.adria');
-    util = __require('src/util.adria');
+    Transform = __require('transform.adria');
+    util = __require('util.adria');
     Set = util.Set;
     AdriaNode = (function(___parent) {
         var ___self = function AdriaNode() {
@@ -3130,7 +3217,7 @@ module('src/targets/adria_node.adria', function(module, resource) {
                 result.add('*');
             }
             this.name = this.findName();
-            if (this.name !== null) {
+            if (this.name !== null && this instanceof AsyncLiteral === false) {
                 this.get('body').implicits.add(this.name);
                 result.add([ ' ', this.name ]);
             }
@@ -3152,16 +3239,16 @@ module('src/targets/adria_node.adria', function(module, resource) {
         };
         return ___self;
     })(AdriaNode);
-    GeneratorLiteral = (function(___parent) {
-        var ___self = function GeneratorLiteral() {
+    FunctionStatement = (function(___parent) {
+        var ___self = function FunctionStatement() {
             ___parent.apply(this, arguments);
         }
         ___self.prototype = Object.create(___parent.prototype);
         ___self.prototype.constructor = ___self;
         return ___self;
     })(FunctionLiteral);
-    FunctionStatement = (function(___parent) {
-        var ___self = function FunctionStatement() {
+    GeneratorLiteral = (function(___parent) {
+        var ___self = function GeneratorLiteral() {
             ___parent.apply(this, arguments);
         }
         ___self.prototype = Object.create(___parent.prototype);
@@ -3621,9 +3708,9 @@ module('src/targets/adria_node.adria', function(module, resource) {
                 result = this.csn([
                     '(function(' + locals + '___callback) {',
                     this.nl(1),
-                    'try { return ',
+                    'return ',
                     result,
-                    '; } catch (___exc) { ___callback(___exc); }',
+                    ';',
                     this.nl(-1),
                     '}).bind(this' + (wrapper.params.length > 0 ? ', ' + params : '') + ')'
                 ]);
@@ -4022,6 +4109,10 @@ module('src/targets/adria_node.adria', function(module, resource) {
             resolvedName = util.normalizeExtension(moduleName, options.fileExt);
             if (parser.transform.builtins[resolvedName] !== undefined) {
                 parser.transform.usedBuiltins.add(resolvedName);
+                moduleName = resolvedName;
+                if (options.platform === 'node') {
+                    requireFunction = '__require';
+                }
             } else {
                 resolvedName = this.resolvePath(util.normalizeExtension(moduleName, options.fileExt), parser);
                 if (resolvedName !== null) {
@@ -4181,8 +4272,8 @@ module('src/targets/adria_node.adria', function(module, resource) {
     module.exports.InvokeOperation = InvokeOperation;
     module.exports.AsyncWrapOperation = AsyncWrapOperation;
     module.exports.FunctionLiteral = FunctionLiteral;
-    module.exports.GeneratorLiteral = GeneratorLiteral;
     module.exports.FunctionStatement = FunctionStatement;
+    module.exports.GeneratorLiteral = GeneratorLiteral;
     module.exports.GeneratorStatement = GeneratorStatement;
     module.exports.AsyncLiteral = AsyncLiteral;
     module.exports.AsyncStatement = AsyncStatement;
@@ -4223,13 +4314,13 @@ module('src/targets/adria_node.adria', function(module, resource) {
     module.exports.VarDef = VarDef;
     module.exports.ImportStatement = ImportStatement;
 });
-module('src/targets/adria_parser.adria', function(module, resource) {
+module('targets/adria_parser.adria', function(module, resource) {
     var fs, util, LanguageParser, AdriaNode, Tokenizer, AdriaParser;
     fs = require('fs');
-    util = __require('src/util.adria');
-    LanguageParser = __require('src/language_parser.adria');
-    AdriaNode = __require('src/targets/adria_node.adria');
-    Tokenizer = __require('src/tokenizer.adria');
+    util = __require('util.adria');
+    LanguageParser = __require('language_parser.adria');
+    AdriaNode = __require('targets/adria_node.adria');
+    Tokenizer = __require('tokenizer.adria');
     AdriaParser = (function(___parent) {
         var ___self = function AdriaParser(transform) {
             LanguageParser.prototype.constructor.call(this, transform);
@@ -4312,12 +4403,12 @@ module('src/targets/adria_parser.adria', function(module, resource) {
                 Tokenizer.prefab.regex('STRING', /^(["'])(?:(?=(\\?))\2[\s\S])*?\1/)
             ], [ 'KEYWORD' ]);
             util.log('AdriaParser', 'trainer processing adria .sdt-files', 2);
-            this.setDefinition(resource('definition/adria/control.sdt'), 'control');
-            this.setDefinition(resource('definition/adria/expression.sdt'), 'expression');
-            this.setDefinition(resource('definition/adria/literal.sdt'), 'literal');
-            this.setDefinition(resource('definition/adria/proto.sdt'), 'proto');
-            this.setDefinition(resource('definition/adria/root.sdt'), 'root');
-            this.setDefinition(resource('definition/adria/statement.sdt'), 'statement');
+            this.setDefinition(resource('../definition/adria/control.sdt'), 'control');
+            this.setDefinition(resource('../definition/adria/expression.sdt'), 'expression');
+            this.setDefinition(resource('../definition/adria/literal.sdt'), 'literal');
+            this.setDefinition(resource('../definition/adria/proto.sdt'), 'proto');
+            this.setDefinition(resource('../definition/adria/root.sdt'), 'root');
+            this.setDefinition(resource('../definition/adria/statement.sdt'), 'statement');
             util.log('AdriaParser', 'being trained', -2);
             LanguageParser.prototype.trainSelf.call(this);
             util.log('AdriaParser', 'done');
@@ -4361,15 +4452,15 @@ module('src/targets/adria_parser.adria', function(module, resource) {
     })(LanguageParser);
     module.exports = AdriaParser;
 });
-module('src/targets/adria_transform.adria', function(module, resource) {
+module('targets/adria_transform.adria', function(module, resource) {
     var fs, path, util, SourceNode, Template, Transform, AdriaParser, AdriaTransform;
     fs = require('fs');
     path = require('path');
-    util = __require('src/util.adria');
+    util = __require('util.adria');
     SourceNode = require('source-map').SourceNode;
-    Template = __require('src/template.adria');
-    Transform = __require('src/transform.adria');
-    AdriaParser = __require('src/targets/adria_parser.adria');
+    Template = __require('template.adria');
+    Transform = __require('transform.adria');
+    AdriaParser = __require('targets/adria_parser.adria');
     AdriaTransform = (function(___parent) {
         var ___self = function AdriaTransform(piped) {
             var options;
@@ -4403,7 +4494,7 @@ module('src/targets/adria_transform.adria', function(module, resource) {
         ___self.prototype.requiresDone = null;
         ___self.prototype.sourceCode = null;
         ___self.prototype.protoParser = null;
-        ___self.prototype.builtins = { 'async.adria': resource('templates/adria/async.tpl') };
+        ___self.prototype.builtins = { 'async.adria': resource('../templates/adria/async.tpl') };
         ___self.prototype.initOptions = function initOptions() {
             Transform.prototype.initOptions.call(this, this);
             this.defineOptions({
@@ -4448,6 +4539,7 @@ module('src/targets/adria_transform.adria', function(module, resource) {
             options = this.options;
             node = new SourceNode(null, null);
             tpl = new Template();
+            tpl.debug = this.options.debug;
             tpl.assign('globals', this.globals.toArray());
             tpl.assign('builtins', this.usedBuiltins.toArray());
             tpl.assign('enableAssert', options.assert);
@@ -4459,7 +4551,7 @@ module('src/targets/adria_transform.adria', function(module, resource) {
             if (options['tweak-nostrict'] !== true) {
                 node.add('"use strict";\n');
             }
-            fw = tpl.fetch(resource('templates/adria/framework.tpl'));
+            fw = tpl.fetch(resource('../templates/adria/framework.tpl'));
             tmpNode = node.add(new SourceNode(1, 0, 'adria-framework.js', fw));
             tmpNode.setSourceContent('adria-framework.js', fw);
             for (fileName in this.resources.data) {
@@ -4532,10 +4624,10 @@ module('src/targets/adria_transform.adria', function(module, resource) {
     })(Transform);
     module.exports = AdriaTransform;
 });
-module('src/targets/adriadebug_parser.adria', function(module, resource) {
+module('targets/adriadebug_parser.adria', function(module, resource) {
     var AdriaParser, AdriaNode, AdriaDebugParser;
-    AdriaParser = __require('src/targets/adria_parser.adria');
-    AdriaNode = __require('src/targets/adria_node.adria');
+    AdriaParser = __require('targets/adria_parser.adria');
+    AdriaNode = __require('targets/adria_node.adria');
     AdriaNode.prototype.toString = function toString() {
         var indent, result, childId, node;
         indent = String.repeat(this.depth() * 4, ' ');
@@ -4563,12 +4655,12 @@ module('src/targets/adriadebug_parser.adria', function(module, resource) {
     })(AdriaParser);
     module.exports = AdriaDebugParser;
 });
-module('src/targets/adriadebug_transform.adria', function(module, resource) {
+module('targets/adriadebug_transform.adria', function(module, resource) {
     var fs, util, AdriaTransform, AdriaDebugParser, AdriaDebugTransform;
     fs = require('fs');
-    util = __require('src/util.adria');
-    AdriaTransform = __require('src/targets/adria_transform.adria');
-    AdriaDebugParser = __require('src/targets/adriadebug_parser.adria');
+    util = __require('util.adria');
+    AdriaTransform = __require('targets/adria_transform.adria');
+    AdriaDebugParser = __require('targets/adriadebug_parser.adria');
     AdriaDebugTransform = (function(___parent) {
         var ___self = function AdriaDebugTransform(piped) {
             AdriaTransform.prototype.constructor.call(this, piped);
@@ -4606,10 +4698,10 @@ module('src/targets/adriadebug_transform.adria', function(module, resource) {
 });
 module('main.adria', function(module, resource) {
     var util, AdriaTransform, AdriaDebugTransform, target, piped, debug, handle, run, pipeData;
-    __require('src/prototype.adria');
-    util = __require('src/util.adria');
-    AdriaTransform = __require('src/targets/adria_transform.adria');
-    AdriaDebugTransform = __require('src/targets/adriadebug_transform.adria');
+    __require('prototype.adria');
+    util = __require('util.adria');
+    AdriaTransform = __require('targets/adria_transform.adria');
+    AdriaDebugTransform = __require('targets/adriadebug_transform.adria');
     target = 'adria';
     piped = false;
     debug = false;

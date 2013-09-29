@@ -343,6 +343,10 @@ export InvokeOperation = proto (AdriaNode) {
     },
 };
 
+/**
+ * handles an async-wrap-operation. note: wrapping happens in expression, this
+ * is just the operation where "(..., #)" is the operator.
+ */
 export AsyncWrapOperation = proto (AdriaNode) {
 
     params: null,
@@ -400,11 +404,11 @@ export FunctionLiteral = proto (AdriaNode) {
             result.add('*');
         }
 
-        // name anonymous functions within their scope
+        // name anonymous functions within their scope, don't name async functions as any recursion attempts need to refer to the outer function
 
         this.name = this.findName();
 
-        if (this.name !== null) {
+        if (this.name !== null && this instanceof AsyncLiteral === false) {
 
             this.get('body').implicits.add(this.name);
             result.add([ ' ', this.name ]);
@@ -438,8 +442,9 @@ export FunctionLiteral = proto (AdriaNode) {
     },
 };
 
-export GeneratorLiteral = proto (FunctionLiteral) { };
 export FunctionStatement = proto (FunctionLiteral) { };
+
+export GeneratorLiteral = proto (FunctionLiteral) { };
 export GeneratorStatement = proto (GeneratorLiteral) { };
 
 export AsyncLiteral = proto (FunctionLiteral) {
@@ -820,8 +825,6 @@ export Expression = proto (AdriaNode) {
         var wrapper = this.get('wrap');
         var result = this.csn();
 
-        //this instanceof AsyncLiteral
-
         for (var id, child in children) {
 
             if (children[+id+1] !== undefined && children[+id+1].key === 'passignment_op') {
@@ -865,6 +868,8 @@ export Expression = proto (AdriaNode) {
             }
         }
 
+        // property assignment
+
         if (propertyAssignSplit > -1) {
 
             result.prepend('Object.defineProperty(');
@@ -894,7 +899,7 @@ export Expression = proto (AdriaNode) {
             }
         }
 
-        // async wrap operation
+        // async wrapping
 
         if (wrapper.isNode()) {
 
@@ -907,7 +912,7 @@ export Expression = proto (AdriaNode) {
 
             result = this.csn([
                 '(function(' + locals + '___callback) {', this.nl(1),
-                'try { return ', result, '; } catch (___exc) { ___callback(___exc); }', this.nl(-1),
+                'return ', result, ';', this.nl(-1),
                 '}).bind(this' + (wrapper.params.length > 0 ? ', ' + params : '') + ')'
             ]);
         }
@@ -1378,6 +1383,11 @@ export RequireLiteral = proto (AdriaFileNode) {
             // module is builtin, set flag for inclusion by transform
 
             parser.transform.usedBuiltins.add(resolvedName);
+            moduleName = resolvedName;
+
+            if (options.platform === 'node') {
+                requireFunction = '__require';
+            }
 
         } else {
 

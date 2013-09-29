@@ -44,7 +44,7 @@ var <= globals.join(', ') =>;<: } :>
         }
         <: } :>
         return modules[file].exports;
-    }; <: if (enableAssert) { :>
+    };<: if (enableAssert) { :>
     assert = function(assertion, message) {
         if (assertion !== true) {
             throw new Error('assertion failed: ' + message);
