@@ -152,6 +152,7 @@ module AdriaTransform = proto (Transform) {
         var node = new SourceNode(null, null);
         var tpl = new Template();
 
+        tpl.debug = this.options.debug;
         tpl.assign('globals', this.globals.toArray());
         tpl.assign('builtins', this.usedBuiltins.toArray());
         tpl.assign('enableAssert', options.assert);

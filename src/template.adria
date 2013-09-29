@@ -30,8 +30,9 @@ module Template = proto {
     basePath    : 'templates/',
     data        : null,
     regexp      : null,
+    debug       : false,
 
-    constructor: function(delimiterOpen = '<', delimiterClose = '>', delimiterStatement = ':', delimiterExpression = '=') {
+    constructor: function(delimiterOpen = '<', delimiterClose = '>', delimiterStatement = ':', delimiterExpression = '=', delimiterComment = '*') {
 
         this.data = { };
 
@@ -39,13 +40,15 @@ module Template = proto {
         var closeStatement  = RegExp.escape(delimiterStatement) + RegExp.escape(delimiterClose);
         var openExpression  = RegExp.escape(delimiterOpen) + RegExp.escape(delimiterExpression);
         var closeExpression = RegExp.escape(delimiterExpression) + RegExp.escape(delimiterClose);
+        var openComment     = RegExp.escape(delimiterOpen) + RegExp.escape(delimiterComment);
+        var closeComment    = RegExp.escape(delimiterComment) + RegExp.escape(delimiterClose);
 
         var statement = '(' + openStatement + ').+?' + closeStatement;
         var expression = '(' + openExpression + ').+?' + closeExpression;
-        var text = '(?:(?!' + openStatement + '|' + openExpression + ')[\\s\\S])+';
+        var comment = '(' + openComment + ')[\\s\\S]+?' + closeComment;
+        var text = '(?:(?!' + openStatement + '|' + openExpression + '|' + openComment + ')[\\s\\S])+';
 
-        this.regexp = new RegExp(statement + '|' + expression + '|' + text, 'g');
-
+        this.regexp = new RegExp(statement + '|' + expression + '|' + comment + '|' + text, 'g');
     },
 
     /**
@@ -67,14 +70,16 @@ module Template = proto {
 
         while (match = regexp.exec(input)) {
 
-            // handle string, statement, expression
+            // handle string, statement, expression and comment
 
-            if (match[1] === undefined && match[2] === undefined) {
+            if (match[1] === undefined && match[2] === undefined && match[3] === undefined) {
                 jsString += 'result += "' + match[0].jsify('"') + '";\n';
             } else if (match[1] !== undefined) {
                 jsString += match[0].slice(2, -2) + '\n';
             } else if (match[2] !== undefined) {
                 jsString += 'result += ' + match[0].slice(2, -2) + ';\n';
+            } else if (this.debug && match[3] !== undefined) {
+                jsString += 'result += "/*' + match[0].slice(2, -2).jsify('"') + '*/";\n';
             }
         }
 

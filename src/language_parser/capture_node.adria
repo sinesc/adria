@@ -582,6 +582,7 @@ module CaptureNode = proto {
     setTemplate: function(fileName) {
 
         this.tpl = new Template();
+        this.tpl.debug = this.parser().transform.options.debug;
         this.tplFile = fileName;
     },
 
