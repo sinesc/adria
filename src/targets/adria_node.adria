@@ -33,6 +33,7 @@ module AdriaNode = proto (CaptureNode) {
 
     validIdentifier: {
         common: new Set([
+            'window',
             'arguments', 'this', 'true', 'false', 'null', 'undefined', 'Infinity', 'NaN',
             'Array', 'Boolean', 'Date', 'Intl', 'JSON', 'Function', 'Math', 'Number', 'Object', 'RegExp', 'String',
             'ArrayBuffer', 'DataView', 'Float32Array', 'Float64Array', 'Int16Array', 'Int32Array', 'Int8Array',
@@ -42,11 +43,10 @@ module AdriaNode = proto (CaptureNode) {
             'setTimeout', 'clearTimeout', 'setInterval', 'clearInterval',
             'isFinite', 'isNaN', 'parseFloat', 'parseInt',
             'console', 'debugger',
-            'application', 'Async',
-            'window',
+            'application', 'Exception',
         ]),
         node: new Set([ 'process', 'Buffer', ]),
-        web: new Set([ 'document', 'performance' ]),
+        web: new Set([ 'document', 'performance', 'alert' ]),
     },
 
     /**
@@ -65,9 +65,12 @@ module AdriaNode = proto (CaptureNode) {
      */
     checkDefined: function(name) {
 
+        var parser = this.parser();
+        var platform = parser.transform.options.platform;
+
         // check base identifier
 
-        if (this.validIdentifier.common.has(name) || this.validIdentifier.node.has(name)) { //!todo
+        if (this.validIdentifier.common.has(name) || this.validIdentifier[platform].has(name)) {
             return;
         }
 
@@ -101,7 +104,7 @@ module AdriaNode = proto (CaptureNode) {
 
         // check globally
 
-        if (this.parser().transform.globals.has(name)) {
+        if (parser.transform.globals.has(name)) {
             return;
         }
 
@@ -116,7 +119,7 @@ module AdriaNode = proto (CaptureNode) {
             return;
         }
 
-        throw new Error('Undefined variable "' + name + '" in ' + this.parser().file + ' line ' + this.row + ', column ' + this.col);
+        throw new Error('Undefined variable "' + name + '" in ' + parser.file + ' line ' + this.row + ', column ' + this.col);
 
         return false;
     },

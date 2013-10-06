@@ -29,6 +29,7 @@ var __require;
 var resource;
 var module;
 var window = global;
+var Exception;
 (function() {
     var resources = { };
     var modules = { };
@@ -48,6 +49,17 @@ var window = global;
     resource = function(name, data) {
         resources[name] = data;
     };
+    Exception = function Exception(message) {
+        if (message !== undefined) {
+            this.message = message;
+        }
+        var stack = Error().stack.split('\n').slice(1);
+        var name = this.constructor.name;
+        stack[0] = (name === undefined ? 'Exception' : name) + ': ' + message;
+        this.stack = stack.join('\n');
+    };
+    Exception.prototype = Object.create(Error.prototype);
+    Exception.prototype.constructor = Exception;
     __require = function(file) {
         return modules[file].exports;
     };
@@ -1045,6 +1057,7 @@ var module;<: if (platform == \'node\') { :>\n\
 var window = global;<: } :><: if (enableAssert) { :>\n\
 var assert;<: } :><: if (globals.length != 0) { :>\n\
 var <= globals.join(\', \') =>;<: } :>\n\
+var Exception<: if (enableAssert) { :>, AssertionFailedException<: } :>;\n\
 (function() {\n\
     var resources = { };\n\
     var modules = { };\n\
@@ -1067,7 +1080,18 @@ var <= globals.join(\', \') =>;<: } :>\n\
     };\n\
     resource = function(name, data) {\n\
         resources[name] = data;\n\
-    };<: if (enableApplication) { :>\n\
+    };\n\
+    Exception = function Exception(message) {\n\
+        if (message !== undefined) {\n\
+            this.message = message;\n\
+        }\n\
+        var stack = Error().stack.split(\'\\n\').slice(1);\n\
+        var name = this.constructor.name;\n\
+        stack[0] = (name === undefined ? \'Exception\' : name) + \': \' + message;\n\
+        this.stack = stack.join(\'\\n\');\n\
+    };\n\
+    Exception.prototype = Object.create(Error.prototype);\n\
+    Exception.prototype.constructor = Exception;<: if (enableApplication) { :>\n\
     application = function(Constructor /*, params... */) {\n\
         function Application() {\n\
             application = this;\n\
@@ -1085,9 +1109,14 @@ var <= globals.join(\', \') =>;<: } :>\n\
         <: } :>\n\
         return modules[file].exports;\n\
     };<: if (enableAssert) { :>\n\
+    AssertionFailedException = function AssertionFailedException(message) {\n\
+        Exception.call(this, message);\n\
+    };\n\
+    AssertionFailedException.prototype = Object.create(Exception.prototype);\n\
+    AssertionFailedException.prototype.constructor = AssertionFailedException;\n\
     assert = function(assertion, message) {\n\
         if (assertion !== true) {\n\
-            throw new Error(\'assertion failed: \' + message);\n\
+            throw new AssertionFailedException(message);\n\
         }\n\
     };<: } :>\n\
 })();\n\
@@ -2912,6 +2941,7 @@ module('targets/adria_node.adria', function(module, resource) {
         ___self.prototype.constructor = ___self;
         ___self.prototype.validIdentifier = {
             common: new Set([
+                'window',
                 'arguments',
                 'this',
                 'true',
@@ -2964,18 +2994,19 @@ module('targets/adria_node.adria', function(module, resource) {
                 'console',
                 'debugger',
                 'application',
-                'Async',
-                'window'
+                'Exception'
             ]),
             node: new Set([ 'process', 'Buffer' ]),
-            web: new Set([ 'document', 'performance' ])
+            web: new Set([ 'document', 'performance', 'alert' ])
         };
         ___self.prototype.findScope = function findScope() {
             return this.ancestor(null, 'scope|module');
         };
         ___self.prototype.checkDefined = function checkDefined(name) {
-            var scope, paramNode;
-            if (this.validIdentifier.common.has(name) || this.validIdentifier.node.has(name)) {
+            var parser, platform, scope, paramNode;
+            parser = this.parser();
+            platform = parser.transform.options.platform;
+            if (this.validIdentifier.common.has(name) || this.validIdentifier[platform].has(name)) {
                 return ;
             }
             scope = this;
@@ -2993,7 +3024,7 @@ module('targets/adria_node.adria', function(module, resource) {
                     return ;
                 }
             } while ((scope = scope.findScope()) !== null);
-            if (this.parser().transform.globals.has(name)) {
+            if (parser.transform.globals.has(name)) {
                 return ;
             }
             paramNode = this.ancestor(null, 'function_param_list');
@@ -3002,7 +3033,7 @@ module('targets/adria_node.adria', function(module, resource) {
                 scope.checkDefined(name);
                 return ;
             }
-            throw new Error('Undefined variable "' + name + '" in ' + this.parser().file + ' line ' + this.row + ', column ' + this.col);
+            throw new Error('Undefined variable "' + name + '" in ' + parser.file + ' line ' + this.row + ', column ' + this.col);
             return false;
         };
         ___self.prototype.addParentLookup = function addParentLookup(result, lookupName, ownName) {

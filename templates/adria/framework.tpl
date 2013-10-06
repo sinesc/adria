@@ -5,6 +5,7 @@ var module;<: if (platform == 'node') { :>
 var window = global;<: } :><: if (enableAssert) { :>
 var assert;<: } :><: if (globals.length != 0) { :>
 var <= globals.join(', ') =>;<: } :>
+var Exception<: if (enableAssert) { :>, AssertionFailedException<: } :>;
 (function() {
     var resources = { };
     var modules = { };
@@ -27,7 +28,18 @@ var <= globals.join(', ') =>;<: } :>
     };
     resource = function(name, data) {
         resources[name] = data;
-    };<: if (enableApplication) { :>
+    };
+    Exception = function Exception(message) {
+        if (message !== undefined) {
+            this.message = message;
+        }
+        var stack = Error().stack.split('\n').slice(1);
+        var name = this.constructor.name;
+        stack[0] = (name === undefined ? 'Exception' : name) + ': ' + message;
+        this.stack = stack.join('\n');
+    };
+    Exception.prototype = Object.create(Error.prototype);
+    Exception.prototype.constructor = Exception;<: if (enableApplication) { :>
     application = function(Constructor /*, params... */) {
         function Application() {
             application = this;
@@ -45,9 +57,14 @@ var <= globals.join(', ') =>;<: } :>
         <: } :>
         return modules[file].exports;
     };<: if (enableAssert) { :>
+    AssertionFailedException = function AssertionFailedException(message) {
+        Exception.call(this, message);
+    };
+    AssertionFailedException.prototype = Object.create(Exception.prototype);
+    AssertionFailedException.prototype.constructor = AssertionFailedException;
     assert = function(assertion, message) {
         if (assertion !== true) {
-            throw new Error('assertion failed: ' + message);
+            throw new AssertionFailedException(message);
         }
     };<: } :>
 })();
