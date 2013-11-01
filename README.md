@@ -9,16 +9,14 @@ adria
 About
 -----
 
-Adria is a programming language for NodeJS and the browser and the name for the self-hosting transcompiler used to generate .js from .adria.
+Adria is a programming language for NodeJS and the browser and the name for the self-hosting transcompiler used to generate .js from .adria. The language
+compiles to JavaScript and is syntactically very similar to it, mostly extending it with new features.
+Adria aims to make prototypal inheritance as simple to use as classical inheritance by adding syntax for prototype creation, extension and inheritance. It
+also adds adds asynchronous function statements and literals to reign in "NodeJS callback hell". The language uses a CommonJS like module system, its
+compiler resolves your application's sourcecode-dependencies and (by default) merges required sourcecode into one sourcemapped file.
+It can also merge in any other textual files (i.e. WebGL shaders) you request via the resource literal - which at runtime will return the resource.
 
-Adria compiles to JavaScript and is syntactically very similar to it. Most strict Javascript code will either work out of the box or require very little
-modification to make it compile, though ultimately you'll want to update existing code to use Adria's extended syntax.
-
-Instead of trying to force data into classes and types, Adria aims to make prototypal inheritance as simple to use as classical inheritance by adding syntax
-for prototype creation, extension and inheritance. Adria adds asynchronous function statements and literals to reign in "NodeJS callback hell". The language
-uses a CommonJS like module system, its compiler resolves your application's sourcecode-dependencies and (by default) merges required sourcecode into one
-sourcemapped file. It can also merge in any other textual files (i.e. WebGL shaders) you request via the resource literal - which at runtime will return
-the resource.
+The project is in its early stages and some features rely on upcoming standards. It's good to play around with.
 
 A few features in short
 -----------------------
