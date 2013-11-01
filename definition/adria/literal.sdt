@@ -114,8 +114,15 @@ yield_literal {
  */
 
 parent_literal {
-    // this is really just a function, but it has to be evaluable at compilation time
     entry -> "parent" -> return
+}
+
+/*
+ * storage
+ */
+
+storage_literal {
+    entry -> "storage" -> return
 }
 
 /*
@@ -135,8 +142,9 @@ base_literal {
     entry -> object_literal:object -> return
     entry -> array_literal:array -> return
     entry -> require_literal:require -> return
-    entry -> parent_literal:parent -> return
     entry -> resource_literal:resource -> return
+    entry -> parent_literal:parent -> return
+    entry -> storage_literal:storage -> return
     entry -> yield_literal:yield -> return
     entry -> "(":brace -> complex_literal -> ")":brace -> return
 }

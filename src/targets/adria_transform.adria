@@ -40,6 +40,7 @@ module AdriaTransform = proto (Transform) {
      * populated by globals node, names of application-wide globals
      */
     globals     : null,
+    implicits   : null,
     requires    : null,
     modules     : null,
     resources   : null,
@@ -57,6 +58,7 @@ module AdriaTransform = proto (Transform) {
         Transform->constructor(piped);
 
         this.globals        = new util.Set();
+        this.implicits      = new util.Set();
         this.requires       = new util.Set();
         this.resources      = new util.Set();
         this.requiresDone   = new util.Set();
@@ -79,6 +81,10 @@ module AdriaTransform = proto (Transform) {
 
         options['tweak-exports'] = (options['tweak-exports'] === undefined ? false : options['tweak-exports']);
         options['tweak-nostrict'] = (options['tweak-nostrict'] === undefined ? false : options['tweak-nostrict']);
+
+        // implictly known references
+
+        this.defineImplicits();
     },
 
     initOptions: function() {
@@ -93,6 +99,36 @@ module AdriaTransform = proto (Transform) {
                 this.platform = platform;
             }
         });
+    },
+
+    /**
+     * defines implictly known references
+     */
+    defineImplicits: function() {
+
+        this.implicits.add([
+            'window',
+            'arguments', 'this', 'true', 'false', 'null', 'undefined', 'Infinity', 'NaN',
+            'Array', 'Boolean', 'Date', 'Intl', 'JSON', 'Function', 'Math', 'Number', 'Object', 'RegExp', 'String',
+            'ArrayBuffer', 'DataView', 'Float32Array', 'Float64Array', 'Int16Array', 'Int32Array', 'Int8Array',
+            'Uint16Array', 'Uint32Array', 'Uint8Array',
+            'Error', 'EvalError', 'RangeError', 'ReferenceError', 'SyntaxError', 'TypeError', 'URIError',
+            'decodeURI', 'decodeURIComponent', 'encodeURI', 'encodeURIComponent', 'eval',
+            'setTimeout', 'clearTimeout', 'setInterval', 'clearInterval',
+            'isFinite', 'isNaN', 'parseFloat', 'parseInt',
+            'console', 'debugger',
+            'application', 'Exception',
+        ]);
+
+        if (this.options.platform === 'node') {
+            this.implicits.add([ 'process', 'Buffer', ]);
+        } else if (this.options.platform === 'web') {
+            this.implicits.add([ 'document', 'performance', 'alert' ]);
+        }
+
+        if (this.options.assert) {
+            this.implicits.add('AssertionFailedException');
+        }
     },
 
     /**

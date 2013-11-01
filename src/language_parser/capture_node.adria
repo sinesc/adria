@@ -28,13 +28,13 @@ var Template = require('../template');
  */
 module CaptureNode = proto {
 
-    parent: null,
+    parent  : null,
     children: null,
-    key: '',
-    value: '',
-    tpl: null,
-    row: 0,
-    col: 0,
+    key     : '',
+    value   : '',
+    tpl     : null,
+    row     : 0,
+    col     : 0,
 
     /**
      * construct new capture node for given key/value
@@ -213,6 +213,10 @@ module CaptureNode = proto {
 
     isNode: function() {
         return this.col !== -1;
+    },
+
+    isDummy: function() {
+        return this.col === -1;
     },
 
     isLeaf: function() {

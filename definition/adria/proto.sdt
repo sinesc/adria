@@ -53,6 +53,8 @@ proto_body_property_data {
 }
 
 proto_body_property_accessor_item {
+    entry -> "default":key -> ":"
+    entry -> "storage":key -> ":" -> string:value -> return
     entry -> "get":key -> ":"
     entry -> "set":key -> ":"
     entry -> "configurable":key -> ":"

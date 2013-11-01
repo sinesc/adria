@@ -54,8 +54,7 @@ async_statement {
  */
 
 assert_statement {
-    entry -> "assert" -> "(" -> expression:value -> ")" -> return
-    expression:value -> "," -> expression:value -> ")"
+    entry -> "assert" -> invoke_operation:call -> return
 }
 
 /*

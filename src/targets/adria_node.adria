@@ -28,6 +28,14 @@ var CaptureNode = LanguageParser.CaptureNode;
 var Transform = require('../transform');
 var util = require('../util');
 var Set = util.Set;
+var ASTException = require('../language_parser/ast_exception');
+
+//!todo this needs various refactoring
+// - tool methods should not return SourceNodes but AdriaNodes (consistency)
+// - all nodes, including String, Ident, ... should have a toSourceNode method to avoid specialcases where node.value needs to be used
+// - need to parse property name strings instead of copying verbatim: unescape the js string, check if valid for .property syntax, otherwise use ['property'] syntax
+// - sourcemapping is disfunctional: needs wrapper, needs proper newline handling
+// - various nodes do too much stuff that their children should handle, i.e. ProtoBodyItem
 
 module AdriaNode = proto (CaptureNode) {
 
@@ -66,11 +74,10 @@ module AdriaNode = proto (CaptureNode) {
     checkDefined: function(name) {
 
         var parser = this.parser();
-        var platform = parser.transform.options.platform;
 
         // check base identifier
 
-        if (this.validIdentifier.common.has(name) || this.validIdentifier[platform].has(name)) {
+        if (parser.transform.implicits.has(name)) {
             return;
         }
 
@@ -119,9 +126,7 @@ module AdriaNode = proto (CaptureNode) {
             return;
         }
 
-        throw new Error('Undefined variable "' + name + '" in ' + parser.file + ' line ' + this.row + ', column ' + this.col);
-
-        return false;
+        throw new ASTException('Undefined variable "' + name + '"', this);
     },
 
     addParentLookup: function(result, lookupName, ownName = lookupName) {
@@ -144,7 +149,6 @@ module AdriaNode = proto (CaptureNode) {
     /**
      * find name on left side of assignment or proto body item
      *
-     * @param mustBeMember only accept member names
      * @return SourceNode for name or null
      */
     findName: function() {
@@ -158,7 +162,7 @@ module AdriaNode = proto (CaptureNode) {
 
             if (nameNode !== null) {
 
-                //fetch from declaration, protoliteral item's left side or expression
+                // fetch from declaration, protoliteral item's left side or expression
 
                 if (nameNode.value === 'dec_def' || nameNode.value === 'module_statement' || nameNode.value === 'export_statement') {
 
@@ -325,11 +329,13 @@ export Module = proto (Scope) {
 
 export InvokeOperation = proto (AdriaNode) {
 
-    toSourceNode: function() {
+    toSourceNode: function(includeBraces = true) {
 
         var result = this.csn();
-        result.add('(');
-        this.params = [];
+
+        if (includeBraces) {
+            result.add('(');
+        }
 
         this.each(function(node, first) {
 
@@ -340,7 +346,9 @@ export InvokeOperation = proto (AdriaNode) {
             result.add(node.toSourceNode());
         });
 
-        result.add(')');
+        if (includeBraces) {
+            result.add(')');
+        }
 
         return result;
     },
@@ -383,9 +391,9 @@ export AsyncWrapOperation = proto (AdriaNode) {
 
 export FunctionLiteral = proto (AdriaNode) {
 
-    defaultArgs: null,
-    name: null,
-    lookupParent: false,
+    defaultArgs     : null,
+    name            : null, //!todo seems to be a sourcenode!
+    lookupParent    : false,
 
     constructor: function(key, value) {
         this.defaultArgs = [ ];
@@ -409,23 +417,31 @@ export FunctionLiteral = proto (AdriaNode) {
 
         // name anonymous functions within their scope, don't name async functions as any recursion attempts need to refer to the outer function
 
-        this.name = this.findName();
+        var nameSN = this.findName();
+
+        if (nameSN !== null && nameSN.toString().match(/^([\'\"]).*\1$/) === null) {
+            this.name = nameSN;
+        } else {
+            this.name = null;
+        }
 
         if (this.name !== null && this instanceof AsyncLiteral === false) {
 
-            this.get('body').implicits.add(this.name);
+            this.get('body').implicits.add(this.name.toString());
             result.add([ ' ', this.name ]);
         }
 
         // statements also add the name to the parent scope
 
-        if (this instanceof FunctionStatement || this instanceof GeneratorStatement) {
-            this.findScope().implicits.add(this.name);
+        if (this instanceof FunctionStatement || this instanceof GeneratorStatement || this instanceof AsyncStatement) {
+            this.findScope().implicits.add(this.name.toString());
         }
 
         result.add('(');
         result.add(this.get('param_list').toSourceNode());
         result.add(') {' + this.nl());
+
+        // add default arguments and function body
 
         for (var id in this.defaultArgs) {
             result.add([ this.defaultArgs[id], ';' + this.nl() ]);
@@ -711,13 +727,9 @@ export ForInStatement = proto (AdriaNode) {
 
 export ObjectLiteral = proto (AdriaNode) {
 
-    toSourceNode: function() {
+    assembleItemList: function() {
 
         var items = new SourceNode();
-
-        // indent now, so that children will be indented. correct for this by not indenting during return
-
-        this.nl(1);
 
         this.each(function(child) {
             var item = new SourceNode();
@@ -727,7 +739,17 @@ export ObjectLiteral = proto (AdriaNode) {
             items.add(item);
         });
 
-        var result =  this.csn();
+        return items;
+    },
+
+    toSourceNode: function() {
+
+        // indent now, so that children will be indented. correct for this by not indenting during return
+
+        this.nl(1);
+
+        var items = this.assembleItemList();
+        var result = this.csn();
 
         if (items.toString().length >= 60) {
 
@@ -747,7 +769,65 @@ export ObjectLiteral = proto (AdriaNode) {
     }
 };
 
-export ProtoBodyProperty = ObjectLiteral;
+var storageId = 1;
+
+export ProtoBodyProperty = proto (ObjectLiteral) {
+
+    useStorage          : false,
+    storageName         : null,
+    defaultValueNode    : 'undefined', //!todo should be sourcenode, but returning sourcenodes also needs to be refactored. eventually should be AdriaNode
+
+    assembleItemList: function() {
+
+        // fetch storage and default settings in advance
+
+        this.each(function(child) {
+
+            var childKey = child.get('key');
+            var childValue = child.get('value');
+
+            if (childKey.value === 'default') {
+                this.defaultValueNode = childValue.toSourceNode();
+                this.useStorage = true;
+            } else if (childKey.value === 'storage') {
+                this.storageName = childValue.value;
+                this.useStorage = true;
+            }
+        });
+
+        // find name for property storage field
+
+        if (this.storageName === null) {
+
+            var nameSN = this.findName();
+
+            if (nameSN === null) {
+                this.storageName = '\'___psf' + (storageId++) + '\'';
+            } else {
+                this.storageName = '\'_' + nameSN.toString() + '\'';
+            }
+        }
+
+        // process property fields
+
+        var items = new SourceNode();
+
+        this.each(function(child) {
+
+            var childKey = child.get('key');
+
+            if (childKey.value !== 'default' && childKey.value !== 'storage') {
+                var item = new SourceNode();
+                item.add(childKey.csn(childKey.value));
+                item.add(': ');
+                item.add(child.get('value').toSourceNode());
+                items.add(item);
+            }
+        });
+
+        return items;
+    },
+};
 
 export ArrayLiteral = proto (AdriaNode) {
 
@@ -1078,16 +1158,27 @@ export ProtoBodyItem = proto (AdriaNode) {
 
             if  (valueNode.value === 'proto_body_property') {
 
-                var name = (keyNode.value === 'string' ? keyNode.value : '"' + keyNode.value + '"');
+                var name = (keyNode instanceof Ident === false ? keyNode.value : '"' + keyNode.value + '"');
+                var propertyBody = valueNode.toSourceNode();
 
-                result = this.csn('Object.defineProperty(___self.prototype, ' + name + ', ');
-                result.add(valueNode.toSourceNode());
+                result = this.csn();
+
+                if (valueNode.useStorage) {
+                    result.add('Object.defineProperty(___self.prototype, ' + valueNode.storageName + ', {' + this.nl(1));
+                    result.add([ 'value: ', valueNode.defaultValueNode, ',' + this.nl() ]);
+                    result.add('writable: true' + this.nl(-1));
+                    result.add('});' + this.nl());
+                    //result.add([ '___self.prototype[' + valueNode.storageName + '] = ', valueNode.defaultValueNode, ';' + this.nl() ]);
+                }
+
+                result.add('Object.defineProperty(___self.prototype, ' + name + ', ');
+                result.add(propertyBody);
                 result.add(');' + this.nl());
                 return result;
 
             } else {
 
-                var name = (keyNode.value === 'string' ? '[' + keyNode.value + ']' : '.' + keyNode.value);
+                var name = (keyNode instanceof Ident === false ? '[' + keyNode.value + ']' : '.' + keyNode.value);
 
                 result = this.csn('___self.prototype' + name + ' = ');
                 result.add(valueNode.toSourceNode());
@@ -1255,9 +1346,24 @@ export AssertStatement = proto (AdriaNode) {
         var result = this.csn();
 
         if (this.parser().transform.options.assert) {
-            var contents = AdriaNode->toSourceNode();
-            result.add('assert(');
-            result.add([ contents, ", '" + contents.toString().jsify("'") + "'" ]);
+
+            var params = this.get('call');
+            var paramsSN = params.toSourceNode(false);
+
+            result.add([ 'assert(', paramsSN ]);
+
+            // if only one parameter, add textual version of assertion as secondary parameter
+
+            var numParams = 0;
+
+            params.each(function(node, first) {
+                numParams++;
+            });
+
+            if (numParams < 2) {
+                result.add([ ", '" + paramsSN.toString().jsify("'") + "'" ]);
+            }
+
             result.add(');' + this.nl());
         }
 
@@ -1354,7 +1460,7 @@ export ResourceLiteral = proto (AdriaFileNode) {
         if (resolvedName !== null) {
             parser.resultData.resources.add(resolvedName);
         } else {
-            throw new Error('Could not find resource ' + fileName + ' (required by ' + parser.file + ')');
+            throw new ASTException('Could not find resource "' + fileName + '"', this);
         }
 
         var result = this.csn();
@@ -1409,7 +1515,7 @@ export RequireLiteral = proto (AdriaFileNode) {
 
             } else if (options.platform !== 'node' || moduleName.hasPostfix(options.fileExt)) {
 
-                throw new Error('Could not find module ' + moduleName + ' (required by ' + parser.file + ')');
+                throw new ASTException('Could not find resource "' + moduleName + '"', this);
             }
         }
 
@@ -1490,14 +1596,37 @@ export ParentLiteral = proto (AdriaNode) {
     }
 };
 
-export Ident = proto (AdriaNode) {
+export StorageLiteral = proto (AdriaNode) {
+
+    toSourceNode: function() {
+
+        var parentFunction = this.ancestor('function');
+
+        if (parentFunction.isNode()) {
+
+            var parentProperty = parentFunction.ancestor(null, 'proto_body_property');
+
+            if (parentProperty.isNode()) {
+                parentProperty.useStorage = true;
+                return this.csn('this[' + parentProperty.storageName + ']');
+            }
+        }
+
+        throw new ASTException('Invalid use of "storage" literal', this);
+    }
+};
+
+export ValueType = proto (AdriaNode) {
 
     toSourceNode: function() {
         return this.csn(this.value);
     }
 };
 
-export Name = Ident;
+export Ident = proto (ValueType) { };
+export Name = Ident; //!todo derive from ValueType
+export String = proto (ValueType) { };
+export Numeric = proto (ValueType) { };
 
 export VarDef = proto (AdriaNode) {
 

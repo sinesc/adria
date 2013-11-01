@@ -24,6 +24,7 @@ expression {
 
     // a = b   or   a++
     entry -> ident:ident -> assignment_operation -> return
+    entry -> storage_literal:storage -> assignment_operation
     assignment_operation -> binary_operation
 
     entry -> prefix_operation -> return

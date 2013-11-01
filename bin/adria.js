@@ -227,6 +227,7 @@ expression {\n\
 \n\
     // a = b   or   a++\n\
     entry -> ident:ident -> assignment_operation -> return\n\
+    entry -> storage_literal:storage -> assignment_operation\n\
     assignment_operation -> binary_operation\n\
 \n\
     entry -> prefix_operation -> return\n\
@@ -556,8 +557,15 @@ yield_literal {\n\
  */\n\
 \n\
 parent_literal {\n\
-    // this is really just a function, but it has to be evaluable at compilation time\n\
     entry -> "parent" -> return\n\
+}\n\
+\n\
+/*\n\
+ * storage\n\
+ */\n\
+\n\
+storage_literal {\n\
+    entry -> "storage" -> return\n\
 }\n\
 \n\
 /*\n\
@@ -577,8 +585,9 @@ base_literal {\n\
     entry -> object_literal:object -> return\n\
     entry -> array_literal:array -> return\n\
     entry -> require_literal:require -> return\n\
-    entry -> parent_literal:parent -> return\n\
     entry -> resource_literal:resource -> return\n\
+    entry -> parent_literal:parent -> return\n\
+    entry -> storage_literal:storage -> return\n\
     entry -> yield_literal:yield -> return\n\
     entry -> "(":brace -> complex_literal -> ")":brace -> return\n\
 }\n\
@@ -651,6 +660,8 @@ proto_body_property_data {\n\
 }\n\
 \n\
 proto_body_property_accessor_item {\n\
+    entry -> "default":key -> ":"\n\
+    entry -> "storage":key -> ":" -> string:value -> return\n\
     entry -> "get":key -> ":"\n\
     entry -> "set":key -> ":"\n\
     entry -> "configurable":key -> ":"\n\
@@ -765,8 +776,7 @@ async_statement {\n\
  */\n\
 \n\
 assert_statement {\n\
-    entry -> "assert" -> "(" -> expression:value -> ")" -> return\n\
-    expression:value -> "," -> expression:value -> ")"\n\
+    entry -> "assert" -> invoke_operation:call -> return\n\
 }\n\
 \n\
 /*\n\
@@ -2535,6 +2545,9 @@ module('language_parser/capture_node.adria', function(module, resource) {
         ___self.prototype.isNode = function isNode() {
             return this.col !== -1;
         };
+        ___self.prototype.isDummy = function isDummy() {
+            return this.col === -1;
+        };
         ___self.prototype.isLeaf = function isLeaf() {
             return (this.children instanceof Array === false);
         };
@@ -2923,8 +2936,27 @@ module('language_parser.adria', function(module, resource) {
     LanguageParser.CaptureNode = CaptureNode;
     module.exports = LanguageParser;
 });
+module('language_parser/ast_exception.adria', function(module, resource) {
+    var CaptureNode, ASTException;
+    CaptureNode = __require('language_parser/capture_node.adria');
+    ASTException = (function(___parent) {
+        var ___self = function ASTException(message, node) {
+            this.row = node.row;
+            this.col = node.col;
+            this.file = node.file;
+            Exception.prototype.constructor.call(this, message + ' in ' + node.parser().file + ' line ' + node.row + ', column ' + node.col);
+        };
+        ___self.prototype = Object.create(___parent.prototype);
+        ___self.prototype.constructor = ___self;
+        ___self.prototype.row = 0;
+        ___self.prototype.col = 0;
+        ___self.prototype.file = '';
+        return ___self;
+    })(Exception);
+    module.exports = ASTException;
+});
 module('targets/adria_node.adria', function(module, resource) {
-    var path, fs, SourceNode, LanguageParser, CaptureNode, Transform, util, Set, AdriaNode, AccessOperationProtocall, ConstLiteral, Scope, Module, InvokeOperation, AsyncWrapOperation, FunctionLiteral, FunctionStatement, GeneratorLiteral, GeneratorStatement, AsyncLiteral, AsyncStatement, FunctionParamList, BaseLiteral, DoWhileStatement, WhileStatement, IfStatement, SwitchStatement, ForCountStatement, ForInStatement, ObjectLiteral, ProtoBodyProperty, ArrayLiteral, Expression, ProtoLiteral, ProtoStatement, NewProtoLiteral, ProtoBodyItem, ReturnStatement, FlowStatement, YieldLiteral, catchSpecificsId, CatchSpecifics, CatchAll, TryCatchFinallyStatement, ThrowStatement, AssertStatement, Statement, InterruptibleStatement, AdriaFileNode, ResourceLiteral, RequireLiteral, ModuleStatement, ExportStatement, GlobalDef, ParentLiteral, Ident, Name, VarDef, ImportStatement;
+    var path, fs, SourceNode, LanguageParser, CaptureNode, Transform, util, Set, ASTException, AdriaNode, AccessOperationProtocall, ConstLiteral, Scope, Module, InvokeOperation, AsyncWrapOperation, FunctionLiteral, FunctionStatement, GeneratorLiteral, GeneratorStatement, AsyncLiteral, AsyncStatement, FunctionParamList, BaseLiteral, DoWhileStatement, WhileStatement, IfStatement, SwitchStatement, ForCountStatement, ForInStatement, ObjectLiteral, storageId, ProtoBodyProperty, ArrayLiteral, Expression, ProtoLiteral, ProtoStatement, NewProtoLiteral, ProtoBodyItem, ReturnStatement, FlowStatement, YieldLiteral, catchSpecificsId, CatchSpecifics, CatchAll, TryCatchFinallyStatement, ThrowStatement, AssertStatement, Statement, InterruptibleStatement, AdriaFileNode, ResourceLiteral, RequireLiteral, ModuleStatement, ExportStatement, GlobalDef, ParentLiteral, StorageLiteral, ValueType, Ident, Name, String, Numeric, VarDef, ImportStatement;
     path = require('path');
     fs = require('fs');
     SourceNode = require('source-map').SourceNode;
@@ -2933,6 +2965,7 @@ module('targets/adria_node.adria', function(module, resource) {
     Transform = __require('transform.adria');
     util = __require('util.adria');
     Set = util.Set;
+    ASTException = __require('language_parser/ast_exception.adria');
     AdriaNode = (function(___parent) {
         var ___self = function AdriaNode() {
             ___parent.apply(this, arguments);
@@ -3003,10 +3036,9 @@ module('targets/adria_node.adria', function(module, resource) {
             return this.ancestor(null, 'scope|module');
         };
         ___self.prototype.checkDefined = function checkDefined(name) {
-            var parser, platform, scope, paramNode;
+            var parser, scope, paramNode;
             parser = this.parser();
-            platform = parser.transform.options.platform;
-            if (this.validIdentifier.common.has(name) || this.validIdentifier[platform].has(name)) {
+            if (parser.transform.implicits.has(name)) {
                 return ;
             }
             scope = this;
@@ -3033,8 +3065,7 @@ module('targets/adria_node.adria', function(module, resource) {
                 scope.checkDefined(name);
                 return ;
             }
-            throw new Error('Undefined variable "' + name + '" in ' + parser.file + ' line ' + this.row + ', column ' + this.col);
-            return false;
+            throw new ASTException('Undefined variable "' + name + '"', this);
         };
         ___self.prototype.addParentLookup = function addParentLookup(result, lookupName, ownName) {
             ownName = (ownName !== undefined ? ownName : (lookupName));
@@ -3184,18 +3215,22 @@ module('targets/adria_node.adria', function(module, resource) {
         }
         ___self.prototype = Object.create(___parent.prototype);
         ___self.prototype.constructor = ___self;
-        ___self.prototype.toSourceNode = function toSourceNode() {
+        ___self.prototype.toSourceNode = function toSourceNode(includeBraces) {
+            includeBraces = (includeBraces !== undefined ? includeBraces : (true));
             var result;
             result = this.csn();
-            result.add('(');
-            this.params = [  ];
+            if (includeBraces) {
+                result.add('(');
+            }
             this.each(function(node, first) {
                 if (first === false) {
                     result.add(', ');
                 }
                 result.add(node.toSourceNode());
             });
-            result.add(')');
+            if (includeBraces) {
+                result.add(')');
+            }
             return result;
         };
         return ___self;
@@ -3240,20 +3275,25 @@ module('targets/adria_node.adria', function(module, resource) {
         ___self.prototype.name = null;
         ___self.prototype.lookupParent = false;
         ___self.prototype.toSourceNode = function toSourceNode() {
-            var result, id, body;
+            var result, nameSN, id, body;
             this.nl(1);
             result = this.csn();
             result.add('function');
             if (this instanceof GeneratorLiteral || this instanceof AsyncLiteral) {
                 result.add('*');
             }
-            this.name = this.findName();
+            nameSN = this.findName();
+            if (nameSN !== null && nameSN.toString().match(/^([\'\"]).*\1$/) === null) {
+                this.name = nameSN;
+            } else {
+                this.name = null;
+            }
             if (this.name !== null && this instanceof AsyncLiteral === false) {
-                this.get('body').implicits.add(this.name);
+                this.get('body').implicits.add(this.name.toString());
                 result.add([ ' ', this.name ]);
             }
-            if (this instanceof FunctionStatement || this instanceof GeneratorStatement) {
-                this.findScope().implicits.add(this.name);
+            if (this instanceof FunctionStatement || this instanceof GeneratorStatement || this instanceof AsyncStatement) {
+                this.findScope().implicits.add(this.name.toString());
             }
             result.add('(');
             result.add(this.get('param_list').toSourceNode());
@@ -3572,10 +3612,9 @@ module('targets/adria_node.adria', function(module, resource) {
         }
         ___self.prototype = Object.create(___parent.prototype);
         ___self.prototype.constructor = ___self;
-        ___self.prototype.toSourceNode = function toSourceNode() {
-            var items, result;
+        ___self.prototype.assembleItemList = function assembleItemList() {
+            var items;
             items = new SourceNode();
-            this.nl(1);
             this.each(function(child) {
                 var item;
                 item = new SourceNode();
@@ -3584,6 +3623,12 @@ module('targets/adria_node.adria', function(module, resource) {
                 item.add(child.get('value').toSourceNode());
                 items.add(item);
             });
+            return items;
+        };
+        ___self.prototype.toSourceNode = function toSourceNode() {
+            var items, result;
+            this.nl(1);
+            items = this.assembleItemList();
             result = this.csn();
             if (items.toString().length >= 60) {
                 result.add('{' + this.nl());
@@ -3599,7 +3644,54 @@ module('targets/adria_node.adria', function(module, resource) {
         };
         return ___self;
     })(AdriaNode);
-    ProtoBodyProperty = ObjectLiteral;
+    storageId = 1;
+    ProtoBodyProperty = (function(___parent) {
+        var ___self = function ProtoBodyProperty() {
+            ___parent.apply(this, arguments);
+        }
+        ___self.prototype = Object.create(___parent.prototype);
+        ___self.prototype.constructor = ___self;
+        ___self.prototype.useStorage = false;
+        ___self.prototype.storageName = null;
+        ___self.prototype.defaultValueNode = 'undefined';
+        ___self.prototype.assembleItemList = function assembleItemList() {
+            var nameSN, items;
+            this.each(function(child) {
+                var childKey, childValue;
+                childKey = child.get('key');
+                childValue = child.get('value');
+                if (childKey.value === 'default') {
+                    this.defaultValueNode = childValue.toSourceNode();
+                    this.useStorage = true;
+                } else if (childKey.value === 'storage') {
+                    this.storageName = childValue.value;
+                    this.useStorage = true;
+                }
+            });
+            if (this.storageName === null) {
+                nameSN = this.findName();
+                if (nameSN === null) {
+                    this.storageName = '\'___psf' + (storageId++) + '\'';
+                } else {
+                    this.storageName = '\'_' + nameSN.toString() + '\'';
+                }
+            }
+            items = new SourceNode();
+            this.each(function(child) {
+                var childKey, item;
+                childKey = child.get('key');
+                if (childKey.value !== 'default' && childKey.value !== 'storage') {
+                    item = new SourceNode();
+                    item.add(childKey.csn(childKey.value));
+                    item.add(': ');
+                    item.add(child.get('value').toSourceNode());
+                    items.add(item);
+                }
+            });
+            return items;
+        };
+        return ___self;
+    })(ObjectLiteral);
     ArrayLiteral = (function(___parent) {
         var ___self = function ArrayLiteral() {
             ___parent.apply(this, arguments);
@@ -3849,7 +3941,7 @@ module('targets/adria_node.adria', function(module, resource) {
         ___self.prototype = Object.create(___parent.prototype);
         ___self.prototype.constructor = ___self;
         ___self.prototype.toSourceNode = function toSourceNode() {
-            var protoNode, keyNode, functionNode, valueNode, result, name;
+            var protoNode, keyNode, functionNode, valueNode, result, name, propertyBody;
             protoNode = this.ancestor(null, 'new_proto_literal|proto_literal|proto_statement');
             keyNode = this.get('key');
             if (keyNode.value === 'constructor') {
@@ -3864,13 +3956,21 @@ module('targets/adria_node.adria', function(module, resource) {
             } else {
                 valueNode = this.get('value');
                 if (valueNode.value === 'proto_body_property') {
-                    name = (keyNode.value === 'string' ? keyNode.value : '"' + keyNode.value + '"');
-                    result = this.csn('Object.defineProperty(___self.prototype, ' + name + ', ');
-                    result.add(valueNode.toSourceNode());
+                    name = (keyNode instanceof Ident === false ? keyNode.value : '"' + keyNode.value + '"');
+                    propertyBody = valueNode.toSourceNode();
+                    result = this.csn();
+                    if (valueNode.useStorage) {
+                        result.add('Object.defineProperty(___self.prototype, ' + valueNode.storageName + ', {' + this.nl(1));
+                        result.add([ 'value: ', valueNode.defaultValueNode, ',' + this.nl() ]);
+                        result.add('writable: true' + this.nl(-1));
+                        result.add('});' + this.nl());
+                    }
+                    result.add('Object.defineProperty(___self.prototype, ' + name + ', ');
+                    result.add(propertyBody);
                     result.add(');' + this.nl());
                     return result;
                 } else {
-                    name = (keyNode.value === 'string' ? '[' + keyNode.value + ']' : '.' + keyNode.value);
+                    name = (keyNode instanceof Ident === false ? '[' + keyNode.value + ']' : '.' + keyNode.value);
                     result = this.csn('___self.prototype' + name + ' = ');
                     result.add(valueNode.toSourceNode());
                     result.add(';' + this.nl());
@@ -4028,12 +4128,19 @@ module('targets/adria_node.adria', function(module, resource) {
         ___self.prototype = Object.create(___parent.prototype);
         ___self.prototype.constructor = ___self;
         ___self.prototype.toSourceNode = function toSourceNode() {
-            var result, contents;
+            var result, params, paramsSN, numParams;
             result = this.csn();
             if (this.parser().transform.options.assert) {
-                contents = AdriaNode.prototype.toSourceNode.call(this);
-                result.add('assert(');
-                result.add([ contents, ", '" + contents.toString().jsify("'") + "'" ]);
+                params = this.get('call');
+                paramsSN = params.toSourceNode(false);
+                result.add([ 'assert(', paramsSN ]);
+                numParams = 0;
+                params.each(function(node, first) {
+                    numParams++;
+                });
+                if (numParams < 2) {
+                    result.add([ ", '" + paramsSN.toString().jsify("'") + "'" ]);
+                }
                 result.add(');' + this.nl());
             }
             return result;
@@ -4113,7 +4220,7 @@ module('targets/adria_node.adria', function(module, resource) {
             if (resolvedName !== null) {
                 parser.resultData.resources.add(resolvedName);
             } else {
-                throw new Error('Could not find resource ' + fileName + ' (required by ' + parser.file + ')');
+                throw new ASTException('Could not find resource "' + fileName + '"', this);
             }
             result = this.csn();
             result.add('resource(');
@@ -4153,7 +4260,7 @@ module('targets/adria_node.adria', function(module, resource) {
                         requireFunction = '__require';
                     }
                 } else if (options.platform !== 'node' || moduleName.hasPostfix(options.fileExt)) {
-                    throw new Error('Could not find module ' + moduleName + ' (required by ' + parser.file + ')');
+                    throw new ASTException('Could not find resource "' + moduleName + '"', this);
                 }
             }
             result.add(requireFunction + '(');
@@ -4242,8 +4349,28 @@ module('targets/adria_node.adria', function(module, resource) {
         };
         return ___self;
     })(AdriaNode);
-    Ident = (function(___parent) {
-        var ___self = function Ident() {
+    StorageLiteral = (function(___parent) {
+        var ___self = function StorageLiteral() {
+            ___parent.apply(this, arguments);
+        }
+        ___self.prototype = Object.create(___parent.prototype);
+        ___self.prototype.constructor = ___self;
+        ___self.prototype.toSourceNode = function toSourceNode() {
+            var parentFunction, parentProperty;
+            parentFunction = this.ancestor('function');
+            if (parentFunction.isNode()) {
+                parentProperty = parentFunction.ancestor(null, 'proto_body_property');
+                if (parentProperty.isNode()) {
+                    parentProperty.useStorage = true;
+                    return this.csn('this[' + parentProperty.storageName + ']');
+                }
+            }
+            throw new ASTException('Invalid use of "storage" literal', this);
+        };
+        return ___self;
+    })(AdriaNode);
+    ValueType = (function(___parent) {
+        var ___self = function ValueType() {
             ___parent.apply(this, arguments);
         }
         ___self.prototype = Object.create(___parent.prototype);
@@ -4253,7 +4380,31 @@ module('targets/adria_node.adria', function(module, resource) {
         };
         return ___self;
     })(AdriaNode);
+    Ident = (function(___parent) {
+        var ___self = function Ident() {
+            ___parent.apply(this, arguments);
+        }
+        ___self.prototype = Object.create(___parent.prototype);
+        ___self.prototype.constructor = ___self;
+        return ___self;
+    })(ValueType);
     Name = Ident;
+    String = (function(___parent) {
+        var ___self = function String() {
+            ___parent.apply(this, arguments);
+        }
+        ___self.prototype = Object.create(___parent.prototype);
+        ___self.prototype.constructor = ___self;
+        return ___self;
+    })(ValueType);
+    Numeric = (function(___parent) {
+        var ___self = function Numeric() {
+            ___parent.apply(this, arguments);
+        }
+        ___self.prototype = Object.create(___parent.prototype);
+        ___self.prototype.constructor = ___self;
+        return ___self;
+    })(ValueType);
     VarDef = (function(___parent) {
         var ___self = function VarDef() {
             ___parent.apply(this, arguments);
@@ -4340,8 +4491,12 @@ module('targets/adria_node.adria', function(module, resource) {
     module.exports.ExportStatement = ExportStatement;
     module.exports.GlobalDef = GlobalDef;
     module.exports.ParentLiteral = ParentLiteral;
+    module.exports.StorageLiteral = StorageLiteral;
+    module.exports.ValueType = ValueType;
     module.exports.Ident = Ident;
     module.exports.Name = Name;
+    module.exports.String = String;
+    module.exports.Numeric = Numeric;
     module.exports.VarDef = VarDef;
     module.exports.ImportStatement = ImportStatement;
 });
@@ -4405,7 +4560,7 @@ module('targets/adria_parser.adria', function(module, resource) {
                 'property',
                 'parent',
                 'yield',
-                'await',
+                'storage',
                 'require',
                 'assert',
                 'resource',
@@ -4497,6 +4652,7 @@ module('targets/adria_transform.adria', function(module, resource) {
             var options;
             Transform.prototype.constructor.call(this, piped);
             this.globals = new util.Set();
+            this.implicits = new util.Set();
             this.requires = new util.Set();
             this.resources = new util.Set();
             this.requiresDone = new util.Set();
@@ -4514,10 +4670,12 @@ module('targets/adria_transform.adria', function(module, resource) {
             options.platform = (options.platform === undefined ? 'web' : options.platform);
             options['tweak-exports'] = (options['tweak-exports'] === undefined ? false : options['tweak-exports']);
             options['tweak-nostrict'] = (options['tweak-nostrict'] === undefined ? false : options['tweak-nostrict']);
+            this.defineImplicits();
         };
         ___self.prototype = Object.create(___parent.prototype);
         ___self.prototype.constructor = ___self;
         ___self.prototype.globals = null;
+        ___self.prototype.implicits = null;
         ___self.prototype.requires = null;
         ___self.prototype.modules = null;
         ___self.prototype.resources = null;
@@ -4536,6 +4694,72 @@ module('targets/adria_transform.adria', function(module, resource) {
                     this.platform = platform;
                 }
             });
+        };
+        ___self.prototype.defineImplicits = function defineImplicits() {
+            this.implicits.add([
+                'window',
+                'arguments',
+                'this',
+                'true',
+                'false',
+                'null',
+                'undefined',
+                'Infinity',
+                'NaN',
+                'Array',
+                'Boolean',
+                'Date',
+                'Intl',
+                'JSON',
+                'Function',
+                'Math',
+                'Number',
+                'Object',
+                'RegExp',
+                'String',
+                'ArrayBuffer',
+                'DataView',
+                'Float32Array',
+                'Float64Array',
+                'Int16Array',
+                'Int32Array',
+                'Int8Array',
+                'Uint16Array',
+                'Uint32Array',
+                'Uint8Array',
+                'Error',
+                'EvalError',
+                'RangeError',
+                'ReferenceError',
+                'SyntaxError',
+                'TypeError',
+                'URIError',
+                'decodeURI',
+                'decodeURIComponent',
+                'encodeURI',
+                'encodeURIComponent',
+                'eval',
+                'setTimeout',
+                'clearTimeout',
+                'setInterval',
+                'clearInterval',
+                'isFinite',
+                'isNaN',
+                'parseFloat',
+                'parseInt',
+                'console',
+                'debugger',
+                'application',
+                'Exception'
+            ]);
+            if (this.options.platform === 'node') {
+                this.implicits.add([ 'process', 'Buffer' ]);
+            } else if (this.options.platform === 'web') {
+                this.implicits.add([ 'document', 'performance', 'alert' ]);
+            }
+            if (this.options.assert) {
+                this.implicits.add('AssertionFailedException');
+            }
         };
         ___self.prototype.buildModule = function buildModule(moduleName, data) {
             var parser, result, requires, name;
