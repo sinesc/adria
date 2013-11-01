@@ -1,0 +1,57 @@
+
+var test = require('./test');
+
+test('assert exception type', function() {
+
+    var caught = false;
+
+    try {
+        assert(false);
+    } catch (AssertionFailedException e) {
+        caught = true;
+    } catch (e) {
+        test.fail('invalid assertion exception');
+    }
+
+    if (caught !== true) {
+        test.fail('no exception thrown');
+    }
+});
+
+test('assert default message', function() {
+
+    var caught = false;
+
+    try {
+        assert(true && false);
+    } catch (AssertionFailedException e) {
+        caught = true;
+        if (e.message !== 'true && false') {
+            test.fail('asserion message wrong');
+        }
+    }
+
+    if (caught !== true) {
+        test.fail('no exception thrown');
+    }
+});
+
+test('assert user message', function() {
+
+    var caught = false;
+
+    try {
+        assert(true && false, 'weird boolean operation');
+    } catch (AssertionFailedException e) {
+        caught = true;
+        if (e.message !== 'weird boolean operation') {
+            test.fail('asserion message wrong');
+        }
+    }
+
+    if (caught !== true) {
+        test.fail('no exception thrown');
+    }
+});
+
+test.summary();

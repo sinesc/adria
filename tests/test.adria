@@ -1,0 +1,109 @@
+/*
+ * The MIT License (MIT)
+ *
+ * Copyright (C) 2013 Dennis Möhlmann <mail@dennismoehlmann.de>
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of
+ * this software and associated documentation files (the "Software"), to deal in
+ * the Software without restriction, including without limitation the rights to
+ * use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of
+ * the Software, and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+ * FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+ * COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
+ * IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+ * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ */
+var thrown, testId, start, last, oks, fails, exceptions;
+
+// ensure the test was compiled with assertions enabled
+
+try {
+    assert(false);
+} catch (e) {
+    thrown = e;
+}
+
+if (thrown === undefined) {
+    console.log('assertion support is disabled, please recompile with --assert');
+    process.exit(1);
+}
+
+if (thrown.stack.split(':', 1)[0] !== 'AssertionFailedException') {
+    console.log('incorrect assertion type thrown during pretest, environment incompatible');
+    process.exit(1);
+}
+
+
+// set up module
+
+module test = function(name, func) {
+
+    var success = true;
+
+    log('test ' + testId++ + ': ' + name + ' ', false);
+
+    try {
+        func();
+    } catch (e) {
+        success = false;
+        exceptions.push(e);
+        fails++;
+        print('FAIL');
+    }
+
+    if (success) {
+        oks++;
+        print('ok');
+    }
+};
+
+export log = function(message, nl = true) {
+
+    var now         = Date.now();
+    var diffStart   = now - start;
+    var diffLast    = now - last;
+
+    last = now;
+
+    process.stdout.write(('+' + diffLast + '/' + diffStart) + 'ms: ' + message + (nl ? '\n' : ''));
+};
+
+export print = function(message, nl = true) {
+
+    process.stdout.write(message + (nl ? '\n' : ''));
+};
+
+export summary = function() {
+
+    log((oks + fails) + ' tests done, ' + oks + ' ok, ' + fails + (fails > 0 ? ' FAILURES' : ' failures'));
+
+    for (var id, exception in exceptions) {
+        console.log('failure ' + (+id + 1), exception.stack);
+    }
+};
+
+export fail = function(message) {
+
+    throw new Error(message);
+};
+
+export reset = function() {
+
+    testId      = 1;
+    start       = Date.now();
+    last        = start;
+    oks         = 0;
+    fails       = 0;
+    exceptions  = [ ];
+};
+
+// start timer
+
+reset();

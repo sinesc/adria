@@ -1,0 +1,77 @@
+
+var test = require('./test');
+
+/*
+ * setup two exceptions based on Exception
+ */
+
+proto TestException (Exception) {
+    message: 'test123',
+}
+
+proto SubTestException (TestException) {
+    message: 'subtest123',
+}
+
+/*
+ * tests
+ */
+
+test('instanceof Error', function() {
+
+    assert(Exception.prototype instanceof Error);
+    assert(new Exception() instanceof Error);
+});
+
+test('inheritance, base', function() {
+
+    try {
+        throw new TestException();
+    } catch (TestException e) {
+        /* OK */
+    } catch (e) {
+        test.fail('not an instance of TestException');
+    }
+});
+
+test('inheritance, sub', function() {
+
+    try {
+        throw new SubTestException();
+    } catch (SubTestException e) {
+        /* OK */
+    } catch (TestException e) {
+        test.fail('wrong type');
+    } catch (e) {
+        test.fail('not an instance of TestException');
+    }
+});
+
+test('default message', function() {
+
+    try {
+        throw new TestException();
+    } catch (e) {
+        assert(e.message === 'test123');
+    }
+});
+
+test('custom message', function() {
+
+    try {
+        throw new TestException('custom123');
+    } catch (e) {
+        assert(e.message === 'custom123');
+    }
+});
+
+test('type-name', function() {
+
+    try {
+        throw new SubTestException();
+    } catch (e) {
+        assert(e.stack.split(':', 1)[0] === 'SubTestException');
+    }
+});
+
+test.summary();

@@ -1,0 +1,163 @@
+
+require('./test');
+
+var Async = require('async');
+
+// prepare some functions
+
+var sleep = function(ms, callback) {
+if (typeof callback !== 'function') {
+    console.log('cb is', callback);
+    debugger;
+}
+    setTimeout(function() {
+        callback(null, ms);
+    }, ms);
+};
+
+var sleepError = function(ms, callback) {
+    setTimeout(function() {
+        callback(new Error('expected error'), 'not returned');
+    }, ms);
+};
+
+var sleepThrow = function() {
+    throw new Error('expected error');
+};
+
+// the async function
+
+var testAsync = function#(callback) {
+
+    console.log('wrap, then yield');
+
+    var wrap = sleep(10, #);
+    var result = yield wrap;
+    assert(result === 10);
+
+
+    console.log('yield wrap');
+
+    var result = yield sleep(11, #);
+    assert(result === 11);
+
+
+    console.log('wrap throwing');
+
+    var wrap, result, thrown;
+
+    try {
+         wrap = sleepThrow(10, #);
+    } catch (e) {
+        assert(false);
+    }
+
+    console.log('yield wrapped throwing ');
+
+    try {
+        result = yield wrap;
+    } catch (e) {
+        thrown = e;
+    }
+
+    assert(thrown instanceof Error && thrown.message === 'expected error');
+
+
+    console.log('wrap error');
+
+    var wrap, result, thrown;
+
+    try {
+         wrap = sleepError(10, #);
+    } catch (e) {
+        assert('never reached');
+    }
+
+    console.log('yield wrapped error');
+
+    try {
+        result = yield wrap;
+    } catch (e) {
+        thrown = e;
+    }
+
+    assert(thrown instanceof Error && thrown.message === 'expected error');
+
+
+    console.log('wrap and yield multiple, array');
+
+    var result = yield [
+        sleep(15, #),
+        sleep(5, #),
+        sleep(10, #),
+    ];
+
+    assert(result instanceof Array && result[0] === 15 && result[1] === 5 && result[2] === 10);
+
+
+    console.log('wrap and yield multiple, object');
+
+    var result = yield {
+        a: sleep(15, #),
+        b: sleep(5, #),
+        c: sleep(10, #),
+    };
+
+    assert(result instanceof Object && result.a === 15 && result.b === 5 && result.c === 10);
+
+
+    console.log('wrap and yield multiple, single invalid argument');
+
+    var result = undefined, thrown = undefined;
+
+    try {
+        result = yield [
+            sleep(15, #),
+            sleep(5, function() { }),       // not a wrap op
+        ];
+    } catch (e) {
+        thrown = e;
+    }
+
+    assert(result === undefined && thrown instanceof Async.AsyncError);
+
+
+    console.log('wrap and yield multiple, single error');
+
+    var result = undefined, thrown = undefined;
+
+    try {
+        result = yield [
+            sleepError(10, #),
+            sleep(15, #),
+        ];
+    } catch (e) {
+        thrown = e;
+    }
+
+    assert(result === undefined && thrown instanceof Error && thrown.message === 'expected error');
+
+
+    console.log('wrap and yield multiple, all error');
+
+    var result = undefined, thrown = undefined;
+
+    try {
+        result = yield [
+            sleepError(10, #),
+            sleepError(10, #),
+        ];
+    } catch (e) {
+        thrown = e;
+    }
+
+    assert(result === undefined && thrown instanceof Error && thrown.message === 'expected error');
+
+    callback('done');
+};
+
+// run the asnyc function
+
+testAsync(function(result) {
+    console.log(result);
+});

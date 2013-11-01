@@ -1,0 +1,158 @@
+
+var test = require('./test');
+
+/*
+ * setup an object with a few properties
+ */
+
+var TestObj = proto {
+
+    'stringField': 'stringFieldValue',
+    plainField: 'plainFieldValue',
+    testData: 'testData',
+
+    nonStorageProp: property {
+        get: function() {
+            return this.testData;
+        },
+        set: function(value) {
+            this.testData = value;
+        },
+    },
+
+    plainProp: property {
+        storage: 'plainPropStorage',
+        default: null,
+        get: function() {
+            return storage;
+        },
+        set: function(value) {
+            storage = value;
+        },
+    },
+
+    'stringProp': property {
+        storage: 'stringPropStorage',
+        default: null,
+        get: function() {
+            return storage;
+        },
+        set: function(value) {
+            storage = value;
+        },
+    },
+
+    anonStorageProp: property {
+        get: function() {
+            return storage;
+        },
+        set: function(value) {
+            storage = value;
+        },
+    },
+
+    anonDefaultStorageProp: property {
+        default: 'anonStorageDefault',
+        get: function() {
+            return storage;
+        },
+        set: function(value) {
+            storage = value;
+        },
+    }
+};
+
+/**
+ * support function for property testing
+ *
+ * @param Type prototype constructor
+ * @param propName property to test
+ * @param storageName name of storage property for given property
+ * @aram initialValue expected initial value in storage
+ */
+var testProp = function(Type, propName, storageName, initialValue) {
+
+    var testObj = new Type();
+    var testValue = propName + 'Test';
+
+    assert(testObj[propName] === initialValue);
+    assert(testObj[storageName] === initialValue, 'storage was properly initialized');
+
+    testObj[propName] = testValue;
+    assert(testObj[propName] === testValue);
+    assert(testObj[storageName] === testValue);
+
+    var descriptor = Object.getOwnPropertyDescriptor(testObj, propName);
+    assert(descriptor === undefined);
+
+    var descriptor = Object.getOwnPropertyDescriptor(TestObj.prototype, propName);
+    assert(typeof descriptor.get === 'function');
+    assert(typeof descriptor.set === 'function');
+    assert(descriptor.enumerable === false);
+    assert(descriptor.configurable === false);
+
+    var descriptor = Object.getOwnPropertyDescriptor(TestObj.prototype, storageName);
+    assert(descriptor.value === initialValue);
+    assert(descriptor.writable === true);
+    assert(descriptor.enumerable === false);
+    assert(descriptor.configurable === false);
+};
+
+/*
+ * tests
+ */
+
+test('simple fields', function() {
+
+    var testObj = new TestObj();
+
+    assert(testObj.stringField === 'stringFieldValue');
+    assert(testObj.plainField === 'plainFieldValue');
+
+    testObj.stringField = 'writeTest';
+    assert(testObj.stringField === 'writeTest');
+
+    var descriptor = Object.getOwnPropertyDescriptor(testObj, 'stringField');
+    assert(descriptor.value === 'writeTest');
+    assert(descriptor.writable === true);
+    assert(descriptor.enumerable === true);
+    assert(descriptor.configurable === true);
+});
+
+test('non-storage properties', function() {
+
+    var testObj = new TestObj();
+
+    assert(testObj.nonStorageProp === 'testData');
+    assert(testObj._nonStorageProp === undefined, 'no storage was generated for non-storage property');
+
+    testObj.nonStorageProp = 'writeTest';
+    assert(testObj.nonStorageProp === 'writeTest');
+
+    var descriptor = Object.getOwnPropertyDescriptor(testObj, 'nonStorageProp');
+    assert(descriptor === undefined);
+
+    var descriptor = Object.getOwnPropertyDescriptor(TestObj.prototype, 'nonStorageProp');
+    assert(typeof descriptor.get === 'function');
+    assert(typeof descriptor.set === 'function');
+    assert(descriptor.enumerable === false);
+    assert(descriptor.configurable === false);
+});
+
+test('storage properties', function() {
+    testProp(TestObj, 'plainProp', 'plainPropStorage', null);
+});
+
+test('string named storage properties', function() {
+    testProp(TestObj, 'stringProp', 'stringPropStorage', null);
+});
+
+test('anon nodefault storage properties', function() {
+    testProp(TestObj, 'anonStorageProp', '_anonStorageProp', undefined);
+});
+
+test('anon default storage properties', function() {
+    testProp(TestObj, 'anonDefaultStorageProp', '_anonDefaultStorageProp', 'anonStorageDefault');
+});
+
+test.summary();
