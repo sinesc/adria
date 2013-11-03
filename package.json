@@ -1,6 +1,6 @@
 {
   "name": "adria",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "A mostly Javascript compatible language that compiles to Javascript",
   "files": [
     "bin/adria.js",
@@ -9,6 +9,7 @@
     "doc/",
     "src/",
     "templates/",
+    "tests",
     "LICENSE",
     "README.md"
   ],
