@@ -40,7 +40,7 @@ var Exception;
     var Module = function(name, func) {
         this.name = name;
         this.exports = { };
-        func(this, getResource);
+        this.func = func;
     };
     Module.prototype.exports = null;
     Module.prototype.name = '';
@@ -62,7 +62,13 @@ var Exception;
     Exception.prototype = Object.create(Error.prototype);
     Exception.prototype.constructor = Exception;
     __require = function(file) {
-        return modules[file].exports;
+        var module = modules[file];        
+        if (typeof module.func === 'function') {
+            var func = module.func;
+            delete module.func;
+            func(module, getResource);
+        }
+        return module.exports;
     };
 })();
 resource('../definition/adria/control.sdt', '\n\
@@ -1082,7 +1088,7 @@ var Exception<: if (enableAssert) { :>, AssertionFailedException<: } :>;\n\
     var Module = function(name, func) {\n\
         this.name = name;\n\
         this.exports = { };\n\
-        func(this, getResource);\n\
+        this.func = func;\n\
     };\n\
     Module.prototype.exports = null;\n\
     Module.prototype.name = \'\';\n\
@@ -1113,12 +1119,17 @@ var Exception<: if (enableAssert) { :>, AssertionFailedException<: } :>;\n\
         args[0] = null;\n\
         return new (Function.prototype.bind.apply(Application, args));\n\
     };<: } :>\n\
-    <: if (platform == \'node\') { :>__<: } :>require = function(file) {<: if (enableAssert) { :>\n\
-        if (modules[file] === undefined) {\n\
+    <: if (platform == \'node\') { :>__<: } :>require = function(file) {\n\
+        var module = modules[file];<: if (enableAssert) { :>\n\
+        if (module === undefined) {\n\
             throw Error(\'missing dependency \' + file);\n\
+        }<: } :>        \n\
+        if (typeof module.func === \'function\') {\n\
+            var func = module.func;\n\
+            delete module.func;\n\
+            func(module, getResource);\n\
         }\n\
-        <: } :>\n\
-        return modules[file].exports;\n\
+        return module.exports;\n\
     };<: if (enableAssert) { :>\n\
     AssertionFailedException = function AssertionFailedException(message) {\n\
         Exception.call(this, message);\n\
@@ -2973,66 +2984,6 @@ module('targets/adria_node.adria', function(module, resource) {
         }
         ___self.prototype = Object.create(___parent.prototype);
         ___self.prototype.constructor = ___self;
-        ___self.prototype.validIdentifier = {
-            common: new Set([
-                'window',
-                'arguments',
-                'this',
-                'true',
-                'false',
-                'null',
-                'undefined',
-                'Infinity',
-                'NaN',
-                'Array',
-                'Boolean',
-                'Date',
-                'Intl',
-                'JSON',
-                'Function',
-                'Math',
-                'Number',
-                'Object',
-                'RegExp',
-                'String',
-                'ArrayBuffer',
-                'DataView',
-                'Float32Array',
-                'Float64Array',
-                'Int16Array',
-                'Int32Array',
-                'Int8Array',
-                'Uint16Array',
-                'Uint32Array',
-                'Uint8Array',
-                'Error',
-                'EvalError',
-                'RangeError',
-                'ReferenceError',
-                'SyntaxError',
-                'TypeError',
-                'URIError',
-                'decodeURI',
-                'decodeURIComponent',
-                'encodeURI',
-                'encodeURIComponent',
-                'eval',
-                'setTimeout',
-                'clearTimeout',
-                'setInterval',
-                'clearInterval',
-                'isFinite',
-                'isNaN',
-                'parseFloat',
-                'parseInt',
-                'console',
-                'debugger',
-                'application',
-                'Exception'
-            ]),
-            node: new Set([ 'process', 'Buffer' ]),
-            web: new Set([ 'document', 'performance', 'alert' ])
-        };
         ___self.prototype.findScope = function findScope() {
             return this.ancestor(null, 'scope|module');
         };
@@ -4261,7 +4212,7 @@ module('targets/adria_node.adria', function(module, resource) {
                         requireFunction = '__require';
                     }
                 } else if (options.platform !== 'node' || moduleName.hasPostfix(options.fileExt)) {
-                    throw new ASTException('Could not find resource "' + moduleName + '"', this);
+                    throw new ASTException('Could not find require "' + moduleName + '"', this);
                 }
             }
             result.add(requireFunction + '(');
@@ -4756,7 +4707,15 @@ module('targets/adria_transform.adria', function(module, resource) {
             if (this.options.platform === 'node') {
                 this.implicits.add([ 'process', 'Buffer' ]);
             } else if (this.options.platform === 'web') {
-                this.implicits.add([ 'document', 'performance', 'alert' ]);
+                this.implicits.add([
+                    'screen',
+                    'document',
+                    'location',
+                    'performance',
+                    'alert',
+                    'XMLHttpRequest',
+                    'Worker'
+                ]);
             }
             if (this.options.assert) {
                 this.implicits.add('AssertionFailedException');
@@ -4791,7 +4750,7 @@ module('targets/adria_transform.adria', function(module, resource) {
             });
         };
         ___self.prototype.generateOutputTree = function generateOutputTree() {
-            var options, node, tpl, fw, tmpNode, fileName, contents, wrapped, usedBuiltins, id, name, currentModule;
+            var options, node, tpl, fw, tmpNode, fileName, contents, wrapped, usedBuiltins, id, name, currentModule, file;
             options = this.options;
             node = new SourceNode(null, null);
             tpl = new Template();
@@ -4827,6 +4786,10 @@ module('targets/adria_transform.adria', function(module, resource) {
                 currentModule = this.modules[id];
                 tmpNode = node.add(new SourceNode(null, null, currentModule.filename, currentModule.result));
                 tmpNode.setSourceContent(currentModule.filename, currentModule.sourceCode);
+            }
+            for (id in options.files) {
+                file = options.files[id];
+                node.add('\n' + (options.platform === 'node' ? '__' : '') + 'require(\'' + util.normalizeExtension(file, this.options.fileExt) + '\');');
             }
             if (options['no-closure'] !== true) {
                 node.add('\n})();');
@@ -5010,4 +4973,5 @@ module('main.adria', function(module, resource) {
         run();
     }
 });
+__require('main.adria');
 })();

@@ -19,7 +19,7 @@ var Exception<: if (enableAssert) { :>, AssertionFailedException<: } :>;
     var Module = function(name, func) {
         this.name = name;
         this.exports = { };
-        func(this, getResource);
+        this.func = func;
     };
     Module.prototype.exports = null;
     Module.prototype.name = '';
@@ -50,12 +50,17 @@ var Exception<: if (enableAssert) { :>, AssertionFailedException<: } :>;
         args[0] = null;
         return new (Function.prototype.bind.apply(Application, args));
     };<: } :>
-    <: if (platform == 'node') { :>__<: } :>require = function(file) {<: if (enableAssert) { :>
-        if (modules[file] === undefined) {
+    <: if (platform == 'node') { :>__<: } :>require = function(file) {
+        var module = modules[file];<: if (enableAssert) { :>
+        if (module === undefined) {
             throw Error('missing dependency ' + file);
+        }<: } :>        
+        if (typeof module.func === 'function') {
+            var func = module.func;
+            delete module.func;
+            func(module, getResource);
         }
-        <: } :>
-        return modules[file].exports;
+        return module.exports;
     };<: if (enableAssert) { :>
     AssertionFailedException = function AssertionFailedException(message) {
         Exception.call(this, message);

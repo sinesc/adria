@@ -122,9 +122,9 @@ module AdriaTransform = proto (Transform) {
         ]);
 
         if (this.options.platform === 'node') {
-            this.implicits.add([ 'process', 'Buffer', ]);
+            this.implicits.add([ 'process', 'Buffer' ]);
         } else if (this.options.platform === 'web') {
-            this.implicits.add([ 'document', 'performance', 'alert' ]);
+            this.implicits.add([ 'screen', 'document', 'location', 'performance', 'alert', 'XMLHttpRequest', 'Worker' ]);
         }
 
         if (this.options.assert) {
@@ -238,6 +238,12 @@ module AdriaTransform = proto (Transform) {
         for (var id, currentModule in this.modules) {
             tmpNode = node.add(new SourceNode(null, null, currentModule.filename, currentModule.result));
             tmpNode.setSourceContent(currentModule.filename, currentModule.sourceCode);
+        }
+
+        // start entry module
+
+        for (var id, file in options.files) {
+            node.add('\n' + (options.platform === 'node' ? '__' : '') + 'require(\'' + util.normalizeExtension(file, this.options.fileExt) + '\');');
         }
 
         if (options['no-closure'] !== true) {
