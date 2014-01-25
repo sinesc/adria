@@ -1,7 +1,7 @@
 /*
  * Adria transcompiler
  *
- * Copyright (C) 2013 Dennis Möhlmann <mail@dennismoehlmann.de>
+ * Copyright (C) 2014 Dennis Möhlmann <mail@dennismoehlmann.de>
  * Licensed under the MIT license.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -48,7 +48,7 @@ util.processOptions(null, {
 
 // transformation performer
 
-var handle = function() {
+var handle = function(pipeData) {
 
     var transform;
 
@@ -71,12 +71,12 @@ var run = function(pipeData) {
         // enabling "break on any exception" earlier will introduce you to node exception hell
 
         debugger;
-        handle();
+        handle(pipeData);
 
     } else {
 
         try {
-            handle();
+            handle(pipeData);
         } catch (e) {
             console.log(e.message);
             process.exit(1);

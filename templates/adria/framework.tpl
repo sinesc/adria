@@ -1,4 +1,4 @@
-var <:if (platform == 'node') { :>__<: } :>require;
+var <:if (platform == 'node') { :>___<: } :>require;
 var resource;<:if (enableApplication) { :>
 var application;<: } :>
 var module;<: if (platform == 'node') { :>
@@ -50,11 +50,11 @@ var Exception<: if (enableAssert) { :>, AssertionFailedException<: } :>;
         args[0] = null;
         return new (Function.prototype.bind.apply(Application, args));
     };<: } :>
-    <: if (platform == 'node') { :>__<: } :>require = function(file) {
+    <: if (platform == 'node') { :>___<: } :>require = function(file) {
         var module = modules[file];<: if (enableAssert) { :>
         if (module === undefined) {
             throw Error('missing dependency ' + file);
-        }<: } :>        
+        }<: } :>
         if (typeof module.func === 'function') {
             var func = module.func;
             delete module.func;

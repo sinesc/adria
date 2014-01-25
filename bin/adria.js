@@ -4,7 +4,7 @@
 /*
  * Adria transcompiler
  *
- * Copyright (C) 2013 Dennis Möhlmann <mail@dennismoehlmann.de>
+ * Copyright (C) 2014 Dennis Möhlmann <mail@dennismoehlmann.de>
  * Licensed under the MIT license.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -26,7 +26,7 @@
  */
 ;(function() {
 "use strict";
-var __require;
+var ___require;
 var resource;
 var module;
 var window = global;
@@ -61,8 +61,8 @@ var Exception;
     };
     Exception.prototype = Object.create(Error.prototype);
     Exception.prototype.constructor = Exception;
-    __require = function(file) {
-        var module = modules[file];        
+    ___require = function(file) {
+        var module = modules[file];
         if (typeof module.func === 'function') {
             var func = module.func;
             delete module.func;
@@ -75,10 +75,6 @@ resource('../definition/adria/control.sdt', '\n\
 /*\n\
  * multipurpose code block\n\
  */\n\
-\n\
-scope {\n\
-    entry -> block -> return\n\
-}\n\
 \n\
 block {\n\
     entry -> "{" -> "}" -> return\n\
@@ -101,14 +97,25 @@ flow_statement {\n\
 }\n\
 \n\
 /*\n\
- * if else block\n\
- * "elseif" is achieved by else followed by a new if-block\n\
+ * if...else if...else block\n\
  */\n\
 \n\
+if_conditional {\n\
+    entry -> "if" -> "(" -> expression:condition -> ")" -> block:body -> return\n\
+}\n\
+\n\
+if_unconditional {\n\
+    entry -> block:body -> return\n\
+}\n\
+\n\
 if_statement {\n\
-    entry -> "if" -> "(" -> expression:condition -> ")" -> block:if_body -> return\n\
-    block:if_body -> "else" -> if_statement:else_if -> return\n\
-    "else" -> block:else_body -> return\n\
+\n\
+    entry -> if_conditional:if -> return\n\
+    if_conditional:if -> "else"[if_to_elseif] -> if_conditional:else_if -> return\n\
+    if_conditional:else_if -> "else"[elseif_to_elseif] -> if_conditional:else_if\n\
+\n\
+    if_conditional:if -> "else"[if_to_else] -> if_unconditional:else -> return\n\
+    if_conditional:else_if -> "else"[elseif_to_else] -> if_unconditional:else\n\
 }\n\
 \n\
 /*\n\
@@ -148,7 +155,7 @@ for_in_statement {\n\
 }\n\
 \n\
 /*\n\
- * switch statement\n\
+ * switch statement !todo scoping how?\n\
  */\n\
 \n\
 switch_case {\n\
@@ -181,31 +188,32 @@ throw_statement {\n\
     entry -> "throw" -> expression:exception -> return\n\
 }\n\
 \n\
-catch_all {\n\
-    entry -> "catch" -> "(" -> ident:value -> ")" -> block:body -> return\n\
+try {\n\
+    entry -> "try" -> block:body -> return\n\
 }\n\
 \n\
 catch_specific {\n\
     entry -> "catch" -> "(" -> expression:type -> ident:value -> ")" -> block:body -> return\n\
 }\n\
 \n\
+catch_all {\n\
+    entry -> "catch" -> "(" -> ident:value -> ")" -> block:body -> return\n\
+}\n\
+\n\
+catch {\n\
+    entry -> catch_all:all -> return\n\
+    entry -> catch_specific:specific -> return\n\
+    catch_specific:specific -> catch_specific:specific\n\
+    catch_specific:specific -> catch_all:all\n\
+}\n\
+\n\
 finally {\n\
     entry -> "finally" -> block:body -> return\n\
 }\n\
 \n\
-catch_specifics {\n\
-    entry -> catch_specific:specific -> return\n\
-    catch_specific:specific -> catch_specific:specific\n\
-    catch_specific:specific -> catch_all:catch -> return\n\
-}\n\
-\n\
 try_catch_finally_statement {\n\
-    entry -> "try" -> block:body -> catch_all:all -> return\n\
-    block:body -> catch_specifics:specifics -> return\n\
-\n\
-    block:body -> finally:finally -> return\n\
-    catch_all:all -> finally:finally\n\
-    catch_specifics:specifics -> finally:finally\n\
+    entry -> try:try -> catch:catch -> return\n\
+    catch:catch -> finally:finally -> return\n\
 }\n\
 ');
 resource('../definition/adria/expression.sdt', '\n\
@@ -293,7 +301,7 @@ prefix_operation {\n\
 \n\
 property_assignment_operation {\n\
     // a::b = property...\n\
-    entry -> "=":passignment_op -> proto_body_property:value -> return\n\
+    entry -> "=":passignment_op -> property_literal:value -> return\n\
     entry -> ":=":passignment_op -> literal_expression:value -> return\n\
 }\n\
 \n\
@@ -470,6 +478,45 @@ object_literal {\n\
 }\n\
 \n\
 /*\n\
+ * property literal\n\
+ */\n\
+\n\
+property_literal {\n\
+    entry -> "property" -> property_accessor -> return\n\
+    entry -> "property" -> property_data -> return\n\
+}\n\
+\n\
+property_accessor {\n\
+    entry -> "{" -> property_accessor_item:item -> "}" -> return\n\
+    property_accessor_item:item -> ","[any] -> property_accessor_item:item\n\
+    property_accessor_item:item -> ","[last] -> "}" -> return\n\
+}\n\
+\n\
+property_data {\n\
+    entry -> "{" -> property_data_item:item -> "}" -> return\n\
+    property_data_item:item -> ","[any] -> property_data_item:item\n\
+    property_data_item:item -> ","[last] -> "}" -> return\n\
+}\n\
+\n\
+property_accessor_item {\n\
+    entry -> "default":key -> ":"\n\
+    entry -> "storage":key -> ":"[storage] -> string:value -> return\n\
+    entry -> "get":key -> ":"\n\
+    entry -> "set":key -> ":"\n\
+    entry -> "configurable":key -> ":"\n\
+    entry -> "enumerable":key -> ":"\n\
+    ":" -> literal_expression:value -> return\n\
+}\n\
+\n\
+property_data_item {\n\
+    entry -> "value":key -> ":"\n\
+    entry -> "writable":key -> ":"\n\
+    entry -> "configurable":key -> ":"\n\
+    entry -> "enumerable":key -> ":"\n\
+    ":" -> literal_expression:value -> return\n\
+}\n\
+\n\
+/*\n\
  * array literal\n\
  */\n\
 \n\
@@ -488,19 +535,26 @@ array_literal {\n\
  */\n\
 \n\
 async_literal {\n\
-    entry -> "function" -> "#":async -> "(" -> ")" -> scope:body -> return\n\
+    entry -> "func" -> "#":async\n\
+\n\
+    entry -> "function" -> "#":async -> "(" -> ")" -> block:body -> return\n\
     "#":async -> ident:name -> "("\n\
     "(" -> function_param_list:param_list -> ")"\n\
 }\n\
 \n\
 generator_literal {\n\
-    entry -> "function" -> "*":generator -> "(" -> ")" -> scope:body -> return\n\
+    entry -> "func" -> "*":generator\n\
+\n\
+    entry -> "function" -> "*":generator -> "(" -> ")" -> block:body -> return\n\
     "*":generator -> ident:name -> "("\n\
     "(" -> function_param_list:param_list -> ")"\n\
 }\n\
 \n\
 function_literal {\n\
-    entry -> "function" -> "(" -> ")" -> scope:body -> return\n\
+    entry -> "func" -> "("\n\
+    "func" -> ident:name\n\
+\n\
+    entry -> "function" -> "(" -> ")" -> block:body -> return\n\
     "function" -> ident:name -> "("\n\
     "(" -> function_param_list:param_list -> ")"\n\
 }\n\
@@ -646,42 +700,7 @@ proto_body_item {\n\
     entry -> name:key -> ":"\n\
     entry -> string:key -> ":"\n\
     ":" -> literal_expression:value -> return // todo verify\n\
-    ":" -> proto_body_property:value -> return\n\
-}\n\
-\n\
-proto_body_property {\n\
-    entry -> "property" -> proto_body_property_accessor -> return\n\
-    entry -> "property" -> proto_body_property_data -> return\n\
-}\n\
-\n\
-proto_body_property_accessor {\n\
-    entry -> "{" -> proto_body_property_accessor_item:item -> "}" -> return\n\
-    proto_body_property_accessor_item:item -> ","[any] -> proto_body_property_accessor_item:item\n\
-    proto_body_property_accessor_item:item -> ","[last] -> "}" -> return\n\
-}\n\
-\n\
-proto_body_property_data {\n\
-    entry -> "{" -> proto_body_property_data_item:item -> "}" -> return\n\
-    proto_body_property_data_item:item -> ","[any] -> proto_body_property_data_item:item\n\
-    proto_body_property_data_item:item -> ","[last] -> "}" -> return\n\
-}\n\
-\n\
-proto_body_property_accessor_item {\n\
-    entry -> "default":key -> ":"\n\
-    entry -> "storage":key -> ":" -> string:value -> return\n\
-    entry -> "get":key -> ":"\n\
-    entry -> "set":key -> ":"\n\
-    entry -> "configurable":key -> ":"\n\
-    entry -> "enumerable":key -> ":"\n\
-    ":" -> literal_expression:value -> return\n\
-}\n\
-\n\
-proto_body_property_data_item {\n\
-    entry -> "value":key -> ":"\n\
-    entry -> "writable":key -> ":"\n\
-    entry -> "configurable":key -> ":"\n\
-    entry -> "enumerable":key -> ":"\n\
-    ":" -> literal_expression:value -> return\n\
+    ":" -> property_literal:value -> return\n\
 }\n\
 ');
 resource('../definition/adria/root.sdt', '/*\n\
@@ -757,7 +776,9 @@ global_def {\n\
 }\n\
 \n\
 function_statement {\n\
-    entry -> "function" -> ident:name -> "(" -> ")" -> scope:body -> return\n\
+    entry -> "func" -> ident:name\n\
+    \n\
+    entry -> "function" -> ident:name -> "(" -> ")" -> block:body -> return\n\
     "(" -> function_param_list:param_list -> ")"\n\
 }\n\
 \n\
@@ -769,12 +790,16 @@ proto_statement {\n\
 }\n\
 \n\
 generator_statement {\n\
-    entry -> "function" -> "*":generator -> ident:name -> "(" -> ")" -> scope:body -> return\n\
+    entry -> "func" -> "*":generator\n\
+    \n\
+    entry -> "function" -> "*":generator -> ident:name -> "(" -> ")" -> block:body -> return\n\
     "(" -> function_param_list:param_list -> ")"\n\
 }\n\
 \n\
 async_statement {\n\
-    entry -> "function" -> "#":async -> ident:name -> "(" -> ")" -> scope:body -> return\n\
+    entry -> "func" -> "#":async    \n\
+    \n\
+    entry -> "function" -> "#":async -> ident:name -> "(" -> ")" -> block:body -> return\n\
     "(" -> function_param_list:param_list -> ")"\n\
 }\n\
 \n\
@@ -1067,7 +1092,7 @@ resource('../templates/adria/async.tpl', 'module(\'async.adria\', function(modul
     module.exports = Async;\n\
 });\n\
 ');
-resource('../templates/adria/framework.tpl', 'var <:if (platform == \'node\') { :>__<: } :>require;\n\
+resource('../templates/adria/framework.tpl', 'var <:if (platform == \'node\') { :>___<: } :>require;\n\
 var resource;<:if (enableApplication) { :>\n\
 var application;<: } :>\n\
 var module;<: if (platform == \'node\') { :>\n\
@@ -1119,11 +1144,11 @@ var Exception<: if (enableAssert) { :>, AssertionFailedException<: } :>;\n\
         args[0] = null;\n\
         return new (Function.prototype.bind.apply(Application, args));\n\
     };<: } :>\n\
-    <: if (platform == \'node\') { :>__<: } :>require = function(file) {\n\
+    <: if (platform == \'node\') { :>___<: } :>require = function(file) {\n\
         var module = modules[file];<: if (enableAssert) { :>\n\
         if (module === undefined) {\n\
             throw Error(\'missing dependency \' + file);\n\
-        }<: } :>        \n\
+        }<: } :>\n\
         if (typeof module.func === \'function\') {\n\
             var func = module.func;\n\
             delete module.func;\n\
@@ -1221,10 +1246,11 @@ module('prototype.adria', function(module, resource) {
         return padChar.repeat(paddedLength - this.length) + this.valueOf();
     };
     String.random = function random(length, chars) {
-        var chars, numChars, result, i, rnum;
-        chars = (chars === undefined ? '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ' : chars);
+        chars = (chars !== undefined ? chars : ('0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ'));
+        var numChars, result;
         numChars = chars.length;
         result = '';
+        var i, rnum;
         for (i = 0; i < length;i++) {
             rnum = Math.floor(Math.random() * numChars);
             result += chars.substr(rnum, 1);
@@ -1232,8 +1258,9 @@ module('prototype.adria', function(module, resource) {
         return result;
     };
     String.prototype.stripPostfix = function stripPostfix(postfix) {
-        var len, i;
+        var len;
         if (postfix instanceof Array) {
+            var i;
             for (i in postfix) {
                 len = postfix[i].length;
                 if (this.substr(-len) === postfix[i]) {
@@ -1253,7 +1280,7 @@ module('prototype.adria', function(module, resource) {
     };
 });
 module('util.adria', function(module, resource) {
-    var sysutil, crypto, DebugLog, debugLog, indent, enabled, log, dump, Enumeration, Enum, Set, processOptions, home, normalizeExtension, md5;
+    var sysutil, crypto, DebugLog, debugLog, indent, enabled, log, dump, Enumeration, Enum, processOptions, home, normalizeExtension, md5;
     sysutil = require('util');
     crypto = require('crypto');
     DebugLog = (function() {
@@ -1262,6 +1289,7 @@ module('util.adria', function(module, resource) {
             this.last = this.start;
             console.log('=============================: Log started');
         };
+        var DebugLog = ___self;
         ___self.prototype.print = function print(source, message, indent) {
             var now, diffStart, diffLast;
             now = Date.now();
@@ -1304,8 +1332,9 @@ module('util.adria', function(module, resource) {
         console.log(sysutil.inspect(obj, showHidden, depth));
     };
     Enumeration = function Enumeration(options) {
-        var bit, id;
+        var bit;
         bit = 0;
+        var id;
         for (id in options) {
             if (this[options[id]] === undefined) {
                 this[options[id]] = 1 << bit;
@@ -1320,133 +1349,10 @@ module('util.adria', function(module, resource) {
     Enum = function Enum(options) {
         return new Enumeration(options);
     };
-    Set = (function() {
-        var ___self = function Set(value) {
-            this.data = {  };
-            if (value !== undefined) {
-                this.add(value);
-            }
-        };
-        ___self.prototype.merge = function merge() {
-            var args, result, key, id;
-            args = Array.prototype.slice.call(arguments, 0);
-            result = new Set();
-            for (key in this.data) {
-                result.data[key] = true;
-            }
-            for (id in args) {
-                for (key in args[id].data) {
-                    result.data[key] = true;
-                }
-            }
-            return result;
-        };
-        ___self.prototype.add = function add(value) {
-            var data, element;
-            data = this.data;
-            if (value instanceof Array) {
-                value.forEach(function(element) {
-                    data[element] = true;
-                });
-            } else if (value instanceof Set) {
-                for (element in value.data) {
-                    data[element] = true;
-                }
-            } else {
-                data[value] = true;
-            }
-            return this;
-        };
-        ___self.prototype.remove = function remove(value) {
-            var data, element;
-            data = this.data;
-            if (value instanceof Array) {
-                value.forEach(function(element) {
-                    delete data[element];
-                });
-            } else if (value instanceof Set) {
-                for (element in value.data) {
-                    delete data[element];
-                }
-            } else {
-                delete data[value];
-            }
-            return this;
-        };
-        ___self.prototype.has = function has(value) {
-            var data, id, other, key;
-            data = this.data;
-            if (value instanceof Array) {
-                for (id in value) {
-                    if (data.hasOwnProperty(value[id]) !== true) {
-                        return false;
-                    }
-                }
-                return true;
-            } else if (value instanceof Set) {
-                other = value.data;
-                for (key in other) {
-                    if (data.hasOwnProperty(key) !== true) {
-                        return false;
-                    }
-                }
-                return true;
-            } else {
-                return (data.hasOwnProperty(value));
-            }
-        };
-        ___self.prototype.lacks = function lacks(value) {
-            return this.has(value) === false;
-        };
-        ___self.prototype.missing = function missing(value) {
-            var result, data, id, other, key;
-            result = new Set();
-            data = this.data;
-            if (value instanceof Array) {
-                for (id in value) {
-                    if (data[value[id]] !== true) {
-                        result.add(value[id]);
-                    }
-                }
-            } else if (value instanceof Set) {
-                other = value.data;
-                for (key in other) {
-                    if (data[key] !== true) {
-                        result.add(key);
-                    }
-                }
-            } else {
-                throw new Error('invalid argument');
-            }
-            return result;
-        };
-        ___self.prototype.toArray = function toArray() {
-            return Object.keys(this.data);
-        };
-        Object.defineProperty(___self.prototype, "empty", {
-            get: function empty() {
-                var dummy;
-                for (dummy in this.data) {
-                    return false;
-                }
-                return true;
-            }
-        });
-        Object.defineProperty(___self.prototype, "length", {
-            get: function length() {
-                var len, dummy;
-                len = 0;
-                for (dummy in this.data) {
-                    len++;
-                }
-                return len;
-            }
-        });
-        return ___self;
-    })();
     processOptions = function processOptions(context, handlers) {
-        var next, i, argv, prefix, param;
+        var next;
         next = '_default';
+        var i, argv, prefix, param;
         for (i = 2; i < process.argv.length;i++) {
             argv = process.argv[i];
             prefix = argv.slice(0, 2);
@@ -1483,11 +1389,151 @@ module('util.adria', function(module, resource) {
     module.exports.log = log;
     module.exports.dump = dump;
     module.exports.Enum = Enum;
-    module.exports.Set = Set;
     module.exports.processOptions = processOptions;
     module.exports.home = home;
     module.exports.normalizeExtension = normalizeExtension;
     module.exports.md5 = md5;
+});
+module('../../astdlib/astd/set.adria', function(module, resource) {
+    var Set;
+    Set = (function() {
+        var ___self = function Set(value) {
+            this.data = Object.create(null);
+            if (value !== undefined) {
+                this.add(value);
+            }
+        };
+        var Set = ___self;
+        ___self.prototype.merge = function merge() {
+            var args, result;
+            args = Array.prototype.slice.call(arguments, 0);
+            result = new Set();
+            var key;
+            for (key in this.data) {
+                result.data[key] = true;
+            }
+            var id;
+            for (id in args) {
+                var key;
+                for (key in args[id].data) {
+                    result.data[key] = true;
+                }
+            }
+            return result;
+        };
+        ___self.prototype.add = function add(value) {
+            var data;
+            data = this.data;
+            if (value instanceof Array) {
+                value.forEach(function(element) {
+                    data[element] = true;
+                });
+            } else if (value instanceof Set) {
+                var element;
+                for (element in value.data) {
+                    data[element] = true;
+                }
+            } else {
+                data[value] = true;
+            }
+            return this;
+        };
+        ___self.prototype.remove = function remove(value) {
+            var data;
+            data = this.data;
+            if (value instanceof Array) {
+                value.forEach(function(element) {
+                    delete data[element];
+                });
+            } else if (value instanceof Set) {
+                var element;
+                for (element in value.data) {
+                    delete data[element];
+                }
+            } else {
+                delete data[value];
+            }
+            return this;
+        };
+        ___self.prototype.has = function has(value) {
+            var data;
+            data = this.data;
+            if (value instanceof Array) {
+                var id;
+                for (id in value) {
+                    if (value[id] in data !== true) {
+                        return false;
+                    }
+                }
+                return true;
+            } else if (value instanceof Set) {
+                var other;
+                other = value.data;
+                var key;
+                for (key in other) {
+                    if (key in data !== true) {
+                        return false;
+                    }
+                }
+                return true;
+            } else {
+                return (value in data);
+            }
+        };
+        ___self.prototype.lacks = function lacks(value) {
+            return this.has(value) === false;
+        };
+        ___self.prototype.missing = function missing(value) {
+            var result, data;
+            result = new Set();
+            data = this.data;
+            if (value instanceof Array) {
+                var id;
+                for (id in value) {
+                    if (data[value[id]] !== true) {
+                        result.add(value[id]);
+                    }
+                }
+            } else if (value instanceof Set) {
+                var other;
+                other = value.data;
+                var key;
+                for (key in other) {
+                    if (data[key] !== true) {
+                        result.add(key);
+                    }
+                }
+            } else {
+                throw new Error('invalid argument');
+            }
+            return result;
+        };
+        ___self.prototype.toArray = function toArray() {
+            return Object.keys(this.data);
+        };
+        Object.defineProperty(___self.prototype, "empty", {
+            get: function empty() {
+                var dummy;
+                for (dummy in this.data) {
+                    return false;
+                }
+                return true;
+            }
+        });
+        Object.defineProperty(___self.prototype, "length", {
+            get: function length() {
+                var len;
+                len = 0;
+                var dummy;
+                for (dummy in this.data) {
+                    len++;
+                }
+                return len;
+            }
+        });
+        return ___self;
+    })();
+    module.exports = Set;
 });
 module('template.adria', function(module, resource) {
     var fs, Template;
@@ -1513,6 +1559,7 @@ module('template.adria', function(module, resource) {
             text = '(?:(?!' + openStatement + '|' + openExpression + '|' + openComment + ')[\\s\\S])+';
             this.regexp = new RegExp(statement + '|' + expression + '|' + comment + '|' + text, 'g');
         };
+        var Template = ___self;
         ___self.prototype.basePath = 'templates/';
         ___self.prototype.data = null;
         ___self.prototype.regexp = null;
@@ -1538,8 +1585,9 @@ module('template.adria', function(module, resource) {
             return jsString;
         };
         ___self.prototype.exec = function exec(tplString) {
-            var varDefs, name, value, finalString;
+            var varDefs, finalString;
             varDefs = 'var result = "";\n';
+            var name, value;
             for (name in this.data) {
                 value = this.data[name];
                 varDefs += 'var ' + name + ' = data.' + name + ';\n';
@@ -1565,30 +1613,32 @@ module('cache.adria', function(module, resource) {
     var fs, path, util, Cache;
     fs = require('fs');
     path = require('path');
-    util = __require('util.adria');
+    util = ___require('util.adria');
     Cache = (function() {
         var ___self = function Cache() {
             this.checkBaseDir();
         };
+        var Cache = ___self;
         ___self.prototype.baseDir = util.home() + '/.adria/cache/';
         ___self.prototype.checkBaseDir = function checkBaseDir() {
-            var parts, path, id, part;
+            var parts, ___path_scp1;
             if (this.baseDir.slice(0, 1) !== '/' || this.baseDir.slice(-1) !== '/') {
                 throw new Error('cache.baseDir needs to be an absolute path');
             }
             parts = this.baseDir.slice(1, -1).split('/');
-            path = '/';
+            ___path_scp1 = '/';
+            var id, part;
             for (id in parts) {
                 part = parts[id];
-                path += part;
-                if (fs.existsSync(path)) {
-                    if (fs.statSync(path).isFile()) {
-                        throw new Error(path + ' is a file');
+                ___path_scp1 += part;
+                if (fs.existsSync(___path_scp1)) {
+                    if (fs.statSync(___path_scp1).isFile()) {
+                        throw new Error(___path_scp1 + ' is a file');
                     }
                 } else {
-                    fs.mkdirSync(path, (parseInt(id) === parts.length - 1 ? 511 : 493));
+                    fs.mkdirSync(___path_scp1, (parseInt(id) === parts.length - 1 ? 511 : 493));
                 }
-                path += '/';
+                ___path_scp1 += '/';
             }
         };
         ___self.prototype.cacheName = function cacheName(file) {
@@ -1597,13 +1647,16 @@ module('cache.adria', function(module, resource) {
             return this.baseDir + util.md5(absPath);
         };
         ___self.prototype.fetch = function fetch(file, variants) {
-            var cacheFile, inputStat, cacheStat, resultData, id, variant;
+            var cacheFile;
             cacheFile = this.cacheName(file);
             if (fs.existsSync(cacheFile) && fs.existsSync(file)) {
+                var inputStat, cacheStat;
                 inputStat = fs.statSync(file);
                 cacheStat = fs.statSync(cacheFile);
                 if (cacheStat.isFile() && inputStat.mtime.toString() === cacheStat.mtime.toString()) {
+                    var resultData;
                     resultData = {  };
+                    var id, variant;
                     for (id in variants) {
                         variant = variants[id];
                         if (variant === 'base') {
@@ -1621,9 +1674,10 @@ module('cache.adria', function(module, resource) {
             return null;
         };
         ___self.prototype.insert = function insert(file, variants) {
-            var inputStat, cacheFile, ext, variant;
+            var inputStat, cacheFile;
             inputStat = fs.statSync(file);
             cacheFile = this.cacheName(file);
+            var ext, variant;
             for (ext in variants) {
                 variant = variants[ext];
                 if (ext === 'base') {
@@ -1641,8 +1695,8 @@ module('cache.adria', function(module, resource) {
 });
 module('transform.adria', function(module, resource) {
     var util, Cache, Transform;
-    util = __require('util.adria');
-    Cache = __require('cache.adria');
+    util = ___require('util.adria');
+    Cache = ___require('cache.adria');
     Transform = (function() {
         var ___self = function Transform(piped) {
             this.options = { basePath: '', paths: [  ], files: [  ], outFile: null };
@@ -1656,6 +1710,7 @@ module('transform.adria', function(module, resource) {
                 util.log.enable();
             }
         };
+        var Transform = ___self;
         ___self.prototype.optionsDefinition = null;
         ___self.prototype.options = null;
         ___self.prototype.piped = null;
@@ -1686,10 +1741,10 @@ module('transform.adria', function(module, resource) {
             });
         };
         ___self.prototype.defineOptions = function defineOptions(optionsDefinition) {
-            var id;
             if (this.optionsDefinition === null) {
                 this.optionsDefinition = {  };
             }
+            var id;
             for (id in optionsDefinition) {
                 this.optionsDefinition[id] = optionsDefinition[id];
             }
@@ -1707,6 +1762,7 @@ module('parser/generator_state.adria', function(module, resource) {
     var GeneratorState;
     GeneratorState = (function() {
         var ___self = function GeneratorState() {}
+        var GeneratorState = ___self;
         ___self.prototype.generator = null;
         ___self.prototype.node = null;
         ___self.prototype.stack = null;
@@ -1742,13 +1798,14 @@ module('parser/generator_state.adria', function(module, resource) {
 });
 module('parser/definition/node.adria', function(module, resource) {
     var Enum, Type, StackItem, Node;
-    Enum = __require('util.adria').Enum;
+    Enum = ___require('util.adria').Enum;
     Type = Enum([ 'NONE', 'BLOCK', 'JUMP', 'RETURN' ]);
     StackItem = (function() {
         var ___self = function StackItem(node, token) {
             this.node = node;
             this.token = token;
         };
+        var StackItem = ___self;
         ___self.prototype.node = null;
         ___self.prototype.token = null;
         return ___self;
@@ -1757,6 +1814,7 @@ module('parser/definition/node.adria', function(module, resource) {
         var ___self = function Node() {
             this.children = [  ];
         };
+        var Node = ___self;
         ___self.prototype.children = null;
         ___self.prototype.tokenType = 0;
         ___self.prototype.match = '';
@@ -1766,8 +1824,9 @@ module('parser/definition/node.adria', function(module, resource) {
         ___self.prototype.label = '';
         ___self.prototype.description = '';
         ___self.prototype.hasChild = function hasChild(node) {
-            var children, id;
+            var children;
             children = this.children;
+            var id;
             for (id in children) {
                 if (children[id] === node) {
                     return true;
@@ -1776,7 +1835,7 @@ module('parser/definition/node.adria', function(module, resource) {
             return false;
         };
         ___self.prototype.add = function add(node) {
-            var children, lastId, lastChild;
+            var children;
             if (this.hasChild(node)) {
                 return ;
             }
@@ -1785,8 +1844,10 @@ module('parser/definition/node.adria', function(module, resource) {
                 children.push(node);
                 return node;
             } else {
+                var lastId;
                 lastId = children.length - 1;
                 if (lastId >= 0) {
+                    var lastChild;
                     lastChild = children[lastId];
                     if (lastChild.type & Type.RETURN) {
                         children[lastId] = node;
@@ -1833,12 +1894,14 @@ module('parser/definition/node.adria', function(module, resource) {
             return false;
         };
         ___self.prototype.filter = function* filter(parser, token, stack) {
-            var children, child, blockRoot, generator, result, message, id, len, top;
+            var children, child, blockRoot, generator, result;
             children = this.children;
             if (stack.length > 500) {
+                var message;
                 message = parser.errorMessage(token, this, stack);
                 throw new Error('recursion too deep. last error:\n' + message);
             }
+            var id, len;
             for (id = 0, len = children.length; id < len;id++) {
                 child = children[id];
                 if (child.type === Type.JUMP) {
@@ -1851,6 +1914,7 @@ module('parser/definition/node.adria', function(module, resource) {
                         yield result.value;
                     }
                 } else if (child.type === Type.RETURN) {
+                    var top;
                     if (stack.length === 0) {
                         throw new Error('nothing to yield');
                     }
@@ -1866,19 +1930,21 @@ module('parser/definition/node.adria', function(module, resource) {
             }
         };
         ___self.prototype.toString = function toString(owner, known) {
-            var data, childId, child, result, item;
+            var data, result;
             if (known === undefined) {
                 data = {  };
             } else {
                 data = known;
             }
+            var childId, child;
             for (childId in this.children) {
                 child = this.children[childId];
                 if ((child.type & Type.RETURN) === 0) {
                     if (child.type === Type.JUMP && owner !== undefined) {
                         try {
                             owner.definition.getBlock(child.match).toString(owner, data);
-                        } catch (e) {
+                        } catch (___exc3) {
+                            var e = ___exc3;
                         }
                     } else {
                         data[child.description != "" ? child.description : (child.capture != "" ? child.capture : "\"" + child.match + "\"")] = true;
@@ -1889,6 +1955,7 @@ module('parser/definition/node.adria', function(module, resource) {
                 return "";
             }
             result = this.type === Type.JUMP ? '[' + this.match + '] ' : '';
+            var item;
             for (item in data) {
                 if (result != "") {
                     result += ", ";
@@ -1905,12 +1972,13 @@ module('parser/definition/node.adria', function(module, resource) {
 });
 module('parser/definition.adria', function(module, resource) {
     var Node, Definition;
-    Node = __require('parser/definition/node.adria');
+    Node = ___require('parser/definition/node.adria');
     Definition = (function() {
         var ___self = function Definition(initialBlock) {
             this.blockRoot = {  };
             this.initialBlock = (initialBlock === undefined ? 'root' : initialBlock);
         };
+        var Definition = ___self;
         ___self.prototype.createBlock = function createBlock(name, rootNode) {
             name = (name === null ? this.initialBlock : name);
             rootNode.match = 'block_' + name;
@@ -1939,24 +2007,25 @@ module('parser/definition.adria', function(module, resource) {
 module('parser.adria', function(module, resource) {
     var path, util, GeneratorState, Definition, Parser;
     path = require('path');
-    util = __require('util.adria');
-    GeneratorState = __require('parser/generator_state.adria');
-    Definition = __require('parser/definition.adria');
+    util = ___require('util.adria');
+    GeneratorState = ___require('parser/generator_state.adria');
+    Definition = ___require('parser/definition.adria');
     Parser = (function() {
         var ___self = function Parser() {
             this.definition = new Definition('root');
         };
+        var Parser = ___self;
         ___self.prototype.definition = null;
         ___self.prototype.tokenizer = null;
         ___self.prototype.file = 'unnamed';
         ___self.prototype.includeTrace = true;
         ___self.prototype.clone = function clone() {
+            var parser;
             var ___p, ___p0 = ___p = (this === this.constructor.prototype ? this : Object.getPrototypeOf(this));
             while (___p !== null && (___p.clone !== clone || ___p.hasOwnProperty('clone') === false)) {
                 ___p = Object.getPrototypeOf(___p);
             }
             ___p = (___p !== null ? Object.getPrototypeOf(___p).constructor : ___p0);
-            var parser;
             parser = ___p.prototype.clone.call(this);
             parser.definition = this.definition;
             parser.tokenizer = this.tokenizer;
@@ -2035,7 +2104,8 @@ module('parser.adria', function(module, resource) {
                 }
                 try {
                     result.next();
-                } catch (e) {
+                } catch (___exc2) {
+                    var e = ___exc2;
                     if (e.message === 'nothing to yield') {
                         break ;
                     } else {
@@ -2084,6 +2154,7 @@ module('tokenizer/result.adria', function(module, resource) {
             this.col = col;
             this.row = row;
         };
+        var Position = ___self;
         ___self.prototype.col = 0;
         ___self.prototype.row = 0;
         ___self.prototype.toString = function toString() {
@@ -2098,6 +2169,7 @@ module('tokenizer/result.adria', function(module, resource) {
             this.start = start;
             this.pos = new Position(col, row);
         };
+        var Token = ___self;
         ___self.prototype.data = '';
         ___self.prototype.type = 0;
         ___self.prototype.start = 0;
@@ -2109,6 +2181,7 @@ module('tokenizer/result.adria', function(module, resource) {
             this.tokenizer = tokenizer;
             this.tokens = [  ];
         };
+        var Result = ___self;
         ___self.prototype.add = function add(data, type, start, col, row) {
             this.tokens.push(new Token(data, type, start, col, row));
         };
@@ -2126,26 +2199,29 @@ module('tokenizer/result.adria', function(module, resource) {
 });
 module('tokenizer.adria', function(module, resource) {
     var Enum, Result, Tokenizer;
-    Enum = __require('util.adria').Enum;
-    Result = __require('tokenizer/result.adria');
+    Enum = ___require('util.adria').Enum;
+    Result = ___require('tokenizer/result.adria');
     Tokenizer = (function() {
         var ___self = function Tokenizer(definition, extra) {
-            var legend, id;
+            var legend;
             this.definition = definition;
             legend = [  ];
+            var id;
             for (id in definition) {
                 legend.push(definition[id].name);
             }
             if (extra instanceof Array) {
+                var id;
                 for (id in extra) {
                     legend.push(extra);
                 }
             }
             this.Type = Enum(legend);
         };
+        var Tokenizer = ___self;
         ___self.prototype.process = function process(data, filename) {
             filename = (filename !== undefined ? filename : ('unnamed'));
-            var startPos, result, col, row, definition, match, found, lastMatch, id, processor;
+            var startPos, result, col, row, definition, match, found, lastMatch;
             startPos = 0;
             result = new Result(this);
             col = 1;
@@ -2154,6 +2230,7 @@ module('tokenizer.adria', function(module, resource) {
             lastMatch = null;
             while (startPos < data.length) {
                 found = false;
+                var id, processor;
                 for (id in this.definition) {
                     processor = this.definition[id];
                     match = processor.func(data, startPos, lastMatch);
@@ -2192,9 +2269,10 @@ module('tokenizer.adria', function(module, resource) {
             return {
                 name: name,
                 func: function(data, start, lastMatch) {
-                    var result, rows, lastBreak, lastRowLen, match;
+                    var result;
                     result = regex.exec(data.substr(start));
                     if (result !== null && (lastRegex === null || lastRegex.exec(lastMatch) !== null)) {
+                        var rows, lastBreak, lastRowLen, match;
                         rows = result[0].occurances('\n');
                         lastBreak = result[0].lastIndexOf('\n');
                         lastRowLen = result[0].length - (lastBreak + 1);
@@ -2225,8 +2303,8 @@ module('tokenizer.adria', function(module, resource) {
             regex = new RegExp('^(' + regexEscape(start) + '[\\s\\S]*?' + regexEscape(end) + ')');
             return regexFunc(name, regex);
         };
-        this.regex = function regex(name, regex, lastRegex, callback) {
-            return regexFunc(name, regex, lastRegex, callback);
+        this.regex = function regex(name, thisRegex, lastRegex, callback) {
+            return regexFunc(name, thisRegex, lastRegex, callback);
         };
         excludeFunc = function excludeFunc(match) {
             if (this.indexOf(match.data) !== -1) {
@@ -2234,12 +2312,13 @@ module('tokenizer.adria', function(module, resource) {
             }
             return match;
         };
-        this.exclude = function exclude(name, regex, exclude) {
-            return regexFunc(name, regex, null, excludeFunc.bind(exclude));
+        this.exclude = function exclude(name, regex, excluded) {
+            return regexFunc(name, regex, null, excludeFunc.bind(excluded));
         };
         this.set = function set(name, matches) {
-            var escaped, id, regex;
+            var escaped, regex;
             escaped = [  ];
+            var id;
             for (id in matches) {
                 escaped.push(regexEscape(matches[id]));
             }
@@ -2247,8 +2326,9 @@ module('tokenizer.adria', function(module, resource) {
             return regexFunc(name, regex);
         };
         this.group = function group(name, matches) {
-            var escaped, id, regex;
+            var escaped, regex;
             escaped = [  ];
+            var id;
             for (id in matches) {
                 escaped.push(regexEscape(matches[id]));
             }
@@ -2269,6 +2349,7 @@ module('definition_parser/path.adria', function(module, resource) {
             this.source = new PathElement(sourceName, sourceCapture, sourceLabel, sourceCondition);
             this.target = new PathElement(targetName, targetCapture, targetLabel, targetCondition);
         };
+        var Path = ___self;
         ___self.prototype.source = null;
         ___self.prototype.target = null;
         ___self.prototype.reset = function reset() {
@@ -2291,6 +2372,7 @@ module('definition_parser/path.adria', function(module, resource) {
             this.label = label;
             this.condition = condition;
         };
+        var PathElement = ___self;
         ___self.prototype.name = '';
         ___self.prototype.capture = '';
         ___self.prototype.label = '';
@@ -2301,10 +2383,10 @@ module('definition_parser/path.adria', function(module, resource) {
 });
 module('definition_parser.adria', function(module, resource) {
     var util, Parser, Tokenizer, Path, DefinitionParser;
-    util = __require('util.adria');
-    Parser = __require('parser.adria');
-    Tokenizer = __require('tokenizer.adria');
-    Path = __require('definition_parser/path.adria');
+    util = ___require('util.adria');
+    Parser = ___require('parser.adria');
+    Tokenizer = ___require('tokenizer.adria');
+    Path = ___require('definition_parser/path.adria');
     DefinitionParser = (function(___parent) {
         var ___self = function DefinitionParser() {
             Parser.prototype.constructor.call(this);
@@ -2323,6 +2405,7 @@ module('definition_parser.adria', function(module, resource) {
         };
         ___self.prototype = Object.create(___parent.prototype);
         ___self.prototype.constructor = ___self;
+        var DefinitionParser = ___self;
         ___self.prototype.capture = function capture(name, value) {
             var currentPath;
             currentPath = this.currentPath;
@@ -2360,8 +2443,9 @@ module('definition_parser.adria', function(module, resource) {
             }
         };
         ___self.prototype.parse = function parse(source) {
-            var results, id, result;
+            var results;
             results = Parser.prototype.parse.call(this, source);
+            var id, result;
             for (id in results) {
                 result = results[id];
                 if (result.node.capture != '') {
@@ -2371,19 +2455,23 @@ module('definition_parser.adria', function(module, resource) {
             return results;
         };
         ___self.prototype.trainOther = function trainOther(parser) {
-            var parts, block_name, block_paths, node_map, node_pair, id, path, i, part, hash, node;
+            var parts;
             parts = [ 'source', 'target' ];
+            var block_name, block_paths, node_map, node_pair;
             for (block_name in this.pathBlocks) {
                 block_paths = this.pathBlocks[block_name];
                 node_map = {  };
                 node_pair = [  ];
+                var id, path;
                 for (id in block_paths) {
                     path = block_paths[id];
+                    var i, part, hash;
                     for (i in parts) {
                         part = parts[i];
                         hash = path[part].name + ':' + path[part].capture + ':' + path[part].label;
                         node_pair[i] = node_map[hash];
                         if (node_pair[i] === undefined) {
+                            var node;
                             node = parser.createNode(path[part].name, path[part].capture, path[part].label, path[part].condition);
                             node_map[hash] = node;
                             node_pair[i] = node;
@@ -2449,12 +2537,13 @@ module('definition_parser.adria', function(module, resource) {
 module('language_parser/capture_node.adria', function(module, resource) {
     var SourceNode, Template, CaptureNode;
     SourceNode = require('source-map').SourceNode;
-    Template = __require('template.adria');
+    Template = ___require('template.adria');
     CaptureNode = (function() {
         var ___self = function CaptureNode(key, value) {
             this.key = key;
             this.value = value;
         };
+        var CaptureNode = ___self;
         ___self.prototype.parent = null;
         ___self.prototype.children = null;
         ___self.prototype.key = '';
@@ -2463,8 +2552,9 @@ module('language_parser/capture_node.adria', function(module, resource) {
         ___self.prototype.row = 0;
         ___self.prototype.col = 0;
         ___self.prototype.toJSON = function toJSON() {
-            var children, id;
+            var children;
             children = [  ];
+            var id;
             for (id in this.children) {
                 children.push(this.children[id].toJSON());
             }
@@ -2479,7 +2569,7 @@ module('language_parser/capture_node.adria', function(module, resource) {
             };
         };
         ___self.prototype.fromJSON = function fromJSON(json, parentNode, typeMapper) {
-            var Type, result, jsonChildren, resultChildren, id;
+            var Type, result, jsonChildren, resultChildren;
             Type = typeMapper(null, json._);
             result = new Type(json.k, json.v);
             result.parent = parentNode;
@@ -2489,6 +2579,7 @@ module('language_parser/capture_node.adria', function(module, resource) {
             result.children = [  ];
             jsonChildren = json.s;
             resultChildren = result.children;
+            var id;
             for (id in jsonChildren) {
                 resultChildren.push(CaptureNode.prototype.fromJSON(jsonChildren[id], result, typeMapper));
             }
@@ -2497,9 +2588,10 @@ module('language_parser/capture_node.adria', function(module, resource) {
         ___self.prototype.fromResults = (function() {
             var stackDiff;
             stackDiff = function stackDiff(stack, lastStack, minStackLen) {
-                var deepestCommonCapture, minLen, i, numCaptures, lastLen, captures, len;
+                var deepestCommonCapture, minLen, numCaptures, lastLen, captures, len;
                 deepestCommonCapture = -1;
                 minLen = Math.min(stack.length, lastStack.length, minStackLen);
+                var i;
                 for (i = 0; i < minLen;i++) {
                     if (stack[i].node === lastStack[i].node) {
                         if (stack[i].node.capture !== '') {
@@ -2511,6 +2603,7 @@ module('language_parser/capture_node.adria', function(module, resource) {
                 }
                 numCaptures = 0;
                 lastLen = lastStack.length;
+                var i;
                 for (i = deepestCommonCapture + 1; i < lastLen;i++) {
                     if (lastStack[i].node.capture !== '') {
                         numCaptures++;
@@ -2518,6 +2611,7 @@ module('language_parser/capture_node.adria', function(module, resource) {
                 }
                 captures = [  ];
                 len = stack.length;
+                var i;
                 for (i = deepestCommonCapture + 1; i < len;i++) {
                     if (stack[i].node.capture !== '') {
                         captures.push(stack[i].node);
@@ -2526,10 +2620,11 @@ module('language_parser/capture_node.adria', function(module, resource) {
                 return { ascend: numCaptures, create: captures };
             };
             return function fromResults(results, typeMapper) {
-                var root, current, lastStack, result, stack, diff, node, resultId, nodeId, match;
+                var root, current, lastStack, result, stack, diff, node;
                 root = new CaptureNode();
                 current = root;
                 lastStack = [  ];
+                var resultId;
                 for (resultId in results) {
                     result = results[resultId];
                     stack = result.stack;
@@ -2537,6 +2632,7 @@ module('language_parser/capture_node.adria', function(module, resource) {
                     while (diff.ascend--) {
                         current = current.parent;
                     }
+                    var nodeId;
                     for (nodeId in diff.create) {
                         node = diff.create[nodeId];
                         current = current.addNew(node.capture, node.name, typeMapper(node.capture, node.name));
@@ -2545,6 +2641,7 @@ module('language_parser/capture_node.adria', function(module, resource) {
                     }
                     node = result.node;
                     if (node.capture !== '') {
+                        var match;
                         match = current.addNew(node.capture, result.token.data, typeMapper(node.capture, node.name));
                         match.row = result.token.pos.row;
                         match.col = result.token.pos.col;
@@ -2603,6 +2700,15 @@ module('language_parser/capture_node.adria', function(module, resource) {
                 return null;
             }
         };
+        ___self.prototype.findProto = function findProto(Constructor, fromParent) {
+            fromParent = (fromParent !== undefined ? fromParent : (true));
+            var current;
+            current = fromParent ? this.parent : this;
+            while (current instanceof CaptureNode && current instanceof Constructor === false) {
+                current = current.parent;
+            }
+            return current instanceof Constructor ? current : null;
+        };
         ___self.prototype.parser = function parser() {
             var current;
             current = this;
@@ -2619,10 +2725,10 @@ module('language_parser/capture_node.adria', function(module, resource) {
             return child;
         };
         ___self.prototype.get = function get(key, index, dummy) {
-            var id, child;
             index = (index === undefined ? 0 : index);
             dummy = (dummy === undefined ? this.dummy : null);
             if (this.children instanceof Array) {
+                var id, child;
                 for (id in this.children) {
                     child = this.children[id];
                     if (child.key == key && index-- == 0) {
@@ -2632,13 +2738,14 @@ module('language_parser/capture_node.adria', function(module, resource) {
             }
             return dummy;
         };
-        ___self.prototype.path = function path(path, dummy) {
-            var step, current, id;
+        ___self.prototype.path = function path(pathString, dummy) {
+            var step, current;
             current = this;
             dummy = (dummy === undefined ? this.dummy : null);
-            path = path.split('.');
-            for (id in path) {
-                step = path[id].split('[');
+            pathString = pathString.split('.');
+            var id;
+            for (id in pathString) {
+                step = pathString[id].split('[');
                 if (step.length === 1) {
                     current = current.get(step[0]);
                 } else {
@@ -2661,13 +2768,14 @@ module('language_parser/capture_node.adria', function(module, resource) {
         };
         ___self.prototype.nest = function nest(from, to, Constructor) {
             Constructor = (Constructor !== undefined ? Constructor : (this.constructor));
-            var node, id, child;
+            var node;
             node = new Constructor(this.key, this.value);
             node.children = this.children.splice(from, to - from + 1, node);
             node.parent = this;
             node.tpl = this.tpl;
             node.row = node.children[0].row;
             node.col = node.children[0].col;
+            var id, child;
             for (id in node.children) {
                 child = node.children[id];
                 child.parent = node;
@@ -2684,9 +2792,10 @@ module('language_parser/capture_node.adria', function(module, resource) {
             return new SourceNode(this.row, this.col - 1, this.parser().file, code);
         };
         ___self.prototype.toString = function toString() {
-            var result, id;
+            var result;
             result = '';
             if (this.children instanceof Array) {
+                var id;
                 for (id in this.children) {
                     result += this.children[id].toString();
                 }
@@ -2694,9 +2803,10 @@ module('language_parser/capture_node.adria', function(module, resource) {
             return result;
         };
         ___self.prototype.toSourceNode = function toSourceNode() {
-            var result, id;
+            var result;
             result = new SourceNode(null, null);
             if (this.children instanceof Array) {
+                var id;
                 for (id in this.children) {
                     result.add(this.children[id].toSourceNode());
                 }
@@ -2704,8 +2814,8 @@ module('language_parser/capture_node.adria', function(module, resource) {
             return result;
         };
         ___self.prototype.scan = function scan(state) {
-            var id, child;
             if (this.children instanceof Array) {
+                var id, child;
                 for (id in this.children) {
                     child = this.children[id];
                     child.scan(state);
@@ -2713,8 +2823,8 @@ module('language_parser/capture_node.adria', function(module, resource) {
             }
         };
         ___self.prototype.preprocess = function preprocess(state) {
-            var id, child;
             if (this.children instanceof Array) {
+                var id, child;
                 for (id in this.children) {
                     child = this.children[id];
                     child.preprocess(state);
@@ -2722,23 +2832,27 @@ module('language_parser/capture_node.adria', function(module, resource) {
             }
         };
         ___self.prototype.each = function each(fn) {
-            var children, last, id;
+            var children;
             children = this.children;
             if (children instanceof Array) {
+                var last;
                 last = children.length - 1;
+                var id;
                 for (id in children) {
                     fn.call(this, children[id], +id === 0, +id === last);
                 }
             }
         };
         ___self.prototype.eachKey = function eachKey(key, fn) {
-            var part, children, len, prevChild, first, id, child;
+            var part;
             part = key.split('.');
             if (this.children instanceof Array) {
+                var children, len, prevChild, first, id;
                 children = this.children;
                 len = children.length;
                 prevChild = null;
                 first = true;
+                var child;
                 for (id = 0; id < len;id++) {
                     child = children[id];
                     if (child.key === part[0]) {
@@ -2779,10 +2893,10 @@ module('language_parser/capture_node.adria', function(module, resource) {
 module('language_parser.adria', function(module, resource) {
     var fs, util, Parser, DefinitionParser, CaptureNode, LanguageParser;
     fs = require('fs');
-    util = __require('util.adria');
-    Parser = __require('parser.adria');
-    DefinitionParser = __require('definition_parser.adria');
-    CaptureNode = __require('language_parser/capture_node.adria');
+    util = ___require('util.adria');
+    Parser = ___require('parser.adria');
+    DefinitionParser = ___require('definition_parser.adria');
+    CaptureNode = ___require('language_parser/capture_node.adria');
     LanguageParser = (function(___parent) {
         var ___self = function LanguageParser(transform) {
             Parser.prototype.constructor.call(this, transform);
@@ -2792,6 +2906,7 @@ module('language_parser.adria', function(module, resource) {
         };
         ___self.prototype = Object.create(___parent.prototype);
         ___self.prototype.constructor = ___self;
+        var LanguageParser = ___self;
         ___self.prototype.trainer = null;
         ___self.prototype.sourceCode = null;
         ___self.prototype.captureTree = null;
@@ -2800,12 +2915,12 @@ module('language_parser.adria', function(module, resource) {
         ___self.prototype.transform = null;
         ___self.prototype.outputMethod = 'toSourceNode';
         ___self.prototype.clone = function clone() {
+            var parser;
             var ___p, ___p0 = ___p = (this === this.constructor.prototype ? this : Object.getPrototypeOf(this));
             while (___p !== null && (___p.clone !== clone || ___p.hasOwnProperty('clone') === false)) {
                 ___p = Object.getPrototypeOf(___p);
             }
             ___p = (___p !== null ? Object.getPrototypeOf(___p).constructor : ___p0);
-            var parser;
             parser = ___p.prototype.clone.call(this);
             parser.trainer = this.trainer;
             parser.sourceCode = this.sourceCode;
@@ -2948,9 +3063,124 @@ module('language_parser.adria', function(module, resource) {
     LanguageParser.CaptureNode = CaptureNode;
     module.exports = LanguageParser;
 });
+module('../../astdlib/astd/map.adria', function(module, resource) {
+    var Map;
+    Map = (function() {
+        var ___self = function Map(key, value) {
+            this.data = Object.create(null);
+            if (key !== undefined) {
+                this.set(key, value);
+            }
+        };
+        var Map = ___self;
+        ___self.prototype.merge = function merge() {
+            var args, result;
+            args = Array.prototype.slice.call(arguments, 0);
+            result = new Map();
+            var key, value;
+            for (key in this.data) {
+                value = this.data[key];
+                result.data[key] = value;
+            }
+            var id;
+            for (id in args) {
+                var key, value;
+                for (key in args[id].data) {
+                    value = args[id].data[key];
+                    result.data[key] = value;
+                }
+            }
+            return result;
+        };
+        ___self.prototype.set = function set(key, value) {
+            var data;
+            data = this.data;
+            if (key instanceof Map) {
+                var mapKey, mapValue;
+                for (mapKey in value.data) {
+                    mapValue = value.data[mapKey];
+                    data[mapKey] = mapValue;
+                }
+            } else {
+                data[key] = value;
+            }
+            return this;
+        };
+        ___self.prototype.get = function get(key) {
+            return this.data[key];
+        };
+        ___self.prototype.unset = function unset(key) {
+            var data;
+            data = this.data;
+            if (key instanceof Array) {
+                var k, arrayValue;
+                for (k in key) {
+                    arrayValue = key[k];
+                    delete data[arrayValue];
+                }
+            } else {
+                delete data[key];
+            }
+            return this;
+        };
+        ___self.prototype.has = function has(key) {
+            var data;
+            data = this.data;
+            if (key instanceof Array) {
+                var id;
+                for (id in key) {
+                    if (key[id] in data !== true) {
+                        return false;
+                    }
+                }
+                return true;
+            } else {
+                return (key in data);
+            }
+        };
+        ___self.prototype.lacks = function lacks(key) {
+            return this.has(key) === false;
+        };
+        ___self.prototype.keys = function keys() {
+            return Object.keys(this.data);
+        };
+        ___self.prototype.values = function values() {
+            var result;
+            result = [  ];
+            var key, value;
+            for (key in this.data) {
+                value = this.data[key];
+                result.push(value);
+            }
+            return result;
+        };
+        Object.defineProperty(___self.prototype, "empty", {
+            get: function empty() {
+                var dummy;
+                for (dummy in this.data) {
+                    return false;
+                }
+                return true;
+            }
+        });
+        Object.defineProperty(___self.prototype, "length", {
+            get: function length() {
+                var len;
+                len = 0;
+                var dummy;
+                for (dummy in this.data) {
+                    len++;
+                }
+                return len;
+            }
+        });
+        return ___self;
+    })();
+    module.exports = Map;
+});
 module('language_parser/ast_exception.adria', function(module, resource) {
     var CaptureNode, ASTException;
-    CaptureNode = __require('language_parser/capture_node.adria');
+    CaptureNode = ___require('language_parser/capture_node.adria');
     ASTException = (function(___parent) {
         var ___self = function ASTException(message, node) {
             this.row = node.row;
@@ -2960,6 +3190,7 @@ module('language_parser/ast_exception.adria', function(module, resource) {
         };
         ___self.prototype = Object.create(___parent.prototype);
         ___self.prototype.constructor = ___self;
+        var ASTException = ___self;
         ___self.prototype.row = 0;
         ___self.prototype.col = 0;
         ___self.prototype.file = '';
@@ -2968,56 +3199,38 @@ module('language_parser/ast_exception.adria', function(module, resource) {
     module.exports = ASTException;
 });
 module('targets/adria_node.adria', function(module, resource) {
-    var path, fs, SourceNode, LanguageParser, CaptureNode, Transform, util, Set, ASTException, AdriaNode, AccessOperationProtocall, ConstLiteral, Scope, Module, InvokeOperation, AsyncWrapOperation, FunctionLiteral, FunctionStatement, GeneratorLiteral, GeneratorStatement, AsyncLiteral, AsyncStatement, FunctionParamList, BaseLiteral, DoWhileStatement, WhileStatement, IfStatement, SwitchStatement, ForCountStatement, ForInStatement, ObjectLiteral, storageId, ProtoBodyProperty, ArrayLiteral, Expression, ProtoLiteral, ProtoStatement, NewProtoLiteral, ProtoBodyItem, ReturnStatement, FlowStatement, YieldLiteral, catchSpecificsId, CatchSpecifics, CatchAll, TryCatchFinallyStatement, ThrowStatement, AssertStatement, Statement, InterruptibleStatement, AdriaFileNode, ResourceLiteral, RequireLiteral, ModuleStatement, ExportStatement, GlobalDef, ParentLiteral, StorageLiteral, ValueType, Ident, Name, String, Numeric, VarDef, ImportStatement;
+    var path, fs, SourceNode, LanguageParser, CaptureNode, Transform, util, Set, Map, ASTException, AdriaNode, AccessOperationProtocall, ConstLiteral, Scope, Module, InvokeOperation, AsyncWrapOperation, FunctionLiteral, FunctionStatement, GeneratorLiteral, GeneratorStatement, AsyncLiteral, AsyncStatement, FunctionParamList, BaseLiteral, DoWhileStatement, WhileStatement, IfConditional, IfUnconditional, IfStatement, SwitchStatement, ForCountStatement, ForInStatement, ObjectLiteral, PropertyLiteral, ArrayLiteral, Expression, ProtoLiteral, ProtoStatement, NewProtoLiteral, ProtoBodyItem, ReturnStatement, FlowStatement, YieldLiteral, Try, Catch, CatchSpecific, CatchAll, Finally, ThrowStatement, AssertStatement, Statement, InterruptibleStatement, AdriaFileNode, ResourceLiteral, RequireLiteral, ModuleStatement, ExportStatement, GlobalDef, ParentLiteral, StorageLiteral, ValueType, Ident, Name, String, Numeric, VarDef, ImportStatement;
     path = require('path');
     fs = require('fs');
     SourceNode = require('source-map').SourceNode;
-    LanguageParser = __require('language_parser.adria');
+    LanguageParser = ___require('language_parser.adria');
     CaptureNode = LanguageParser.CaptureNode;
-    Transform = __require('transform.adria');
-    util = __require('util.adria');
-    Set = util.Set;
-    ASTException = __require('language_parser/ast_exception.adria');
+    Transform = ___require('transform.adria');
+    util = ___require('util.adria');
+    Set = ___require('../../astdlib/astd/set.adria');
+    Map = ___require('../../astdlib/astd/map.adria');
+    ASTException = ___require('language_parser/ast_exception.adria');
     AdriaNode = (function(___parent) {
         var ___self = function AdriaNode() {
             ___parent.apply(this, arguments);
         }
         ___self.prototype = Object.create(___parent.prototype);
         ___self.prototype.constructor = ___self;
-        ___self.prototype.findScope = function findScope() {
-            return this.ancestor(null, 'scope|module');
+        var AdriaNode = ___self;
+        ___self.prototype.findScope = function findScope(fromParent) {
+            fromParent = (fromParent !== undefined ? fromParent : (false));
+            return this.findProto(Scope, fromParent);
         };
         ___self.prototype.checkDefined = function checkDefined(name) {
-            var parser, scope, paramNode;
+            var parser;
             parser = this.parser();
-            if (parser.transform.implicits.has(name)) {
+            if (parser.transform.implicits.has(name) || parser.transform.globals.has(name)) {
                 return ;
             }
-            scope = this;
-            do {
-                if (scope instanceof Scope !== true) {
-                    continue ;
-                }
-                if (scope.locals.has(name)) {
-                    return ;
-                }
-                if (scope instanceof Scope && scope.implicits.has(name)) {
-                    return ;
-                }
-                if (scope instanceof Module && (scope.exports.has(name) || scope.moduleExport === name)) {
-                    return ;
-                }
-            } while ((scope = scope.findScope()) !== null);
-            if (parser.transform.globals.has(name)) {
+            if (this.findScope().findRef(name) !== null) {
                 return ;
             }
-            paramNode = this.ancestor(null, 'function_param_list');
-            if (paramNode !== null) {
-                scope = paramNode.parent.get('body');
-                scope.checkDefined(name);
-                return ;
-            }
-            throw new ASTException('Undefined variable "' + name + '"', this);
+            throw new ASTException('Undefined reference "' + name + '"', this);
         };
         ___self.prototype.addParentLookup = function addParentLookup(result, lookupName, ownName) {
             ownName = (ownName !== undefined ? ownName : (lookupName));
@@ -3048,10 +3261,11 @@ module('targets/adria_node.adria', function(module, resource) {
             return result;
         };
         ___self.prototype.findAssignee = function findAssignee() {
-            var children, found, result, id, child;
+            var children, found, result;
             children = this.children;
             found = -1;
             result = null;
+            var id;
             for (id = 0; id < children.length;id++) {
                 if (children[id].key === 'assignment_op') {
                     found = id - 1;
@@ -3059,6 +3273,7 @@ module('targets/adria_node.adria', function(module, resource) {
                 }
             }
             if (found !== -1) {
+                var child;
                 child = children[found];
                 if (child.value === 'access_operation_member' || child.value === 'access_operation_proto') {
                     result = child.csn(child.get('item').value);
@@ -3077,6 +3292,7 @@ module('targets/adria_node.adria', function(module, resource) {
         }
         ___self.prototype = Object.create(___parent.prototype);
         ___self.prototype.constructor = ___self;
+        var AccessOperationProtocall = ___self;
         ___self.prototype.toSourceNode = function toSourceNode() {
             var params, result;
             params = this.get('call');
@@ -3096,6 +3312,7 @@ module('targets/adria_node.adria', function(module, resource) {
         }
         ___self.prototype = Object.create(___parent.prototype);
         ___self.prototype.constructor = ___self;
+        var ConstLiteral = ___self;
         ___self.prototype.toSourceNode = function toSourceNode() {
             var stringNode;
             stringNode = this.get('string');
@@ -3107,54 +3324,144 @@ module('targets/adria_node.adria', function(module, resource) {
         };
         return ___self;
     })(AdriaNode);
-    Scope = (function(___parent) {
-        var ___self = function Scope(key, value) {
-            this.locals = new Set();
-            this.implicits = new Set();
-            AdriaNode.prototype.constructor.call(this, key, value);
+    (function() {
+        var scopeLocalId, findRefScope, createLocalName;
+        scopeLocalId = 1;
+        findRefScope = function findRefScope(name) {
+            var scope;
+            scope = this;
+            do {
+                if (scope.getOwnRef(name) !== null) {
+                    return scope;
+                }
+            } while ((scope = scope.findScope(true)) !== null);
+            return scope;
         };
-        ___self.prototype = Object.create(___parent.prototype);
-        ___self.prototype.constructor = ___self;
-        ___self.prototype.locals = null;
-        ___self.prototype.implicits = null;
-        ___self.prototype.toSourceNode = function toSourceNode() {
-            var content, result;
-            content = AdriaNode.prototype.toSourceNode.call(this);
-            result = this.csn();
-            if (this.locals.length > 0) {
-                result.add([ 'var ', this.locals.toArray().join(', '), ';' + this.nl() ]);
+        createLocalName = function createLocalName(name) {
+            var scope;
+            scope = findRefScope.call(this, name);
+            if (scope !== null) {
+                return '___' + name + '_scp' + scopeLocalId++;
             }
-            result.add(content);
-            return result;
+            return name;
         };
-        return ___self;
-    })(AdriaNode);
+        Scope = (function(___parent) {
+            var ___self = function Scope(key, value) {
+                this.locals = new Map();
+                this.implicits = new Map();
+                AdriaNode.prototype.constructor.call(this, key, value);
+            };
+            ___self.prototype = Object.create(___parent.prototype);
+            ___self.prototype.constructor = ___self;
+            var Scope = ___self;
+            ___self.prototype.locals = null;
+            ___self.prototype.implicits = null;
+            ___self.prototype.addLocal = function addLocal(name) {
+                var localName;
+                if (this.getOwnRef(name)) {
+                    throw new ASTException('Reference "' + name + '" already defined in local scope', this);
+                }
+                localName = createLocalName.call(this, name);
+                this.locals.set(name, localName);
+                return localName;
+            };
+            ___self.prototype.addImplicit = function addImplicit(name, ignore) {
+                ignore = (ignore !== undefined ? ignore : (false));
+                if (ignore == false && (this.getOwnRef(name) || findRefScope.call(this, name) !== null)) {
+                    throw new ASTException('Reference "' + name + '" already defined in local scope', this);
+                }
+                this.implicits.set(name, name);
+                return name;
+            };
+            ___self.prototype.getOwnRef = function getOwnRef(name) {
+                if (this.locals.has(name)) {
+                    return this.locals.get(name);
+                } else if (this.implicits.has(name)) {
+                    return this.implicits.get(name);
+                }
+                return null;
+            };
+            ___self.prototype.findRef = function findRef(name) {
+                var scope, refName;
+                if ((refName = this.getOwnRef(name)) !== null) {
+                    return refName;
+                } else if ((scope = findRefScope.call(this, name)) !== null) {
+                    if ((refName = scope.getOwnRef(name)) !== null) {
+                        return refName;
+                    } else {
+                    }
+                }
+                return null;
+            };
+            ___self.prototype.refsToSourceNode = function refsToSourceNode() {
+                if (this.locals.empty) {
+                    return this.csn();
+                } else {
+                    return this.csn([ 'var ', this.locals.values().join(', '), ';' + this.nl() ]);
+                }
+            };
+            return ___self;
+        })(AdriaNode);
+    })();
     Module = (function(___parent) {
         var ___self = function Module(key, value) {
-            this.exports = new Set();
+            this.exports = new Map();
             Scope.prototype.constructor.call(this, key, value);
         };
         ___self.prototype = Object.create(___parent.prototype);
         ___self.prototype.constructor = ___self;
+        var Module = ___self;
         ___self.prototype.moduleExport = null;
         ___self.prototype.exports = null;
+        ___self.prototype.setModuleExport = function setModuleExport(name) {
+            var localName;
+            if (this.getOwnRef(name)) {
+                throw new ASTException('Reference "' + name + '" already defined in local scope', this);
+            }
+            localName = this.addLocal(name);
+            this.moduleExport = localName;
+            return name;
+        };
+        ___self.prototype.addExport = function addExport(name) {
+            var localName;
+            if (this.getOwnRef(name)) {
+                throw new ASTException('Reference "' + name + '" already defined in local scope', this);
+            }
+            localName = this.addLocal(name);
+            this.exports.set(name, localName);
+            return name;
+        };
+        ___self.prototype.getOwnRef = function getOwnRef(name) {
+            var refName;
+            if ((refName = Scope.prototype.getOwnRef.call(this, name)) !== null) {
+                return refName;
+            }
+            if (this.exports.has(name)) {
+                return this.exports.get(name);
+            } else if (this.moduleExport === name) {
+                return this.moduleExport;
+            }
+            return null;
+        };
         ___self.prototype.toSourceNode = function toSourceNode() {
-            var parser, code, exports, file, result, id;
-            parser = this.parser();
+            var parser, code, file, result, exports;
             this.nl(1);
+            parser = this.parser();
             code = Scope.prototype.toSourceNode.call(this);
-            exports = this.exports.toArray();
             file = parser.file;
             result = this.csn('module(\'' + parser.moduleName + '\', function(module, resource) {' + this.nl());
             if (parser.transform.options['tweak-exports']) {
                 result.add('var exports = module.exports;' + this.nl());
             }
+            result.add(this.refsToSourceNode());
             result.add(code);
             if (this.moduleExport !== null) {
                 result.add('module.exports = ' + this.moduleExport + ';' + this.nl());
             }
+            exports = this.exports.keys();
+            var id;
             for (id in exports) {
-                result.add('module.exports.' + exports[id] + ' = ' + exports[id] + ';' + this.nl());
+                result.add('module.exports.' + exports[id] + ' = ' + this.exports.get(exports[id]) + ';' + this.nl());
             }
             result.add(this.nl(-1) + '});' + this.nl());
             return result;
@@ -3167,6 +3474,7 @@ module('targets/adria_node.adria', function(module, resource) {
         }
         ___self.prototype = Object.create(___parent.prototype);
         ___self.prototype.constructor = ___self;
+        var InvokeOperation = ___self;
         ___self.prototype.toSourceNode = function toSourceNode(includeBraces) {
             includeBraces = (includeBraces !== undefined ? includeBraces : (true));
             var result;
@@ -3193,6 +3501,7 @@ module('targets/adria_node.adria', function(module, resource) {
         }
         ___self.prototype = Object.create(___parent.prototype);
         ___self.prototype.constructor = ___self;
+        var AsyncWrapOperation = ___self;
         ___self.prototype.params = null;
         ___self.prototype.toSourceNode = function toSourceNode() {
             var id, result;
@@ -3216,58 +3525,74 @@ module('targets/adria_node.adria', function(module, resource) {
         };
         return ___self;
     })(AdriaNode);
-    FunctionLiteral = (function(___parent) {
-        var ___self = function FunctionLiteral(key, value) {
-            this.defaultArgs = [  ];
-            AdriaNode.prototype.constructor.call(this, key, value);
-        };
-        ___self.prototype = Object.create(___parent.prototype);
-        ___self.prototype.constructor = ___self;
-        ___self.prototype.defaultArgs = null;
-        ___self.prototype.name = null;
-        ___self.prototype.lookupParent = false;
-        ___self.prototype.toSourceNode = function toSourceNode() {
-            var result, nameSN, id, body;
-            this.nl(1);
-            result = this.csn();
-            result.add('function');
-            if (this instanceof GeneratorLiteral || this instanceof AsyncLiteral) {
-                result.add('*');
-            }
-            nameSN = this.findName();
-            if (nameSN !== null && nameSN.toString().match(/^([\'\"]).*\1$/) === null) {
-                this.name = nameSN;
-            } else {
-                this.name = null;
-            }
-            if (this.name !== null && this instanceof AsyncLiteral === false) {
-                this.get('body').implicits.add(this.name.toString());
-                result.add([ ' ', this.name ]);
-            }
-            if (this instanceof FunctionStatement || this instanceof GeneratorStatement || this instanceof AsyncStatement) {
-                this.findScope().implicits.add(this.name.toString());
-            }
-            result.add('(');
-            result.add(this.get('param_list').toSourceNode());
-            result.add(') {' + this.nl());
-            for (id in this.defaultArgs) {
-                result.add([ this.defaultArgs[id], ';' + this.nl() ]);
-            }
-            body = this.get('body').toSourceNode();
-            if (this.lookupParent) {
-                this.addParentLookup(result, this.name);
-            }
-            result.add([ body, this.nl(-1) + '}' ]);
-            return result;
-        };
-        return ___self;
-    })(AdriaNode);
+    (function() {
+        var thisId;
+        thisId = 1;
+        FunctionLiteral = (function(___parent) {
+            var ___self = function FunctionLiteral(key, value) {
+                this.defaultArgs = [  ];
+                Scope.prototype.constructor.call(this, key, value);
+            };
+            ___self.prototype = Object.create(___parent.prototype);
+            ___self.prototype.constructor = ___self;
+            var FunctionLiteral = ___self;
+            ___self.prototype.defaultArgs = null;
+            ___self.prototype.name = null;
+            ___self.prototype.lookupParent = false;
+            ___self.prototype.thisId = 0;
+            ___self.prototype.storeContext = function storeContext() {
+                if (this.thisId === 0) {
+                    this.thisId = thisId++;
+                }
+                return '___ths' + this.thisId;
+            };
+            ___self.prototype.toSourceNode = function toSourceNode() {
+                var result, nameSN, body;
+                this.nl(1);
+                result = this.csn();
+                result.add('function');
+                if (this instanceof GeneratorLiteral || this instanceof AsyncLiteral) {
+                    result.add('*');
+                }
+                nameSN = this.findName();
+                if (nameSN !== null && nameSN.toString().match(/^([\'\"]).*\1$/) === null) {
+                    this.name = nameSN;
+                } else {
+                    this.name = null;
+                }
+                if (this.name !== null && this instanceof AsyncLiteral === false) {
+                    this.addImplicit(this.name.toString(), true);
+                    result.add([ ' ', this.name ]);
+                }
+                if (this instanceof FunctionStatement || this instanceof GeneratorStatement || this instanceof AsyncStatement) {
+                    this.parent.findScope().addImplicit(this.name.toString());
+                }
+                result.add([ '(', this.get('param_list').toSourceNode(), ') {' + this.nl() ]);
+                var id;
+                for (id in this.defaultArgs) {
+                    result.add([ this.defaultArgs[id], ';' + this.nl() ]);
+                }
+                body = this.get('body').toSourceNode();
+                result.add(this.refsToSourceNode());
+                if (this.thisId > 0) {
+                    result.add('var ' + this.storeContext() + ' = this;' + this.nl());
+                }
+                if (this.lookupParent) {
+                    this.addParentLookup(result, this.name);
+                }
+                result.add([ body, this.nl(-1) + '}' ]);
+                return result;
+            };
+            return ___self;
+        })(Scope);
+    })();
     FunctionStatement = (function(___parent) {
         var ___self = function FunctionStatement() {
             ___parent.apply(this, arguments);
         }
         ___self.prototype = Object.create(___parent.prototype);
         ___self.prototype.constructor = ___self;
+        var FunctionStatement = ___self;
         return ___self;
     })(FunctionLiteral);
     GeneratorLiteral = (function(___parent) {
@@ -3276,6 +3601,7 @@ module('targets/adria_node.adria', function(module, resource) {
         }
         ___self.prototype = Object.create(___parent.prototype);
         ___self.prototype.constructor = ___self;
+        var GeneratorLiteral = ___self;
         return ___self;
     })(FunctionLiteral);
     GeneratorStatement = (function(___parent) {
@@ -3284,6 +3610,7 @@ module('targets/adria_node.adria', function(module, resource) {
         }
         ___self.prototype = Object.create(___parent.prototype);
         ___self.prototype.constructor = ___self;
+        var GeneratorStatement = ___self;
         return ___self;
     })(GeneratorLiteral);
     AsyncLiteral = (function(___parent) {
@@ -3292,6 +3619,7 @@ module('targets/adria_node.adria', function(module, resource) {
         }
         ___self.prototype = Object.create(___parent.prototype);
         ___self.prototype.constructor = ___self;
+        var AsyncLiteral = ___self;
         ___self.prototype.toSourceNode = function toSourceNode() {
             var parser, result;
             parser = this.parser();
@@ -3323,6 +3651,7 @@ module('targets/adria_node.adria', function(module, resource) {
         }
         ___self.prototype = Object.create(___parent.prototype);
         ___self.prototype.constructor = ___self;
+        var AsyncStatement = ___self;
         return ___self;
     })(AsyncLiteral);
     FunctionParamList = (function(___parent) {
@@ -3331,15 +3660,16 @@ module('targets/adria_node.adria', function(module, resource) {
         }
         ___self.prototype = Object.create(___parent.prototype);
         ___self.prototype.constructor = ___self;
+        var FunctionParamList = ___self;
         ___self.prototype.toSourceNode = function toSourceNode() {
             var name, defaultArg, valueNode, result, functionNode, scope;
             result = this.csn();
             functionNode = this.ancestor('function|generator|async');
-            scope = functionNode.get('body');
+            scope = this.findScope();
             this.eachKey('item', function(node) {
                 name = node.get('name').toSourceNode();
                 result.add(name);
-                scope.implicits.add(name);
+                scope.addImplicit(name.toString());
                 valueNode = node.get('value');
                 if (valueNode.isNode()) {
                     defaultArg = new SourceNode();
@@ -3366,6 +3696,7 @@ module('targets/adria_node.adria', function(module, resource) {
         }
         ___self.prototype = Object.create(___parent.prototype);
         ___self.prototype.constructor = ___self;
+        var BaseLiteral = ___self;
         ___self.prototype.scan = function scan(state) {
             AdriaNode.prototype.scan.call(this, state);
             this.eachKey('ident', function(child) {
@@ -3397,65 +3728,98 @@ module('targets/adria_node.adria', function(module, resource) {
         }
         ___self.prototype = Object.create(___parent.prototype);
         ___self.prototype.constructor = ___self;
+        var DoWhileStatement = ___self;
         ___self.prototype.toSourceNode = function toSourceNode() {
-            var result;
+            var result, body;
             result = this.csn();
             result.add('do {' + this.nl(1));
-            result.add(this.get('body').toSourceNode());
-            result.add(this.nl(-1) + '}');
-            result.add([ ' while (', this.get('condition').toSourceNode(), ');' ]);
+            body = this.get('body').toSourceNode();
+            result.add([ this.refsToSourceNode(), body ]);
+            result.add([
+                this.nl(-1) + '} while (',
+                this.get('condition').toSourceNode(),
+                ');'
+            ]);
             return result;
         };
         return ___self;
-    })(AdriaNode);
+    })(Scope);
     WhileStatement = (function(___parent) {
         var ___self = function WhileStatement() {
             ___parent.apply(this, arguments);
         }
         ___self.prototype = Object.create(___parent.prototype);
         ___self.prototype.constructor = ___self;
+        var WhileStatement = ___self;
         ___self.prototype.toSourceNode = function toSourceNode() {
-            var result;
+            var result, body;
             result = this.csn();
             result.add([
                 'while (',
                 this.get('condition').toSourceNode(),
                 ') {' + this.nl(1)
             ]);
-            result.add(this.get('body').toSourceNode());
+            body = this.get('body').toSourceNode();
+            result.add([ this.refsToSourceNode(), body ]);
             result.add(this.nl(-1) + '}');
             return result;
         };
         return ___self;
-    })(AdriaNode);
-    IfStatement = (function(___parent) {
-        var ___self = function IfStatement() {
+    })(Scope);
+    IfConditional = (function(___parent) {
+        var ___self = function IfConditional() {
             ___parent.apply(this, arguments);
         }
         ___self.prototype = Object.create(___parent.prototype);
         ___self.prototype.constructor = ___self;
+        var IfConditional = ___self;
         ___self.prototype.toSourceNode = function toSourceNode() {
-            var result, elseIf, elseBody;
+            var result, body;
             result = this.csn();
             result.add([
                 'if (',
                 this.get('condition').toSourceNode(),
                 ') {' + this.nl(1)
             ]);
-            result.add([ this.get('if_body').toSourceNode(), this.nl(-1) + '}' ]);
-            elseIf = this.get('else_if');
-            if (elseIf.isNode()) {
-                result.add([ ' else ', elseIf.toSourceNode() ]);
-            } else {
-                elseBody = this.get('else_body');
-                if (elseBody.isNode()) {
-                    result.add([
-                        ' else {' + this.nl(1),
-                        elseBody.toSourceNode(),
-                        this.nl(-1) + '}'
-                    ]);
+            body = this.get('body').toSourceNode();
+            result.add([ this.refsToSourceNode(), body, this.nl(-1) + '}' ]);
+            return result;
+        };
+        return ___self;
+    })(Scope);
+    IfUnconditional = (function(___parent) {
+        var ___self = function IfUnconditional() {
+            ___parent.apply(this, arguments);
+        }
+        ___self.prototype = Object.create(___parent.prototype);
+        ___self.prototype.constructor = ___self;
+        var IfUnconditional = ___self;
+        ___self.prototype.toSourceNode = function toSourceNode() {
+            var result, body;
+            result = this.csn();
+            result.add([ '{' + this.nl(1) ]);
+            body = this.get('body').toSourceNode();
+            result.add([ this.refsToSourceNode(), body, this.nl(-1) + '}' ]);
+            return result;
+        };
+        return ___self;
+    })(Scope);
+    IfStatement = (function(___parent) {
+        var ___self = function IfStatement() {
+            ___parent.apply(this, arguments);
+        }
+        ___self.prototype = Object.create(___parent.prototype);
+        ___self.prototype.constructor = ___self;
+        var IfStatement = ___self;
+        ___self.prototype.toSourceNode = function toSourceNode() {
+            var result;
+            result = this.csn();
+            this.each(function(child) {
+                if (child.key === 'else_if' || child.key === 'else') {
+                    result.add(' else ');
                 }
-            }
+                result.add(child.toSourceNode());
+            });
             return result;
         };
         return ___self;
@@ -3466,6 +3830,7 @@ module('targets/adria_node.adria', function(module, resource) {
         }
         ___self.prototype = Object.create(___parent.prototype);
         ___self.prototype.constructor = ___self;
+        var SwitchStatement = ___self;
         ___self.prototype.toSourceNode = function toSourceNode() {
             var result, defaultNode;
             result = this.csn();
@@ -3492,17 +3857,21 @@ module('targets/adria_node.adria', function(module, resource) {
         }
         ___self.prototype = Object.create(___parent.prototype);
         ___self.prototype.constructor = ___self;
+        var ForCountStatement = ___self;
         ___self.prototype.toSourceNode = function toSourceNode() {
-            var initNode, init, varDefs, test, condOp, result;
+            var initNode, init, test, condOp, body, result;
             initNode = this.get('init');
             if (initNode.value === 'var_def') {
+                var varDefs, ownScope;
                 varDefs = this.csn();
+                ownScope = this;
                 initNode.eachKey('item', function(node) {
-                    var valueNode, nameNode, varDef;
+                    var valueNode, nameNode;
                     valueNode = node.get('value');
                     nameNode = node.get('name');
-                    this.findScope().locals.add(nameNode.value);
+                    ownScope.addLocal(nameNode.value);
                     if (valueNode.isNode()) {
+                        var varDef;
                         varDef = new SourceNode();
                         varDef.add([ nameNode.toSourceNode(), ' = ', valueNode.toSourceNode() ]);
                         varDefs.add(varDef);
@@ -3517,53 +3886,57 @@ module('targets/adria_node.adria', function(module, resource) {
             }
             test = this.get('test').toSourceNode();
             condOp = this.get('cond_op').toSourceNode();
+            this.nl(1);
+            body = this.get('body').toSourceNode();
+            this.nl(-1);
             result = this.csn();
+            result.add(this.refsToSourceNode());
             result.add([ 'for (', init, '; ', test, ';', condOp, ') {' + this.nl(1) ]);
-            result.add(this.get('body').toSourceNode());
-            result.add(this.nl(-1) + '}');
+            result.add([ body, this.nl(-1) + '}' ]);
             return result;
         };
         return ___self;
-    })(AdriaNode);
+    })(Scope);
     ForInStatement = (function(___parent) {
         var ___self = function ForInStatement() {
             ___parent.apply(this, arguments);
         }
         ___self.prototype = Object.create(___parent.prototype);
         ___self.prototype.constructor = ___self;
+        var ForInStatement = ___self;
         ___self.prototype.toSourceNode = function toSourceNode() {
-            var keyNode, valueNode, locals, source, key, result;
+            var keyNode, valueNode, source, key, body, result;
             keyNode = this.get('key');
             valueNode = this.get('value');
             if (this.get('var').isNode()) {
-                locals = this.findScope().locals;
-                locals.add(keyNode.value);
+                this.addLocal(keyNode.value);
                 if (valueNode.isNode()) {
-                    locals.add(valueNode.value);
+                    this.addLocal(valueNode.value);
                 }
             }
             source = this.get('source').toSourceNode();
             key = keyNode.toSourceNode();
+            this.nl(1);
+            body = this.get('body').toSourceNode();
+            this.nl(-1);
             result = this.csn();
-            result.add('for (');
-            result.add(key);
-            result.add(' in ');
-            result.add(source);
-            result.add(') {' + this.nl(1));
+            result.add(this.refsToSourceNode());
+            result.add([ 'for (', key, ' in ', source, ') {' + this.nl(1) ]);
             if (valueNode.isNode()) {
                 result.add([ valueNode.toSourceNode(), ' = ', source, '[', key, '];', this.nl() ]);
             }
-            result.add([ this.get('body').toSourceNode(), this.nl(-1), '}' ]);
+            result.add([ body, this.nl(-1), '}' ]);
             return result;
         };
         return ___self;
-    })(AdriaNode);
+    })(Scope);
     ObjectLiteral = (function(___parent) {
         var ___self = function ObjectLiteral() {
             ___parent.apply(this, arguments);
         }
         ___self.prototype = Object.create(___parent.prototype);
         ___self.prototype.constructor = ___self;
+        var ObjectLiteral = ___self;
         ___self.prototype.assembleItemList = function assembleItemList() {
             var items;
             items = new SourceNode();
@@ -3596,60 +3969,82 @@ module('targets/adria_node.adria', function(module, resource) {
         };
         return ___self;
     })(AdriaNode);
-    storageId = 1;
-    ProtoBodyProperty = (function(___parent) {
-        var ___self = function ProtoBodyProperty() {
-            ___parent.apply(this, arguments);
-        }
-        ___self.prototype = Object.create(___parent.prototype);
-        ___self.prototype.constructor = ___self;
-        ___self.prototype.useStorage = false;
-        ___self.prototype.storageName = null;
-        ___self.prototype.defaultValueNode = 'undefined';
-        ___self.prototype.assembleItemList = function assembleItemList() {
-            var nameSN, items;
-            this.each(function(child) {
-                var childKey, childValue;
-                childKey = child.get('key');
-                childValue = child.get('value');
-                if (childKey.value === 'default') {
-                    this.defaultValueNode = childValue.toSourceNode();
-                    this.useStorage = true;
-                } else if (childKey.value === 'storage') {
-                    this.storageName = childValue.value;
-                    this.useStorage = true;
-                }
-            });
-            if (this.storageName === null) {
-                nameSN = this.findName();
-                if (nameSN === null) {
-                    this.storageName = '\'___psf' + (storageId++) + '\'';
-                } else {
-                    this.storageName = '\'_' + nameSN.toString() + '\'';
-                }
+    (function() {
+        var storageId;
+        storageId = 1;
+        PropertyLiteral = (function(___parent) {
+            var ___self = function PropertyLiteral() {
+                ___parent.apply(this, arguments);
             }
-            items = new SourceNode();
-            this.each(function(child) {
-                var childKey, item;
-                childKey = child.get('key');
-                if (childKey.value !== 'default' && childKey.value !== 'storage') {
-                    item = new SourceNode();
-                    item.add(childKey.csn(childKey.value));
-                    item.add(': ');
-                    item.add(child.get('value').toSourceNode());
-                    items.add(item);
+            ___self.prototype = Object.create(___parent.prototype);
+            ___self.prototype.constructor = ___self;
+            var PropertyLiteral = ___self;
+            ___self.prototype.useStorage = false;
+            ___self.prototype.storageName = null;
+            ___self.prototype.defaultValueNode = 'undefined';
+            ___self.prototype.assignmentToSourceNode = function assignmentToSourceNode(name, target) {
+                var propertyBody, result;
+                propertyBody = ObjectLiteral.prototype.toSourceNode.call(this);
+                result = this.csn();
+                if (this.useStorage) {
+                    result.add('(Object.defineProperty(' + target + ', ' + this.storageName + ', {' + this.nl(1));
+                    result.add([ 'value: ', this.defaultValueNode, ',' + this.nl() ]);
+                    result.add('writable: true' + this.nl(-1));
+                    result.add('}),' + this.nl());
                 }
-            });
-            return items;
-        };
-        return ___self;
-    })(ObjectLiteral);
+                result.add([ 'Object.defineProperty(', target, ', ', name, ', ' ]);
+                result.add(propertyBody);
+                result.add(this.useStorage ? '))' : ')');
+                return result;
+            };
+            ___self.prototype.assembleItemList = function assembleItemList() {
+                var items;
+                this.each(function(child) {
+                    var childKey, childValue;
+                    childKey = child.get('key');
+                    childValue = child.get('value');
+                    if (childKey.value === 'default') {
+                        this.defaultValueNode = childValue.toSourceNode();
+                        this.useStorage = true;
+                    } else if (childKey.value === 'storage') {
+                        this.storageName = childValue.value;
+                        this.useStorage = true;
+                    }
+                });
+                if (this.storageName === null) {
+                    var nameSN;
+                    nameSN = this.findName();
+                    if (nameSN === null) {
+                        this.storageName = '\'___psf' + (storageId++) + '\'';
+                    } else {
+                        this.storageName = '\'_' + nameSN.toString() + '\'';
+                    }
+                }
+                items = new SourceNode();
+                this.each(function(child) {
+                    var childKey;
+                    childKey = child.get('key');
+                    if (childKey.value !== 'default' && childKey.value !== 'storage') {
+                        var item;
+                        item = new SourceNode();
+                        item.add(childKey.csn(childKey.value));
+                        item.add(': ');
+                        item.add(child.get('value').toSourceNode());
+                        items.add(item);
+                    }
+                });
+                return items;
+            };
+            return ___self;
+        })(ObjectLiteral);
+    })();
     ArrayLiteral = (function(___parent) {
         var ___self = function ArrayLiteral() {
             ___parent.apply(this, arguments);
         }
         ___self.prototype = Object.create(___parent.prototype);
         ___self.prototype.constructor = ___self;
+        var ArrayLiteral = ___self;
         ___self.prototype.toSourceNode = function toSourceNode() {
             var items, result;
             items = new SourceNode();
@@ -3678,6 +4073,7 @@ module('targets/adria_node.adria', function(module, resource) {
         }
         ___self.prototype = Object.create(___parent.prototype);
         ___self.prototype.constructor = ___self;
+        var Expression = ___self;
         ___self.prototype.wrapPrefix = new Set([ 'member', 'index', 'proto', 'call', 'pcall', 'item' ]);
         ___self.prototype.preprocess = function preprocess(state) {
             var children, id, end;
@@ -3703,7 +4099,7 @@ module('targets/adria_node.adria', function(module, resource) {
             });
         };
         ___self.prototype.toSourceNode = function toSourceNode() {
-            var children, propertyAssignSplit, wrapper, result, id, child, locals, params;
+            var children, propertyAssignSplit, wrapper, result, id, child;
             children = this.children;
             propertyAssignSplit = -1;
             wrapper = this.get('wrap');
@@ -3750,35 +4146,40 @@ module('targets/adria_node.adria', function(module, resource) {
                 }
             }
             if (propertyAssignSplit > -1) {
-                result.prepend('Object.defineProperty(');
+                var target, name;
                 child = children[propertyAssignSplit - 1];
                 switch (child.key) {
                     case 'member':
-                        result.add(", '" + child.children[0].value + "',");
+                        target = result;
+                        name = child.children[0].value;
                         break ;
                     case 'index':
-                        result.add(', ');
-                        result.add(child.toSourceNode());
-                        result.add(', ');
+                        target = result;
+                        name = child.toSourceNode();
                         break ;
                     case 'proto':
-                        result.add(".prototype, '" + child.children[0].value + "', ");
+                        result.add('.prototype');
+                        target = result;
+                        name = "'" + child.children[0].value + "'";
                         break ;
                 }
                 if (children[propertyAssignSplit].value === ':=') {
+                    result.prepend('Object.defineProperty(');
+                    result.add([ ', ', name ]);
                     result.add('{' + this.nl(1) + 'value: ');
                     result.add(children[propertyAssignSplit + 1].toSourceNode());
                     result.add(',' + this.nl() + 'writable: false' + this.nl(-1) + '})');
                 } else {
-                    result.add(children[propertyAssignSplit + 1].toSourceNode());
-                    result.add(')');
+                    result = children[propertyAssignSplit + 1].assignmentToSourceNode(name, target);
                 }
             }
             if (wrapper.isNode()) {
+                var locals, params;
                 locals = '';
                 params = wrapper.params.join(', ');
-                for (id = 0; id < wrapper.params.length;id++) {
-                    locals += '___' + id + ', ';
+                var ___id_scp2;
+                for (___id_scp2 = 0; ___id_scp2 < wrapper.params.length;___id_scp2++) {
+                    locals += '___' + ___id_scp2 + ', ';
                 }
                 result = this.csn([
                     '(function(' + locals + '___callback) {',
@@ -3802,13 +4203,15 @@ module('targets/adria_node.adria', function(module, resource) {
         };
         ___self.prototype = Object.create(___parent.prototype);
         ___self.prototype.constructor = ___self;
+        var ProtoLiteral = ___self;
+        ___self.prototype.constructorFunc = null;
         ___self.prototype.constructorArgs = null;
         ___self.prototype.constructorBody = null;
         ___self.prototype.constructorDefaults = null;
         ___self.prototype.lookupParent = false;
         ___self.prototype.name = '';
         ___self.prototype.toSourceNode = function toSourceNode() {
-            var nameSN, parentNode, haveParent, assignTo, locals, result, body, id;
+            var nameSN, parentNode, haveParent, assignTo, result, body;
             nameSN = this.findName();
             if (nameSN !== null) {
                 this.name = nameSN.toString();
@@ -3817,8 +4220,7 @@ module('targets/adria_node.adria', function(module, resource) {
             haveParent = parentNode.isNode();
             assignTo = '';
             if (this.value === 'proto_statement') {
-                locals = this.findScope().locals;
-                locals.add(this.name);
+                this.parent.findScope().addLocal(this.name);
                 assignTo = this.name + ' = ';
             }
             result = this.csn(assignTo + '(function(' + (haveParent ? '___parent' : '') + ') {' + this.nl(1));
@@ -3827,10 +4229,12 @@ module('targets/adria_node.adria', function(module, resource) {
                 result.add('var ___self = function ' + this.name + '(');
                 result.add(this.constructorArgs);
                 result.add(') {' + this.nl(1));
+                var id;
                 for (id in this.constructorDefaults) {
                     result.add(this.constructorDefaults[id]);
                     result.add(';' + this.nl());
                 }
+                result.add(this.constructorFunc.refsToSourceNode());
                 if (this.lookupParent) {
                     this.addParentLookup(result, 'constructor', '___self');
                 }
@@ -3845,9 +4249,12 @@ module('targets/adria_node.adria', function(module, resource) {
             }
             if (haveParent) {
                 result.add('___self.prototype = Object.create(___parent.prototype);' + this.nl());
-                result.add('___self.prototype.constructor = ___self;' + this.nl() + this.nl());
+                result.add('___self.prototype.constructor = ___self;' + this.nl());
             }
-            result.add(body);
+            if (this.name !== '') {
+                result.add('var ' + this.name + ' = ___self;' + this.nl());
+            }
+            result.add([ this.nl(), body ]);
             result.add(this.nl() + 'return ___self;' + this.nl(-1));
             result.add('})(');
             result.add(parentNode.toSourceNode());
@@ -3866,13 +4273,14 @@ module('targets/adria_node.adria', function(module, resource) {
         }
         ___self.prototype = Object.create(___parent.prototype);
         ___self.prototype.constructor = ___self;
+        var NewProtoLiteral = ___self;
         ___self.prototype.toSourceNode = function toSourceNode() {
+            var result, paramList;
             var ___p, ___p0 = ___p = (this === this.constructor.prototype ? this : Object.getPrototypeOf(this));
             while (___p !== null && (___p.toSourceNode !== toSourceNode || ___p.hasOwnProperty('toSourceNode') === false)) {
                 ___p = Object.getPrototypeOf(___p);
             }
             ___p = (___p !== null ? Object.getPrototypeOf(___p).constructor : ___p0);
-            var result, paramList;
             result = this.csn();
             result.add('new (');
             result.add(___p.prototype.toSourceNode.call(this));
@@ -3892,13 +4300,16 @@ module('targets/adria_node.adria', function(module, resource) {
         }
         ___self.prototype = Object.create(___parent.prototype);
         ___self.prototype.constructor = ___self;
+        var ProtoBodyItem = ___self;
         ___self.prototype.toSourceNode = function toSourceNode() {
-            var protoNode, keyNode, functionNode, valueNode, result, name, propertyBody;
+            var protoNode, keyNode;
             protoNode = this.ancestor(null, 'new_proto_literal|proto_literal|proto_statement');
             keyNode = this.get('key');
             if (keyNode.value === 'constructor') {
+                var functionNode;
                 functionNode = this.path('value.function');
                 this.nl(1);
+                protoNode.constructorFunc = functionNode;
                 protoNode.constructorArgs = functionNode.get('param_list').toSourceNode();
                 protoNode.constructorDefaults = functionNode.defaultArgs;
                 protoNode.constructorBody = functionNode.get('body').toSourceNode();
@@ -3906,22 +4317,17 @@ module('targets/adria_node.adria', function(module, resource) {
                 this.nl(-1);
                 return this.csn();
             } else {
+                var valueNode, result;
                 valueNode = this.get('value');
-                if (valueNode.value === 'proto_body_property') {
+                if (valueNode.value === 'property_literal') {
+                    var name;
                     name = (keyNode instanceof Ident === false ? keyNode.value : '"' + keyNode.value + '"');
-                    propertyBody = valueNode.toSourceNode();
-                    result = this.csn();
-                    if (valueNode.useStorage) {
-                        result.add('Object.defineProperty(___self.prototype, ' + valueNode.storageName + ', {' + this.nl(1));
-                        result.add([ 'value: ', valueNode.defaultValueNode, ',' + this.nl() ]);
-                        result.add('writable: true' + this.nl(-1));
-                        result.add('});' + this.nl());
-                    }
-                    result.add('Object.defineProperty(___self.prototype, ' + name + ', ');
-                    result.add(propertyBody);
-                    result.add(');' + this.nl());
-                    return result;
+                    return this.csn([
+                        valueNode.assignmentToSourceNode(name, '___self.prototype'),
+                        ';' + this.nl()
+                    ]);
                 } else {
+                    var name;
                     name = (keyNode instanceof Ident === false ? '[' + keyNode.value + ']' : '.' + keyNode.value);
                     result = this.csn('___self.prototype' + name + ' = ');
                     result.add(valueNode.toSourceNode());
@@ -3938,6 +4344,7 @@ module('targets/adria_node.adria', function(module, resource) {
         }
         ___self.prototype = Object.create(___parent.prototype);
         ___self.prototype.constructor = ___self;
+        var ReturnStatement = ___self;
         ___self.prototype.toSourceNode = function toSourceNode() {
             var result, type;
             result = this.csn();
@@ -3956,6 +4363,7 @@ module('targets/adria_node.adria', function(module, resource) {
         }
         ___self.prototype = Object.create(___parent.prototype);
         ___self.prototype.constructor = ___self;
+        var YieldLiteral = ___self;
         ___self.prototype.toSourceNode = function toSourceNode() {
             var result, type;
             result = this.csn();
@@ -3966,104 +4374,135 @@ module('targets/adria_node.adria', function(module, resource) {
         };
         return ___self;
     })(AdriaNode);
-    catchSpecificsId = 1;
-    CatchSpecifics = (function(___parent) {
-        var ___self = function CatchSpecifics() {
+    Try = (function(___parent) {
+        var ___self = function Try() {
             ___parent.apply(this, arguments);
         }
         ___self.prototype = Object.create(___parent.prototype);
         ___self.prototype.constructor = ___self;
+        var Try = ___self;
         ___self.prototype.toSourceNode = function toSourceNode() {
-            var name, result, allNode, valueNode;
-            name = '___exc' + (catchSpecificsId++);
+            var result;
             result = this.csn();
-            result.add(' catch (' + name + ') {' + this.nl(1));
-            this.eachKey('specific', function(node, first, last) {
-                var valueNode;
-                if (first !== true) {
-                    result.add(' else ');
-                }
-                valueNode = node.get('value');
-                this.findScope().locals.add(valueNode.value);
-                result.add('if (' + name + ' instanceof ');
-                result.add(node.get('type').toSourceNode());
-                result.add(') {' + this.nl(1));
-                result.add(valueNode.value + ' = ' + name + ';' + this.nl());
-                result.add(node.get('body').toSourceNode());
-                result.add(this.nl(-1) + '}');
-            });
-            allNode = this.get('catch');
-            if (allNode.isNode()) {
-                valueNode = allNode.get('value');
-                this.findScope().locals.add(valueNode.value);
-                result.add(' else { ' + this.nl(1));
-                result.add(valueNode.value + ' = ' + name + ';' + this.nl());
-                result.add(allNode.get('body').toSourceNode());
-                result.add(this.nl(-1) + '}');
-            } else {
-                result.add(' else { ' + this.nl(1));
-                result.add('throw ' + name + ';' + this.nl());
-                result.add(this.nl(-1) + '}');
-            }
+            result.add('try {' + this.nl(1));
+            result.add(this.get('body').toSourceNode());
             result.add(this.nl(-1) + '}');
             return result;
         };
         return ___self;
-    })(AdriaNode);
+    })(Scope);
+    (function() {
+        var catchId;
+        catchId = 1;
+        Catch = (function(___parent) {
+            var ___self = function Catch() {
+                ___parent.apply(this, arguments);
+            }
+            ___self.prototype = Object.create(___parent.prototype);
+            ___self.prototype.constructor = ___self;
+            var Catch = ___self;
+            ___self.prototype.exceptionName = '';
+            ___self.prototype.toSourceNode = function toSourceNode() {
+                var result;
+                this.exceptionName = '___exc' + (catchId++);
+                result = this.csn();
+                result.add(' catch (' + this.exceptionName + ') {' + this.nl(1));
+                this.each(function(node, first, last) {
+                    if (node instanceof CatchAll && first !== true) {
+                        result.add([ ' else {' + this.nl(1), node.toSourceNode(), this.nl(-1) + '}' ]);
+                    } else if (node instanceof CatchSpecific && first !== true) {
+                        result.add([ ' else ', node.toSourceNode() ]);
+                    } else {
+                        result.add(node.toSourceNode());
+                    }
+                    if (last && node instanceof CatchAll !== true) {
+                        result.add(' else { ' + this.nl(1));
+                        result.add('throw ' + this.exceptionName + ';' + this.nl());
+                        result.add(this.nl(-1) + '}');
+                    }
+                });
+                result.add(this.nl(-1) + '}');
+                return result;
+            };
+            return ___self;
+        })(AdriaNode);
+    })();
+    CatchSpecific = (function(___parent) {
+        var ___self = function CatchSpecific() {
+            ___parent.apply(this, arguments);
+        }
+        ___self.prototype = Object.create(___parent.prototype);
+        ___self.prototype.constructor = ___self;
+        var CatchSpecific = ___self;
+        ___self.prototype.toSourceNode = function toSourceNode() {
+            var catchNode, valueNode, result;
+            catchNode = this.findProto(Catch);
+            valueNode = this.get('value');
+            this.addLocal(valueNode.value);
+            result = this.csn();
+            result.add([
+                'if (' + catchNode.exceptionName + ' instanceof ',
+                this.get('type').toSourceNode(),
+                ') {' + this.nl(1)
+            ]);
+            result.add([
+                'var ',
+                valueNode.toSourceNode(),
+                ' = ' + catchNode.exceptionName + ';' + this.nl()
+            ]);
+            result.add(this.get('body').toSourceNode());
+            result.add(this.nl(-1) + '}');
+            return result;
+        };
+        return ___self;
+    })(Scope);
     CatchAll = (function(___parent) {
         var ___self = function CatchAll() {
             ___parent.apply(this, arguments);
         }
         ___self.prototype = Object.create(___parent.prototype);
         ___self.prototype.constructor = ___self;
+        var CatchAll = ___self;
         ___self.prototype.toSourceNode = function toSourceNode() {
-            var result, valueNode;
-            result = this.csn();
+            var catchNode, valueNode, result;
+            catchNode = this.findProto(Catch);
             valueNode = this.get('value');
-            this.findScope().implicits.add(valueNode.value);
-            result.add(' catch (');
-            result.add(valueNode.toSourceNode());
-            result.add(') {' + this.nl(1));
+            this.addLocal(valueNode.value);
+            result = this.csn();
+            result.add([
+                'var ',
+                valueNode.toSourceNode(),
+                ' = ' + catchNode.exceptionName + ';' + this.nl()
+            ]);
             result.add(this.get('body').toSourceNode());
-            result.add(this.nl(-1) + '}');
             return result;
         };
         return ___self;
-    })(AdriaNode);
-    TryCatchFinallyStatement = (function(___parent) {
-        var ___self = function TryCatchFinallyStatement() {
+    })(Scope);
+    Finally = (function(___parent) {
+        var ___self = function Finally() {
             ___parent.apply(this, arguments);
         }
         ___self.prototype = Object.create(___parent.prototype);
         ___self.prototype.constructor = ___self;
+        var Finally = ___self;
         ___self.prototype.toSourceNode = function toSourceNode() {
-            var result, allNode, finallyNode;
+            var result;
             result = this.csn();
-            result.add('try {' + this.nl(1));
+            result.add(' finally {' + this.nl(1));
             result.add(this.get('body').toSourceNode());
             result.add(this.nl(-1) + '}');
-            allNode = this.get('all');
-            if (allNode.isNode()) {
-                result.add(allNode.toSourceNode());
-            } else {
-                result.add(this.get('specifics').toSourceNode());
-            }
-            finallyNode = this.get('finally');
-            if (finallyNode.isNode()) {
-                result.add('finally {' + this.nl(1));
-                result.add(finallyNode.toSourceNode());
-                result.add(this.nl(-1) + '}');
-            }
             return result;
         };
         return ___self;
-    })(AdriaNode);
+    })(Scope);
     ThrowStatement = (function(___parent) {
         var ___self = function ThrowStatement() {
             ___parent.apply(this, arguments);
         }
         ___self.prototype = Object.create(___parent.prototype);
         ___self.prototype.constructor = ___self;
+        var ThrowStatement = ___self;
         ___self.prototype.toSourceNode = function toSourceNode() {
             var result;
             result = this.csn('throw ');
@@ -4079,10 +4518,12 @@ module('targets/adria_node.adria', function(module, resource) {
         }
         ___self.prototype = Object.create(___parent.prototype);
         ___self.prototype.constructor = ___self;
+        var AssertStatement = ___self;
         ___self.prototype.toSourceNode = function toSourceNode() {
-            var result, params, paramsSN, numParams;
+            var result;
             result = this.csn();
             if (this.parser().transform.options.assert) {
+                var params, paramsSN, numParams;
                 params = this.get('call');
                 paramsSN = params.toSourceNode(false);
                 result.add([ 'assert(', paramsSN ]);
@@ -4105,6 +4546,7 @@ module('targets/adria_node.adria', function(module, resource) {
         }
         ___self.prototype = Object.create(___parent.prototype);
         ___self.prototype.constructor = ___self;
+        var Statement = ___self;
         ___self.prototype.toSourceNode = function toSourceNode() {
             var type, result;
             type = this.children[0].key;
@@ -4128,6 +4570,7 @@ module('targets/adria_node.adria', function(module, resource) {
         }
         ___self.prototype = Object.create(___parent.prototype);
         ___self.prototype.constructor = ___self;
+        var AdriaFileNode = ___self;
         ___self.prototype.isRelativePath = function isRelativePath(filename) {
             return filename.slice(0, 2) === './' || filename.slice(0, 3) === '../';
         };
@@ -4137,7 +4580,7 @@ module('targets/adria_node.adria', function(module, resource) {
             return path.relative(parser.transform.options.basePath, absName);
         };
         ___self.prototype.resolvePath = function resolvePath(fileName, parser) {
-            var options, relname, id;
+            var options, relname;
             options = parser.transform.options;
             if (this.isRelativePath(fileName)) {
                 relname = this.makeBaseRelative(fileName, parser);
@@ -4145,6 +4588,7 @@ module('targets/adria_node.adria', function(module, resource) {
                     return path.normalize(relname);
                 }
             } else {
+                var id;
                 for (id in options.paths) {
                     relname = options.paths[id] + fileName;
                     if (fs.existsSync(options.basePath + relname)) {
@@ -4162,6 +4606,7 @@ module('targets/adria_node.adria', function(module, resource) {
         }
         ___self.prototype = Object.create(___parent.prototype);
         ___self.prototype.constructor = ___self;
+        var ResourceLiteral = ___self;
         ___self.prototype.toSourceNode = function toSourceNode() {
             var parser, options, fileNode, fileName, resolvedName, result;
             parser = this.parser();
@@ -4188,6 +4633,7 @@ module('targets/adria_node.adria', function(module, resource) {
         }
         ___self.prototype = Object.create(___parent.prototype);
         ___self.prototype.constructor = ___self;
+        var RequireLiteral = ___self;
         ___self.prototype.toSourceNode = function toSourceNode() {
             var parser, options, fileNode, moduleName, result, requireFunction, resolvedName;
             parser = this.parser();
@@ -4201,7 +4647,7 @@ module('targets/adria_node.adria', function(module, resource) {
                 parser.transform.usedBuiltins.add(resolvedName);
                 moduleName = resolvedName;
                 if (options.platform === 'node') {
-                    requireFunction = '__require';
+                    requireFunction = '___require';
                 }
             } else {
                 resolvedName = this.resolvePath(util.normalizeExtension(moduleName, options.fileExt), parser);
@@ -4209,7 +4655,7 @@ module('targets/adria_node.adria', function(module, resource) {
                     moduleName = resolvedName;
                     parser.resultData.requires.add(moduleName);
                     if (options.platform === 'node') {
-                        requireFunction = '__require';
+                        requireFunction = '___require';
                     }
                 } else if (options.platform !== 'node' || moduleName.hasPostfix(options.fileExt)) {
                     throw new ASTException('Could not find require "' + moduleName + '"', this);
@@ -4228,12 +4674,12 @@ module('targets/adria_node.adria', function(module, resource) {
         }
         ___self.prototype = Object.create(___parent.prototype);
         ___self.prototype.constructor = ___self;
+        var ModuleStatement = ___self;
         ___self.prototype.toSourceNode = function toSourceNode() {
             var name, moduleNode, result;
             name = this.get('name').value;
-            moduleNode = this.ancestor(null, 'module');
-            moduleNode.moduleExport = name;
-            moduleNode.locals.add(name);
+            moduleNode = this.findProto(Module);
+            moduleNode.setModuleExport(name);
             result = this.csn();
             result.add(name);
             result.add(' = ');
@@ -4249,12 +4695,12 @@ module('targets/adria_node.adria', function(module, resource) {
         }
         ___self.prototype = Object.create(___parent.prototype);
         ___self.prototype.constructor = ___self;
+        var ExportStatement = ___self;
         ___self.prototype.toSourceNode = function toSourceNode() {
             var name, moduleNode, result;
             name = this.get('name').value;
-            moduleNode = this.ancestor(null, 'module');
-            moduleNode.exports.add(name);
-            moduleNode.locals.add(name);
+            moduleNode = this.findProto(Module);
+            moduleNode.addExport(name);
             result = this.csn();
             result.add(name);
             result.add(' = ');
@@ -4270,6 +4716,7 @@ module('targets/adria_node.adria', function(module, resource) {
         }
         ___self.prototype = Object.create(___parent.prototype);
         ___self.prototype.constructor = ___self;
+        var GlobalDef = ___self;
         ___self.prototype.toSourceNode = function toSourceNode() {
             var valueNode, nameNode, globals, result, nl;
             globals = this.parser().resultData.globals;
@@ -4295,6 +4742,7 @@ module('targets/adria_node.adria', function(module, resource) {
         }
         ___self.prototype = Object.create(___parent.prototype);
         ___self.prototype.constructor = ___self;
+        var ParentLiteral = ___self;
         ___self.prototype.toSourceNode = function toSourceNode() {
             this.ancestor('function').lookupParent = true;
             return this.csn('___p');
@@ -4307,15 +4755,17 @@ module('targets/adria_node.adria', function(module, resource) {
         }
         ___self.prototype = Object.create(___parent.prototype);
         ___self.prototype.constructor = ___self;
+        var StorageLiteral = ___self;
         ___self.prototype.toSourceNode = function toSourceNode() {
-            var parentFunction, parentProperty;
-            parentFunction = this.ancestor('function');
-            if (parentFunction.isNode()) {
-                parentProperty = parentFunction.ancestor(null, 'proto_body_property');
-                if (parentProperty.isNode()) {
-                    parentProperty.useStorage = true;
-                    return this.csn('this[' + parentProperty.storageName + ']');
-                }
+            var propertyItem, propertySelf, propertyFunction;
+            propertyItem = this.ancestor(null, 'property_accessor_item');
+            propertySelf = propertyItem.parent;
+            propertyFunction = propertyItem.get('value').get('function');
+            if (propertySelf instanceof PropertyLiteral && propertyFunction instanceof FunctionLiteral) {
+                var contextName;
+                propertySelf.useStorage = true;
+                contextName = propertyFunction.storeContext();
+                return this.csn(contextName + '[' + propertySelf.storageName + ']');
             }
             throw new ASTException('Invalid use of "storage" literal', this);
         };
@@ -4327,6 +4777,7 @@ module('targets/adria_node.adria', function(module, resource) {
         }
         ___self.prototype = Object.create(___parent.prototype);
         ___self.prototype.constructor = ___self;
+        var ValueType = ___self;
         ___self.prototype.toSourceNode = function toSourceNode() {
             return this.csn(this.value);
         };
@@ -4338,6 +4789,12 @@ module('targets/adria_node.adria', function(module, resource) {
         }
         ___self.prototype = Object.create(___parent.prototype);
         ___self.prototype.constructor = ___self;
+        var Ident = ___self;
+        ___self.prototype.toSourceNode = function toSourceNode() {
+            var name;
+            name = this.findScope().findRef(this.value);
+            return this.csn(name !== null ? name : this.value);
+        };
         return ___self;
     })(ValueType);
     Name = Ident;
@@ -4347,6 +4804,7 @@ module('targets/adria_node.adria', function(module, resource) {
         }
         ___self.prototype = Object.create(___parent.prototype);
         ___self.prototype.constructor = ___self;
+        var String = ___self;
         return ___self;
     })(ValueType);
     Numeric = (function(___parent) {
@@ -4355,6 +4813,7 @@ module('targets/adria_node.adria', function(module, resource) {
         }
         ___self.prototype = Object.create(___parent.prototype);
         ___self.prototype.constructor = ___self;
+        var Numeric = ___self;
         return ___self;
     })(ValueType);
     VarDef = (function(___parent) {
@@ -4363,19 +4822,23 @@ module('targets/adria_node.adria', function(module, resource) {
         }
         ___self.prototype = Object.create(___parent.prototype);
         ___self.prototype.constructor = ___self;
+        var VarDef = ___self;
         ___self.prototype.toSourceNode = function toSourceNode() {
-            var valueNode, nameNode, locals, result, nl;
-            locals = this.findScope().locals;
+            var valueNode, nameNode, scope, result, nl;
+            scope = this.findScope();
             result = this.csn();
             nl = this.nl();
             this.eachKey('item', function(node) {
                 nameNode = node.get('name');
                 valueNode = node.get('value');
-                locals.add(nameNode.value);
+                scope.addLocal(nameNode.value);
                 if (valueNode.isNode()) {
-                    result.add(nameNode.value + ' = ');
-                    result.add(valueNode.toSourceNode());
-                    result.add(';' + nl);
+                    result.add([
+                        nameNode.toSourceNode(),
+                        ' = ',
+                        valueNode.toSourceNode(),
+                        ';' + nl
+                    ]);
                 }
             });
             return result;
@@ -4388,11 +4851,12 @@ module('targets/adria_node.adria', function(module, resource) {
         }
         ___self.prototype = Object.create(___parent.prototype);
         ___self.prototype.constructor = ___self;
+        var ImportStatement = ___self;
         ___self.prototype.toSourceNode = function toSourceNode() {
-            var implicits;
-            implicits = this.findScope().implicits;
+            var scope;
+            scope = this.findScope();
             this.eachKey('item', function(node) {
-                implicits.add(node.value);
+                scope.addImplicit(node.value);
             });
             return this.csn();
         };
@@ -4415,12 +4879,14 @@ module('targets/adria_node.adria', function(module, resource) {
     module.exports.BaseLiteral = BaseLiteral;
     module.exports.DoWhileStatement = DoWhileStatement;
     module.exports.WhileStatement = WhileStatement;
+    module.exports.IfConditional = IfConditional;
+    module.exports.IfUnconditional = IfUnconditional;
     module.exports.IfStatement = IfStatement;
     module.exports.SwitchStatement = SwitchStatement;
     module.exports.ForCountStatement = ForCountStatement;
     module.exports.ForInStatement = ForInStatement;
     module.exports.ObjectLiteral = ObjectLiteral;
-    module.exports.ProtoBodyProperty = ProtoBodyProperty;
+    module.exports.PropertyLiteral = PropertyLiteral;
     module.exports.ArrayLiteral = ArrayLiteral;
     module.exports.Expression = Expression;
     module.exports.ProtoLiteral = ProtoLiteral;
@@ -4430,9 +4896,11 @@ module('targets/adria_node.adria', function(module, resource) {
     module.exports.ReturnStatement = ReturnStatement;
     module.exports.FlowStatement = FlowStatement;
     module.exports.YieldLiteral = YieldLiteral;
-    module.exports.CatchSpecifics = CatchSpecifics;
+    module.exports.Try = Try;
+    module.exports.Catch = Catch;
+    module.exports.CatchSpecific = CatchSpecific;
     module.exports.CatchAll = CatchAll;
-    module.exports.TryCatchFinallyStatement = TryCatchFinallyStatement;
+    module.exports.Finally = Finally;
     module.exports.ThrowStatement = ThrowStatement;
     module.exports.AssertStatement = AssertStatement;
     module.exports.Statement = Statement;
@@ -4453,44 +4921,38 @@ module('targets/adria_node.adria', function(module, resource) {
     module.exports.ImportStatement = ImportStatement;
 });
 module('targets/adria_parser.adria', function(module, resource) {
-    var fs, util, LanguageParser, AdriaNode, Tokenizer, AdriaParser;
+    var fs, util, Set, LanguageParser, AdriaNode, Tokenizer, AdriaParser;
     fs = require('fs');
-    util = __require('util.adria');
-    LanguageParser = __require('language_parser.adria');
-    AdriaNode = __require('targets/adria_node.adria');
-    Tokenizer = __require('tokenizer.adria');
+    util = ___require('util.adria');
+    Set = ___require('../../astdlib/astd/set.adria');
+    LanguageParser = ___require('language_parser.adria');
+    AdriaNode = ___require('targets/adria_node.adria');
+    Tokenizer = ___require('tokenizer.adria');
     AdriaParser = (function(___parent) {
         var ___self = function AdriaParser(transform) {
             LanguageParser.prototype.constructor.call(this, transform);
-            this.resultData = {
-                globals: new util.Set(),
-                requires: new util.Set(),
-                resources: new util.Set()
-            };
+            this.resultData = { globals: new Set(), requires: new Set(), resources: new Set() };
         };
         ___self.prototype = Object.create(___parent.prototype);
         ___self.prototype.constructor = ___self;
+        var AdriaParser = ___self;
         ___self.prototype.moduleName = '';
         ___self.prototype.indent = 0;
         ___self.prototype.resultData = null;
         ___self.prototype.clone = function clone() {
+            var parser;
             var ___p, ___p0 = ___p = (this === this.constructor.prototype ? this : Object.getPrototypeOf(this));
             while (___p !== null && (___p.clone !== clone || ___p.hasOwnProperty('clone') === false)) {
                 ___p = Object.getPrototypeOf(___p);
             }
             ___p = (___p !== null ? Object.getPrototypeOf(___p).constructor : ___p0);
-            var parser;
             parser = ___p.prototype.clone.call(this);
-            parser.resultData = {
-                globals: new util.Set(),
-                requires: new util.Set(),
-                resources: new util.Set()
-            };
+            parser.resultData = { globals: new Set(), requires: new Set(), resources: new Set() };
             return parser;
         };
         ___self.prototype.trainSelf = function trainSelf() {
             var keywords, matchKeywords;
-            keywords = new util.Set([
+            keywords = new Set([
                 'var',
                 'global',
                 'if',
@@ -4591,24 +5053,25 @@ module('targets/adria_parser.adria', function(module, resource) {
     module.exports = AdriaParser;
 });
 module('targets/adria_transform.adria', function(module, resource) {
-    var fs, path, util, SourceNode, Template, Transform, AdriaParser, AdriaTransform;
+    var fs, path, util, Set, SourceNode, Template, Transform, AdriaParser, AdriaTransform;
     fs = require('fs');
     path = require('path');
-    util = __require('util.adria');
+    util = ___require('util.adria');
+    Set = ___require('../../astdlib/astd/set.adria');
     SourceNode = require('source-map').SourceNode;
-    Template = __require('template.adria');
-    Transform = __require('transform.adria');
-    AdriaParser = __require('targets/adria_parser.adria');
+    Template = ___require('template.adria');
+    Transform = ___require('transform.adria');
+    AdriaParser = ___require('targets/adria_parser.adria');
     AdriaTransform = (function(___parent) {
         var ___self = function AdriaTransform(piped) {
             var options;
             Transform.prototype.constructor.call(this, piped);
-            this.globals = new util.Set();
-            this.implicits = new util.Set();
-            this.requires = new util.Set();
-            this.resources = new util.Set();
-            this.requiresDone = new util.Set();
-            this.usedBuiltins = new util.Set();
+            this.globals = new Set();
+            this.implicits = new Set();
+            this.requires = new Set();
+            this.resources = new Set();
+            this.requiresDone = new Set();
+            this.usedBuiltins = new Set();
             this.modules = [  ];
             this.sourceCode = {  };
             options = this.options;
@@ -4626,6 +5089,7 @@ module('targets/adria_transform.adria', function(module, resource) {
         };
         ___self.prototype = Object.create(___parent.prototype);
         ___self.prototype.constructor = ___self;
+        var AdriaTransform = ___self;
         ___self.prototype.globals = null;
         ___self.prototype.implicits = null;
         ___self.prototype.requires = null;
@@ -4722,7 +5186,7 @@ module('targets/adria_transform.adria', function(module, resource) {
             }
         };
         ___self.prototype.buildModule = function buildModule(moduleName, data) {
-            var parser, result, requires, name;
+            var parser, result, requires;
             parser = this.protoParser.clone();
             parser.moduleName = moduleName;
             if (data === undefined) {
@@ -4734,6 +5198,7 @@ module('targets/adria_transform.adria', function(module, resource) {
             result = parser.output();
             requires = parser.resultData.requires;
             this.requiresDone.add(moduleName);
+            var name;
             for (name in requires.data) {
                 if (this.requiresDone.has(name) === false) {
                     this.buildModule(name);
@@ -4750,7 +5215,7 @@ module('targets/adria_transform.adria', function(module, resource) {
             });
         };
         ___self.prototype.generateOutputTree = function generateOutputTree() {
-            var options, node, tpl, fw, tmpNode, fileName, contents, wrapped, usedBuiltins, id, name, currentModule, file;
+            var options, node, tpl, fw, tmpNode, usedBuiltins;
             options = this.options;
             node = new SourceNode(null, null);
             tpl = new Template();
@@ -4769,6 +5234,7 @@ module('targets/adria_transform.adria', function(module, resource) {
             fw = tpl.fetch(resource('../templates/adria/framework.tpl'));
             tmpNode = node.add(new SourceNode(1, 0, 'adria-framework.js', fw));
             tmpNode.setSourceContent('adria-framework.js', fw);
+            var fileName, contents, wrapped;
             for (fileName in this.resources.data) {
                 contents = fs.readFileSync(options.basePath + fileName, 'UTF-8');
                 wrapped = 'resource(\'' + fileName + '\', \'' + contents.jsify("'") + '\');\n';
@@ -4776,20 +5242,23 @@ module('targets/adria_transform.adria', function(module, resource) {
                 tmpNode.setSourceContent(fileName, contents);
             }
             usedBuiltins = this.usedBuiltins.toArray();
+            var id, name;
             for (id in usedBuiltins) {
                 name = usedBuiltins[id];
                 fw = tpl.fetch(this.builtins[name]);
                 tmpNode = node.add(new SourceNode(1, 0, name.replace('.adria', '.js'), fw));
                 tmpNode.setSourceContent(name.replace('.adria', '.js'), fw);
             }
+            var id, currentModule;
             for (id in this.modules) {
                 currentModule = this.modules[id];
                 tmpNode = node.add(new SourceNode(null, null, currentModule.filename, currentModule.result));
                 tmpNode.setSourceContent(currentModule.filename, currentModule.sourceCode);
             }
+            var id, file;
             for (id in options.files) {
                 file = options.files[id];
-                node.add('\n' + (options.platform === 'node' ? '__' : '') + 'require(\'' + util.normalizeExtension(file, this.options.fileExt) + '\');');
+                node.add('\n' + (options.platform === 'node' ? '___' : '') + 'require(\'' + util.normalizeExtension(file, this.options.fileExt) + '\');');
             }
             if (options['no-closure'] !== true) {
                 node.add('\n})();');
@@ -4804,13 +5273,14 @@ module('targets/adria_transform.adria', function(module, resource) {
             }
         };
         ___self.prototype.run = function run() {
-            var files, id, node, options, jsFile, mapFile, result, mapLink;
+            var files, node, options;
             this.protoParser = new AdriaParser(this);
             this.protoParser.trainSelf();
             if (this.piped !== undefined) {
                 this.buildModule('main' + this.options.fileExt, this.piped);
             }
             files = this.options.files;
+            var id;
             for (id in files) {
                 this.buildModule(util.normalizeExtension(files[id], this.options.fileExt));
             }
@@ -4820,14 +5290,17 @@ module('targets/adria_transform.adria', function(module, resource) {
             node = this.generateOutputTree();
             options = this.options;
             if (options.outFile !== null) {
+                var jsFile, mapFile;
                 jsFile = options.basePath + options.outFile;
                 mapFile = jsFile.stripPostfix('.js') + '.map';
                 if (options['no-map'] !== true) {
+                    var result, mapLink;
                     result = node.toStringWithSourceMap({ file: options.outFile });
                     mapLink = '\n//@ sourceMappingURL=' + path.relative(options.basePath, mapFile);
                     fs.writeFileSync(jsFile, result.code + (options['no-link'] ? '' : mapLink));
                     fs.writeFileSync(mapFile, result.map);
                 } else {
+                    var result;
                     result = node.toString();
                     fs.writeFileSync(jsFile, options['no-blanks'] ? this.postProcess(result) : result);
                 }
@@ -4845,12 +5318,13 @@ module('targets/adria_transform.adria', function(module, resource) {
 });
 module('targets/adriadebug_parser.adria', function(module, resource) {
     var AdriaParser, AdriaNode, AdriaDebugParser;
-    AdriaParser = __require('targets/adria_parser.adria');
-    AdriaNode = __require('targets/adria_node.adria');
+    AdriaParser = ___require('targets/adria_parser.adria');
+    AdriaNode = ___require('targets/adria_node.adria');
     AdriaNode.prototype.toString = function toString() {
-        var indent, result, childId, node;
+        var indent, result;
         indent = String.repeat(this.depth() * 4, ' ');
         result = "";
+        var childId, node;
         for (childId in this.children) {
             node = this.children[childId];
             if (node.isLeaf()) {
@@ -4869,6 +5343,7 @@ module('targets/adriadebug_parser.adria', function(module, resource) {
         }
         ___self.prototype = Object.create(___parent.prototype);
         ___self.prototype.constructor = ___self;
+        var AdriaDebugParser = ___self;
         ___self.prototype.outputMethod = 'toString';
         return ___self;
     })(AdriaParser);
@@ -4877,9 +5352,9 @@ module('targets/adriadebug_parser.adria', function(module, resource) {
 module('targets/adriadebug_transform.adria', function(module, resource) {
     var fs, util, AdriaTransform, AdriaDebugParser, AdriaDebugTransform;
     fs = require('fs');
-    util = __require('util.adria');
-    AdriaTransform = __require('targets/adria_transform.adria');
-    AdriaDebugParser = __require('targets/adriadebug_parser.adria');
+    util = ___require('util.adria');
+    AdriaTransform = ___require('targets/adria_transform.adria');
+    AdriaDebugParser = ___require('targets/adriadebug_parser.adria');
     AdriaDebugTransform = (function(___parent) {
         var ___self = function AdriaDebugTransform(piped) {
             AdriaTransform.prototype.constructor.call(this, piped);
@@ -4888,8 +5363,9 @@ module('targets/adriadebug_transform.adria', function(module, resource) {
         };
         ___self.prototype = Object.create(___parent.prototype);
         ___self.prototype.constructor = ___self;
+        var AdriaDebugTransform = ___self;
         ___self.prototype.run = function run() {
-            var options, files, id, result, mod;
+            var options, files, result;
             options = this.options;
             this.protoParser = new AdriaDebugParser(this);
             this.protoParser.trainSelf();
@@ -4897,10 +5373,12 @@ module('targets/adriadebug_transform.adria', function(module, resource) {
                 this.buildModule('main' + options.fileExt, this.piped);
             }
             files = options.files;
+            var id;
             for (id in files) {
                 this.buildModule(util.normalizeExtension(files[id], options.fileExt));
             }
             result = [  ];
+            var id, mod;
             for (id in this.modules) {
                 mod = this.modules[id];
                 result.push(mod.result);
@@ -4916,11 +5394,11 @@ module('targets/adriadebug_transform.adria', function(module, resource) {
     module.exports = AdriaDebugTransform;
 });
 module('main.adria', function(module, resource) {
-    var util, AdriaTransform, AdriaDebugTransform, target, piped, debug, handle, run, pipeData;
-    __require('prototype.adria');
-    util = __require('util.adria');
-    AdriaTransform = __require('targets/adria_transform.adria');
-    AdriaDebugTransform = __require('targets/adriadebug_transform.adria');
+    var util, AdriaTransform, AdriaDebugTransform, target, piped, debug, handle, run;
+    ___require('prototype.adria');
+    util = ___require('util.adria');
+    AdriaTransform = ___require('targets/adria_transform.adria');
+    AdriaDebugTransform = ___require('targets/adriadebug_transform.adria');
     target = 'adria';
     piped = false;
     debug = false;
@@ -4936,7 +5414,7 @@ module('main.adria', function(module, resource) {
             }
         }
     });
-    handle = function handle() {
+    handle = function handle(pipeData) {
         var transform;
         if (target === 'adria') {
             transform = new AdriaTransform(pipeData);
@@ -4950,17 +5428,19 @@ module('main.adria', function(module, resource) {
     run = function run(pipeData) {
         if (debug) {
             debugger;
-            handle();
+            handle(pipeData);
         } else {
             try {
-                handle();
-            } catch (e) {
+                handle(pipeData);
+            } catch (___exc1) {
+                var e = ___exc1;
                 console.log(e.message);
                 process.exit(1);
             }
         }
     };
     if (piped) {
+        var pipeData;
         pipeData = '';
         process.stdin.on('data', function(data) {
             pipeData += data.toString();
@@ -4973,5 +5453,5 @@ module('main.adria', function(module, resource) {
         run();
     }
 });
-__require('main.adria');
+___require('main.adria');
 })();

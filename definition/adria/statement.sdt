@@ -28,7 +28,9 @@ global_def {
 }
 
 function_statement {
-    entry -> "function" -> ident:name -> "(" -> ")" -> scope:body -> return
+    entry -> "func" -> ident:name
+    
+    entry -> "function" -> ident:name -> "(" -> ")" -> block:body -> return
     "(" -> function_param_list:param_list -> ")"
 }
 
@@ -40,12 +42,16 @@ proto_statement {
 }
 
 generator_statement {
-    entry -> "function" -> "*":generator -> ident:name -> "(" -> ")" -> scope:body -> return
+    entry -> "func" -> "*":generator
+    
+    entry -> "function" -> "*":generator -> ident:name -> "(" -> ")" -> block:body -> return
     "(" -> function_param_list:param_list -> ")"
 }
 
 async_statement {
-    entry -> "function" -> "#":async -> ident:name -> "(" -> ")" -> scope:body -> return
+    entry -> "func" -> "#":async    
+    
+    entry -> "function" -> "#":async -> ident:name -> "(" -> ")" -> block:body -> return
     "(" -> function_param_list:param_list -> ")"
 }
 

@@ -83,7 +83,7 @@ prefix_operation {
 
 property_assignment_operation {
     // a::b = property...
-    entry -> "=":passignment_op -> proto_body_property:value -> return
+    entry -> "=":passignment_op -> property_literal:value -> return
     entry -> ":=":passignment_op -> literal_expression:value -> return
 }
 

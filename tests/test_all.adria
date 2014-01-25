@@ -1,16 +1,3 @@
-#!/bin/sh
-
-#
-# bad shell script to wrap given argument in shell code required for commandline execution
-# NOTE: this is only used in the adria build-process and contains adria copyright/license
-#
-
-# output header to temp file
-
-cat << "__TEXT__" > ef38u4985uijf.tmp
-#!/bin/sh
-':' //; exec "`command -v nodejs || command -v node`" --harmony "$0" "$@"
-
 /*
  * Adria transcompiler
  *
@@ -34,17 +21,14 @@ cat << "__TEXT__" > ef38u4985uijf.tmp
  * IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-;
-__TEXT__
+var test = require('./test');
+test.begin();
 
-# strip trailing newline from heredoc
+require('./test_assert');
+require('./test_exception');
+require('./test_property');
+require('./test_scope');
+//require('./test_async');
 
-head -n -1 ef38u4985uijf.tmp > vf38u4985uijf.tmp
-tail -n 1 ef38u4985uijf.tmp | tr -d '\n' >> vf38u4985uijf.tmp
-rm ef38u4985uijf.tmp
-
-# append code to stripped header
-
-cat $1 >> vf38u4985uijf.tmp
-mv vf38u4985uijf.tmp $1
-chmod +x $1
+test.end();
+test.summary();

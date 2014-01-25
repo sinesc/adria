@@ -1,7 +1,7 @@
 /*
  * Adria transcompiler
  *
- * Copyright (C) 2013 Dennis Möhlmann <mail@dennismoehlmann.de>
+ * Copyright (C) 2014 Dennis Möhlmann <mail@dennismoehlmann.de>
  * Licensed under the MIT license.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -107,13 +107,13 @@ var testProp = function(Type, propName, storageName, initialValue) {
     var descriptor = Object.getOwnPropertyDescriptor(testObj, propName);
     assert(descriptor === undefined);
 
-    var descriptor = Object.getOwnPropertyDescriptor(TestObj.prototype, propName);
+    descriptor = Object.getOwnPropertyDescriptor(TestObj.prototype, propName);
     assert(typeof descriptor.get === 'function');
     assert(typeof descriptor.set === 'function');
     assert(descriptor.enumerable === false);
     assert(descriptor.configurable === false);
 
-    var descriptor = Object.getOwnPropertyDescriptor(TestObj.prototype, storageName);
+    descriptor = Object.getOwnPropertyDescriptor(TestObj.prototype, storageName);
     assert(descriptor.value === initialValue);
     assert(descriptor.writable === true);
     assert(descriptor.enumerable === false);
@@ -154,7 +154,7 @@ test('non-storage properties', function() {
     var descriptor = Object.getOwnPropertyDescriptor(testObj, 'nonStorageProp');
     assert(descriptor === undefined);
 
-    var descriptor = Object.getOwnPropertyDescriptor(TestObj.prototype, 'nonStorageProp');
+    descriptor = Object.getOwnPropertyDescriptor(TestObj.prototype, 'nonStorageProp');
     assert(typeof descriptor.get === 'function');
     assert(typeof descriptor.set === 'function');
     assert(descriptor.enumerable === false);
@@ -175,6 +175,62 @@ test('anon nodefault storage properties', function() {
 
 test('anon default storage properties', function() {
     testProp(TestObj, 'anonDefaultStorageProp', '_anonDefaultStorageProp', 'anonStorageDefault');
+});
+
+test('storage scope', function() {
+
+    var ResObj = proto {
+        plainProp: property {
+            storage: 'plainPropStorage',
+            default: null,
+            get: function() {
+                return (function() {
+                    return storage;
+                })();
+            },
+            set: function(value) {
+                (function() {
+                    storage = value;
+                })();
+            },
+        },
+    };
+
+    var test = new ResObj();
+    assert(test.plainProp === null);
+
+    test.plainProp = 'test';
+    assert(test.plainProp === 'test');
+});
+
+test('prototype extension', function() {
+
+    proto MyTestObj (TestObj) { }
+
+    MyTestObj::myAnonStorageProp = property {
+        get: function() {
+            return storage;
+        },
+        set: function(value) {
+            storage = value;
+        },
+    };
+
+    MyTestObj::myDefaultStorageProp = property {
+        default: 'my default value',
+        storage: 'myDefaultStorage',
+        get: function() {
+            return storage;
+        },
+        set: function(value) {
+            storage = value;
+        },
+    };
+
+    var mytest = new MyTestObj();
+
+    assert(mytest.myAnonStorageProp === undefined);
+    assert(mytest.myDefaultStorageProp === 'my default value');
 });
 
 test.summary();

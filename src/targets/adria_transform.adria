@@ -1,7 +1,7 @@
 /*
  * Adria transcompiler
  *
- * Copyright (C) 2013 Dennis Möhlmann <mail@dennismoehlmann.de>
+ * Copyright (C) 2014 Dennis MÃ¶hlmann <mail@dennismoehlmann.de>
  * Licensed under the MIT license.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -24,6 +24,7 @@
 var fs = require('fs');
 var path = require('path');
 var util = require('../util');
+var Set = require('astd/set');
 var SourceNode = require('source-map').SourceNode;
 var Template = require('../template');
 var Transform = require('../transform');
@@ -58,12 +59,12 @@ module AdriaTransform = proto (Transform) {
 
         Transform->constructor(piped);
 
-        this.globals        = new util.Set();
-        this.implicits      = new util.Set();
-        this.requires       = new util.Set();
-        this.resources      = new util.Set();
-        this.requiresDone   = new util.Set();
-        this.usedBuiltins   = new util.Set();
+        this.globals        = new Set();
+        this.implicits      = new Set();
+        this.requires       = new Set();
+        this.resources      = new Set();
+        this.requiresDone   = new Set();
+        this.usedBuiltins   = new Set();
         this.modules        = [ ];
         this.sourceCode     = { };
 
@@ -83,7 +84,7 @@ module AdriaTransform = proto (Transform) {
         options['tweak-exports'] = (options['tweak-exports'] === undefined ? false : options['tweak-exports']);
         options['tweak-nostrict'] = (options['tweak-nostrict'] === undefined ? false : options['tweak-nostrict']);
 
-        // implictly known references
+        // implicitly known references
 
         this.defineImplicits();
     },
@@ -243,7 +244,7 @@ module AdriaTransform = proto (Transform) {
         // start entry module
 
         for (var id, file in options.files) {
-            node.add('\n' + (options.platform === 'node' ? '__' : '') + 'require(\'' + util.normalizeExtension(file, this.options.fileExt) + '\');');
+            node.add('\n' + (options.platform === 'node' ? '___' : '') + 'require(\'' + util.normalizeExtension(file, this.options.fileExt) + '\');');
         }
 
         if (options['no-closure'] !== true) {

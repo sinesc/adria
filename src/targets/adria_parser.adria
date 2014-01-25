@@ -1,7 +1,7 @@
 /*
  * Adria transcompiler
  *
- * Copyright (C) 2013 Dennis Möhlmann <mail@dennismoehlmann.de>
+ * Copyright (C) 2014 Dennis MÃ¶hlmann <mail@dennismoehlmann.de>
  * Licensed under the MIT license.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -23,6 +23,7 @@
  */
 var fs = require('fs');
 var util = require('../util');
+var Set = require('astd/set');
 var LanguageParser = require('../language_parser');
 var AdriaNode = require('./adria_node');
 var Tokenizer = require('../tokenizer');
@@ -42,9 +43,9 @@ module AdriaParser = proto(LanguageParser) {
         LanguageParser->constructor(transform);
 
         this.resultData = {
-            globals: new util.Set(),
-            requires: new util.Set(),
-            resources: new util.Set(),
+            globals: new Set(),
+            requires: new Set(),
+            resources: new Set(),
         };
     },
 
@@ -56,9 +57,9 @@ module AdriaParser = proto(LanguageParser) {
         var parser = parent->clone();
 
         parser.resultData = {
-            globals: new util.Set(),
-            requires: new util.Set(),
-            resources: new util.Set(),
+            globals: new Set(),
+            requires: new Set(),
+            resources: new Set(),
         };
 
         return parser;
@@ -70,7 +71,7 @@ module AdriaParser = proto(LanguageParser) {
      */
     trainSelf: function() {
 
-        var keywords = new util.Set([
+        var keywords = new Set([
             'var', 'global',
             'if', 'else',
             'for', 'in', 'do', 'while', 'break', 'continue',

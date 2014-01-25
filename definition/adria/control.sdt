@@ -3,10 +3,6 @@
  * multipurpose code block
  */
 
-scope {
-    entry -> block -> return
-}
-
 block {
     entry -> "{" -> "}" -> return
     "{" -> statement:statement -> "}"
@@ -28,14 +24,25 @@ flow_statement {
 }
 
 /*
- * if else block
- * "elseif" is achieved by else followed by a new if-block
+ * if...else if...else block
  */
 
+if_conditional {
+    entry -> "if" -> "(" -> expression:condition -> ")" -> block:body -> return
+}
+
+if_unconditional {
+    entry -> block:body -> return
+}
+
 if_statement {
-    entry -> "if" -> "(" -> expression:condition -> ")" -> block:if_body -> return
-    block:if_body -> "else" -> if_statement:else_if -> return
-    "else" -> block:else_body -> return
+
+    entry -> if_conditional:if -> return
+    if_conditional:if -> "else"[if_to_elseif] -> if_conditional:else_if -> return
+    if_conditional:else_if -> "else"[elseif_to_elseif] -> if_conditional:else_if
+
+    if_conditional:if -> "else"[if_to_else] -> if_unconditional:else -> return
+    if_conditional:else_if -> "else"[elseif_to_else] -> if_unconditional:else
 }
 
 /*
@@ -75,7 +82,7 @@ for_in_statement {
 }
 
 /*
- * switch statement
+ * switch statement !todo scoping how?
  */
 
 switch_case {
@@ -108,29 +115,30 @@ throw_statement {
     entry -> "throw" -> expression:exception -> return
 }
 
-catch_all {
-    entry -> "catch" -> "(" -> ident:value -> ")" -> block:body -> return
+try {
+    entry -> "try" -> block:body -> return
 }
 
 catch_specific {
     entry -> "catch" -> "(" -> expression:type -> ident:value -> ")" -> block:body -> return
 }
 
+catch_all {
+    entry -> "catch" -> "(" -> ident:value -> ")" -> block:body -> return
+}
+
+catch {
+    entry -> catch_all:all -> return
+    entry -> catch_specific:specific -> return
+    catch_specific:specific -> catch_specific:specific
+    catch_specific:specific -> catch_all:all
+}
+
 finally {
     entry -> "finally" -> block:body -> return
 }
 
-catch_specifics {
-    entry -> catch_specific:specific -> return
-    catch_specific:specific -> catch_specific:specific
-    catch_specific:specific -> catch_all:catch -> return
-}
-
 try_catch_finally_statement {
-    entry -> "try" -> block:body -> catch_all:all -> return
-    block:body -> catch_specifics:specifics -> return
-
-    block:body -> finally:finally -> return
-    catch_all:all -> finally:finally
-    catch_specifics:specifics -> finally:finally
+    entry -> try:try -> catch:catch -> return
+    catch:catch -> finally:finally -> return
 }

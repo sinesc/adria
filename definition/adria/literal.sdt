@@ -20,6 +20,45 @@ object_literal {
 }
 
 /*
+ * property literal
+ */
+
+property_literal {
+    entry -> "property" -> property_accessor -> return
+    entry -> "property" -> property_data -> return
+}
+
+property_accessor {
+    entry -> "{" -> property_accessor_item:item -> "}" -> return
+    property_accessor_item:item -> ","[any] -> property_accessor_item:item
+    property_accessor_item:item -> ","[last] -> "}" -> return
+}
+
+property_data {
+    entry -> "{" -> property_data_item:item -> "}" -> return
+    property_data_item:item -> ","[any] -> property_data_item:item
+    property_data_item:item -> ","[last] -> "}" -> return
+}
+
+property_accessor_item {
+    entry -> "default":key -> ":"
+    entry -> "storage":key -> ":"[storage] -> string:value -> return
+    entry -> "get":key -> ":"
+    entry -> "set":key -> ":"
+    entry -> "configurable":key -> ":"
+    entry -> "enumerable":key -> ":"
+    ":" -> literal_expression:value -> return
+}
+
+property_data_item {
+    entry -> "value":key -> ":"
+    entry -> "writable":key -> ":"
+    entry -> "configurable":key -> ":"
+    entry -> "enumerable":key -> ":"
+    ":" -> literal_expression:value -> return
+}
+
+/*
  * array literal
  */
 
@@ -38,19 +77,26 @@ array_literal {
  */
 
 async_literal {
-    entry -> "function" -> "#":async -> "(" -> ")" -> scope:body -> return
+    entry -> "func" -> "#":async
+
+    entry -> "function" -> "#":async -> "(" -> ")" -> block:body -> return
     "#":async -> ident:name -> "("
     "(" -> function_param_list:param_list -> ")"
 }
 
 generator_literal {
-    entry -> "function" -> "*":generator -> "(" -> ")" -> scope:body -> return
+    entry -> "func" -> "*":generator
+
+    entry -> "function" -> "*":generator -> "(" -> ")" -> block:body -> return
     "*":generator -> ident:name -> "("
     "(" -> function_param_list:param_list -> ")"
 }
 
 function_literal {
-    entry -> "function" -> "(" -> ")" -> scope:body -> return
+    entry -> "func" -> "("
+    "func" -> ident:name
+
+    entry -> "function" -> "(" -> ")" -> block:body -> return
     "function" -> ident:name -> "("
     "(" -> function_param_list:param_list -> ")"
 }

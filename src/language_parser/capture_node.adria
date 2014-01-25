@@ -1,7 +1,7 @@
 /*
  * Adria transcompiler
  *
- * Copyright (C) 2013 Dennis Möhlmann <mail@dennismoehlmann.de>
+ * Copyright (C) 2014 Dennis Möhlmann <mail@dennismoehlmann.de>
  * Licensed under the MIT license.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -283,6 +283,24 @@ module CaptureNode = proto {
             return null;
         }
     },
+    
+    /**
+     * finds given constructor in ancestors
+     *
+     * @param function Constructor prototype constructor to find
+     * @param boolean fromParent default true, will also check this if false
+     * @return CaptureNode or null
+     */
+    findProto: function(Constructor, fromParent = true) {
+
+        var current = fromParent ? this.parent : this;
+
+        while (current instanceof CaptureNode && current instanceof Constructor === false) {
+            current = current.parent;
+        }
+
+        return current instanceof Constructor ? current : null;
+    },
 
     /**
      * returns the LanguageParser object owning this node
@@ -348,16 +366,16 @@ module CaptureNode = proto {
      *
      * @return CaptureNode or null
      */
-    path: function(path, dummy) {
+    path: function(pathString, dummy) {
 
         var step;
         var current = this;
 
         dummy = (dummy === undefined ? this.dummy : null);
-        path = path.split('.');
+        pathString = pathString.split('.');
 
-        for (var id in path) {
-            step = path[id].split('[');
+        for (var id in pathString) {
+            step = pathString[id].split('[');
 
             if (step.length === 1) {
                 current = current.get(step[0]);
@@ -374,7 +392,7 @@ module CaptureNode = proto {
     },
 
     /**
-     * creates and adds a stringnode of given subclass to this node
+     * creates and adds a node of given subclass to this node
      *
      * @param string? key node key
      * @param string? value node value

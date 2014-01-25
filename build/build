@@ -1,23 +1,29 @@
 #!/bin/bash
 set -e
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+ASTD_PATH="../../astdlib/"
+BASE_PARAMS="--no-application --no-cache --no-blanks --platform node --no-map"
+BUILD_PARAMS="$@ $BASE_PARAMS --base ../src/ --path $ASTD_PATH --out ../bin/ngadria.js main.adria"
+TEST_PARAMS="$@ $BASE_PARAMS --base ../tests/ --assert --out test.js test_all.adria";
 
 echo "changing working directory to $DIR"
 cd $DIR
 chmod +x ../bin/adria.js
 
 echo "adria compiling ngadria..."
-../bin/adria.js $@ --no-application --no-cache --no-blanks --platform node --no-map --base ../src/ --out ../bin/ngadria.js main.adria
+../bin/adria.js $BUILD_PARAMS
 ./shellwrap ../bin/ngadria.js
 
 echo "ngadria compiling ngadria..."
-../bin/ngadria.js $@ --no-application --no-cache --no-blanks --platform node --no-map --base ../src/ --out ../bin/ngadria.js main.adria
+../bin/ngadria.js $BUILD_PARAMS
 ./shellwrap ../bin/ngadria.js
 md5sum ../bin/ngadria.js
 
 echo "ok. again..."
-../bin/ngadria.js $@ --no-application --no-cache --no-blanks --platform node --no-map --base ../src/ --out ../bin/ngadria.js main.adria
+../bin/ngadria.js $BUILD_PARAMS
 ./shellwrap ../bin/ngadria.js
 md5sum ../bin/ngadria.js
 
-echo "done."
+echo "unit testing...";
+../bin/ngadria.js $TEST_PARAMS
+node ../tests/test.js
