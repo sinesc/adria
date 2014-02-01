@@ -28,7 +28,7 @@ var AdriaNode = require('./adria_node');
  * Extend AdriaNode with XML-yielding toString function
  */
 //!todo find better solution without sacrificing the inclusion of precendence-changes caused by the nodes themselves
-AdriaNode::toString = function() {
+AdriaNode::toString = func() {
 
     var indent = String.repeat(this.depth() * 4, ' ');
     var result = "";

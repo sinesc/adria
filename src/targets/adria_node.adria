@@ -23,20 +23,19 @@
  */
 var path = require('path');
 var fs = require('fs');
-var SourceNode = require('source-map').SourceNode;
-var LanguageParser = require('../language_parser');
-var CaptureNode = LanguageParser.CaptureNode;
-var Transform = require('../transform');
-var util = require('../util');
 var Set = require('astd/set');
 var Map = require('astd/map');
+var SourceNode = require('source-map').SourceNode;  //!todo remove dep from here
+var util = require('../util');
+var LanguageParser = require('../language_parser');
+var CaptureNode = LanguageParser.CaptureNode;
 var ASTException = require('../language_parser/ast_exception');
 
 //!todo this needs various refactoring
 // - tool methods should not return SourceNodes but AdriaNodes (consistency)
 // - all nodes, including String, Ident, ... should have a toSourceNode method to avoid specialcases where node.value needs to be used
 // - need to parse property name strings instead of copying verbatim: unescape the js string, check if valid for .property syntax, otherwise use ['property'] syntax
-// - sourcemapping is disfunctional: needs wrapper, needs proper newline handling
+// - sourcemapping is dysfunctional: needs wrapper, needs proper newline handling
 // - various nodes do too much stuff that their children should handle, i.e. ProtoBodyItem
 
 module AdriaNode = proto (CaptureNode) {
@@ -45,10 +44,10 @@ module AdriaNode = proto (CaptureNode) {
      * find this node's scope
      *
      * @param boolean fromParent default false, if true start looking at parent instead of this
-     * @return scope node
+     * @return scope node/null
      */
-    findScope: function(fromParent = false) {
-        return this.findProto(Scope, fromParent);
+    findScope: func(fromParent = false) {
+        return this.findProto(Scope, fromParent, null);
     },
 
     /**
@@ -56,7 +55,7 @@ module AdriaNode = proto (CaptureNode) {
      *
      * @param string name
      */
-    checkDefined: function(name) {
+    checkDefined: func(name) {
 
         var parser = this.parser();
 
@@ -78,7 +77,7 @@ module AdriaNode = proto (CaptureNode) {
      * @param lookupName name of function to look up
      * @param ownName name of function containing the lookup
      */
-    addParentLookup: function(result, lookupName, ownName = lookupName) {
+    addParentLookup: func(result, lookupName, ownName = lookupName) {
 
         // check if in a prototype, don't skip it if we are
 
@@ -100,16 +99,16 @@ module AdriaNode = proto (CaptureNode) {
      *
      * @return SourceNode for name or null
      */
-    findName: function() {
+    findName: func() {
 
         var result = null;
         var nameNode = this.get('name');
 
         if (nameNode.isNode() === false) {
 
-            nameNode = this.ancestor(null, 'module_statement|export_statement|expression|dec_def|proto_body_item');
+            nameNode = this.ancestor(null, ['module_statement', 'export_statement', 'expression', 'dec_def', 'proto_body_item']);
 
-            if (nameNode !== null) {
+            if (nameNode.isNode()) {
 
                 // fetch from declaration, protoliteral item's left side or expression
 
@@ -140,7 +139,7 @@ module AdriaNode = proto (CaptureNode) {
      *
      * @return SourceNode for name or null
      */
-    findAssignee: function() {
+    findAssignee: func() {
 
         var children = this.children;
         var found = -1;
@@ -173,14 +172,14 @@ module AdriaNode = proto (CaptureNode) {
 
 export AccessOperationProtocall = proto (AdriaNode) {
 
-    toSourceNode: function() {
+    toSourceNode: func() {
 
         var params = this.get('call');
         var result = this.csn();
 
         result.add([ '.prototype.', this.csn(this.get('item').value), '.call(this' ]);
 
-        params.each(function(param) {
+        params.each(func(param) {
             result.add([ ', ', param.toSourceNode() ]);
         });
 
@@ -192,7 +191,7 @@ export AccessOperationProtocall = proto (AdriaNode) {
 
 export ConstLiteral = proto (AdriaNode) {
 
-    toSourceNode: function() {
+    toSourceNode: func() {
 
         var stringNode = this.get('string');
 
@@ -204,11 +203,11 @@ export ConstLiteral = proto (AdriaNode) {
     },
 };
 
-(function() {
+(func() {
 
     var scopeLocalId = 1;
 
-    var findRefScope = function(name) {
+    var findRefScope = func(name) {
 
         var scope = this;
 
@@ -221,7 +220,7 @@ export ConstLiteral = proto (AdriaNode) {
         return scope;
     };
 
-    var createLocalName = function(name) {
+    var createLocalName = func(name) {
 
         var scope = findRefScope.call(this, name);
 
@@ -237,13 +236,13 @@ export ConstLiteral = proto (AdriaNode) {
         locals      : null,
         implicits   : null,
 
-        constructor: function(key, value) {
+        constructor: func(key, value) {
             this.locals = new Map();
             this.implicits = new Map();
             AdriaNode->constructor(key, value);
         },
 
-        addLocal: function(name) {
+        addLocal: func(name) {
 
             if (this.getOwnRef(name)) {
                 throw new ASTException('Reference "' + name + '" already defined in local scope', this);
@@ -254,7 +253,7 @@ export ConstLiteral = proto (AdriaNode) {
             return localName;
         },
 
-        addImplicit: function(name, ignore = false) {
+        addImplicit: func(name, ignore = false) {
 
             // implicits may not be defined in any parent scope
 
@@ -266,7 +265,7 @@ export ConstLiteral = proto (AdriaNode) {
             return name;
         },
 
-        getOwnRef: function(name) {
+        getOwnRef: func(name) {
 
             assert(this.locals instanceof Map);
             assert(this.implicits instanceof Map);
@@ -280,7 +279,7 @@ export ConstLiteral = proto (AdriaNode) {
             return null;
         },
 
-        findRef: function(name) {
+        findRef: func(name) {
 
             var scope, refName;
 
@@ -297,7 +296,7 @@ export ConstLiteral = proto (AdriaNode) {
             return null;
         },
 
-        refsToSourceNode: function() {
+        refsToSourceNode: func() {
 
             if (this.locals.empty) {
                 return this.csn();
@@ -314,12 +313,12 @@ export Module = proto (Scope) {
     moduleExport: null,
     exports: null,
 
-    constructor: function(key, value) {
+    constructor: func(key, value) {
         this.exports = new Map();
         Scope->constructor(key, value);
     },
 
-    setModuleExport: function(name) {
+    setModuleExport: func(name) {
 
         if (this.getOwnRef(name)) {
             throw new ASTException('Reference "' + name + '" already defined in local scope', this);
@@ -330,7 +329,7 @@ export Module = proto (Scope) {
         return name;
     },
 
-    addExport: function(name) {
+    addExport: func(name) {
 
         if (this.getOwnRef(name)) {
             throw new ASTException('Reference "' + name + '" already defined in local scope', this);
@@ -341,7 +340,7 @@ export Module = proto (Scope) {
         return name;
     },
 
-    getOwnRef: function(name) {
+    getOwnRef: func(name) {
 
         var refName;
 
@@ -360,7 +359,7 @@ export Module = proto (Scope) {
         return null;
     },
 
-    toSourceNode: function() {
+    toSourceNode: func() {
 
         this.nl(1);
 
@@ -401,7 +400,7 @@ export Module = proto (Scope) {
 
 export InvokeOperation = proto (AdriaNode) {
 
-    toSourceNode: function(includeBraces = true) {
+    toSourceNode: func(includeBraces = true) {
 
         var result = this.csn();
 
@@ -409,7 +408,7 @@ export InvokeOperation = proto (AdriaNode) {
             result.add('(');
         }
 
-        this.each(function(node, first) {
+        this.each(func(node, first) {
 
             if (first === false) {
                 result.add(', ');
@@ -427,21 +426,21 @@ export InvokeOperation = proto (AdriaNode) {
 };
 
 /**
- * handles an async-wrap-operation. note: wrapping happens in expression, this
+ * handles an async-wrap-operation. note: wrapping happens in Expression, this
  * is just the operation where "(..., #)" is the operator.
  */
 export AsyncWrapOperation = proto (AdriaNode) {
 
     params: null,
 
-    toSourceNode: function() {
+    toSourceNode: func() {
 
         var id = 0;
         var result = this.csn();
         this.params = [];
         result.add('(');
 
-        this.each(function(node, first) {
+        this.each(func(node, first) {
 
             if (first === false) {
                 result.add(', ');
@@ -461,7 +460,7 @@ export AsyncWrapOperation = proto (AdriaNode) {
     },
 };
 
-(function() {
+(func() {
     var thisId = 1;
 
     export FunctionLiteral = proto (Scope) {
@@ -471,12 +470,12 @@ export AsyncWrapOperation = proto (AdriaNode) {
         lookupParent    : false,
         thisId          : 0,
 
-        constructor: function(key, value) {
+        constructor: func(key, value) {
             this.defaultArgs = [ ];
             Scope->constructor(key, value);
         },
 
-        storeContext: function() {
+        storeContext: func() {
 
             if (this.thisId === 0) {
                 this.thisId = thisId++;
@@ -485,7 +484,7 @@ export AsyncWrapOperation = proto (AdriaNode) {
             return '___ths' + this.thisId;
         },
 
-        toSourceNode: function() {
+        toSourceNode: func() {
 
             // indent child content, compensate by not indenting at opening {
 
@@ -560,7 +559,9 @@ export GeneratorStatement = proto (GeneratorLiteral) { };
 
 export AsyncLiteral = proto (FunctionLiteral) {
 
-    toSourceNode: function() {
+    callbackMarker: -1,
+
+    toSourceNode: func() {
 
         // include Async module
 
@@ -571,7 +572,7 @@ export AsyncLiteral = proto (FunctionLiteral) {
         var result = this.csn();
         result.add('(function() {' + this.nl(1));
         result.add([ 'var ___self = ', FunctionLiteral->toSourceNode(), ';', this.nl() ]);
-        result.add([ 'return function(', this.get('param_list').toSourceNode(), ') {' + this.nl(1) ]);
+        result.add([ 'return function(', this.get('param_list').toSourceNode(false), ') {' + this.nl(1) ]);
         result.add('return new ___Async(___self.apply(this, arguments));' + this.nl(-1));
         result.add('};'+ this.nl(-1));
         result.add('})()');
@@ -583,27 +584,28 @@ export AsyncStatement = proto (AsyncLiteral) { };
 
 export FunctionParamList = proto (AdriaNode) {
 
-    toSourceNode: function() {
+    toSourceNode: func(declare = true) {
 
-        var name, defaultArg, valueNode;
         var result = this.csn();
-        var functionNode = this.ancestor('function|generator|async');
+        var functionNode = this.ancestor([ 'function', 'generator', 'async' ]);
         var scope = this.findScope();
 
-        this.eachKey('item', function(node) {
+        this.eachKey('item', func(node) {
 
-            name = node.get('name').toSourceNode();
-
+            var name = node.get('name').toSourceNode();
             result.add(name);
-            scope.addImplicit(name.toString());
+
+            if (declare) {
+                scope.addImplicit(name.toString());
+            }
 
             // check for default args, push those to FunctionLiteral's defaultArgs property
 
-            valueNode = node.get('value');
+            var valueNode = node.get('value');
 
             if (valueNode.isNode()) {
 
-                defaultArg = new SourceNode();
+                var defaultArg = new SourceNode();
                 defaultArg.add([ name, ' = (', name, ' !== undefined ? ', name, ' : (', valueNode.toSourceNode(), '))' ]);
                 functionNode.defaultArgs.push(defaultArg);
             }
@@ -615,20 +617,20 @@ export FunctionParamList = proto (AdriaNode) {
 
 export BaseLiteral = proto (AdriaNode) {
 
-    scan: function(state) {
+    scan: func(state) {
 
         AdriaNode->scan(state);
 
-        this.eachKey('ident', function(child) {
+        this.eachKey('ident', func(child) {
             this.checkDefined(child.value);
         });
     },
 
-    toSourceNode: function() {
+    toSourceNode: func() {
 
         var result = '';
 
-        this.each(function(child) {
+        this.each(func(child) {
             switch (child.key) {
                 //!case 'ident':
                 case 'numeric':
@@ -649,7 +651,7 @@ export BaseLiteral = proto (AdriaNode) {
 
 export DoWhileStatement = proto (Scope) {
 
-    toSourceNode: function() {
+    toSourceNode: func() {
 
         var result = this.csn();
         result.add('do {' + this.nl(1));
@@ -664,7 +666,7 @@ export DoWhileStatement = proto (Scope) {
 
 export WhileStatement = proto (Scope) {
 
-    toSourceNode: function() {
+    toSourceNode: func() {
 
         var result = this.csn();
         result.add([ 'while (', this.get('condition').toSourceNode(), ') {' + this.nl(1) ]);
@@ -679,7 +681,7 @@ export WhileStatement = proto (Scope) {
 
 export IfConditional = proto (Scope) {
 
-    toSourceNode: function() {
+    toSourceNode: func() {
 
         var result = this.csn();
         result.add([ 'if (', this.get('condition').toSourceNode(), ') {' + this.nl(1) ]);
@@ -693,7 +695,7 @@ export IfConditional = proto (Scope) {
 
 export IfUnconditional = proto (Scope) {
 
-    toSourceNode: function() {
+    toSourceNode: func() {
 
         var result = this.csn();
         result.add([ '{' + this.nl(1) ]);
@@ -707,11 +709,11 @@ export IfUnconditional = proto (Scope) {
 
 export IfStatement = proto (AdriaNode) {
 
-    toSourceNode: function() {
+    toSourceNode: func() {
 
         var result = this.csn();
 
-        this.each(function(child) {
+        this.each(func(child) {
 
             if (child.key === 'else_if' || child.key === 'else') {
                 result.add(' else ');
@@ -726,14 +728,14 @@ export IfStatement = proto (AdriaNode) {
 
 export SwitchStatement = proto (AdriaNode) {
 
-    toSourceNode: function() {
+    toSourceNode: func() {
 
         var result = this.csn();
         result.add([ 'switch (', this.get('value').toSourceNode(), ') {', this.nl(1) ]);
 
         // cases
 
-        this.eachKey('case', function(caseNode) {
+        this.eachKey('case', func(caseNode) {
 
             result.add(['case ', caseNode.get('match').toSourceNode(), ':' + this.nl(1) ]);
             result.add(caseNode.get('body').toSourceNode());
@@ -758,7 +760,7 @@ export SwitchStatement = proto (AdriaNode) {
 
 export ForCountStatement = proto (Scope) {
 
-    toSourceNode: function() {
+    toSourceNode: func() {
 
         var initNode = this.get('init');
         var init;
@@ -768,7 +770,7 @@ export ForCountStatement = proto (Scope) {
             var varDefs = this.csn();
             var ownScope = this;
 
-            initNode.eachKey('item', function(node) {
+            initNode.eachKey('item', func(node) {
 
                 var valueNode = node.get('value');
                 var nameNode = node.get('name');
@@ -810,7 +812,7 @@ export ForCountStatement = proto (Scope) {
 
 export ForInStatement = proto (Scope) {
 
-    toSourceNode: function() {
+    toSourceNode: func() {
 
         var keyNode = this.get('key');
         var valueNode = this.get('value');
@@ -848,11 +850,11 @@ export ForInStatement = proto (Scope) {
 
 export ObjectLiteral = proto (AdriaNode) {
 
-    assembleItemList: function() {
+    assembleItemList: func() {
 
         var items = new SourceNode();
 
-        this.each(function(child) {
+        this.each(func(child) {
             var item = new SourceNode();
             item.add(child.get('key').csn(child.get('key').value));
             item.add(': ');
@@ -863,7 +865,7 @@ export ObjectLiteral = proto (AdriaNode) {
         return items;
     },
 
-    toSourceNode: function() {
+    toSourceNode: func() {
 
         // indent now, so that children will be indented. correct for this by not indenting during return
 
@@ -890,7 +892,7 @@ export ObjectLiteral = proto (AdriaNode) {
     }
 };
 
-(function() {
+(func() {
     var storageId = 1;
 
     export PropertyLiteral = proto (ObjectLiteral) {
@@ -899,7 +901,7 @@ export ObjectLiteral = proto (AdriaNode) {
         storageName         : null,
         defaultValueNode    : 'undefined', //!todo should be sourcenode, but returning sourcenodes also needs to be refactored. eventually should be AdriaNode
 
-        assignmentToSourceNode: function(name, target) {
+        assignmentToSourceNode: func(name, target) {
 
             var propertyBody = ObjectLiteral->toSourceNode();
             var result = this.csn();
@@ -917,11 +919,11 @@ export ObjectLiteral = proto (AdriaNode) {
             return result;
         },
 
-        assembleItemList: function() {
+        assembleItemList: func() {
 
             // fetch storage and default settings in advance
 
-            this.each(function(child) {
+            this.each(func(child) {
 
                 var childKey = child.get('key');
                 var childValue = child.get('value');
@@ -952,7 +954,7 @@ export ObjectLiteral = proto (AdriaNode) {
 
             var items = new SourceNode(); //!todo csn?
 
-            this.each(function(child) {
+            this.each(func(child) {
 
                 var childKey = child.get('key');
 
@@ -972,7 +974,7 @@ export ObjectLiteral = proto (AdriaNode) {
 
 export ArrayLiteral = proto (AdriaNode) {
 
-    toSourceNode: function() {
+    toSourceNode: func() {
 
         var items = new SourceNode();
 
@@ -980,7 +982,7 @@ export ArrayLiteral = proto (AdriaNode) {
 
         this.nl(1);
 
-        this.each(function(child) {
+        this.each(func(child) {
             items.add(child.toSourceNode());
         });
 
@@ -1011,7 +1013,7 @@ export Expression = proto (AdriaNode) {
         'call', 'pcall', 'item'
     ]),
 
-    preprocess: function(state) {
+    preprocess: func(state) {
 
         AdriaNode->preprocess(state);
 
@@ -1033,24 +1035,22 @@ export Expression = proto (AdriaNode) {
         }
     },
 
-    scan: function(state) {
+    scan: func(state) {
 
         AdriaNode->scan(state);
 
-        this.eachKey('ident', function(child) {
+        this.eachKey('ident', func(child) {
             this.checkDefined(child.value);
         });
     },
 
-    toSourceNode: function() {
+    toSourceNode: func() {
 
         var children = this.children;
         var propertyAssignSplit = -1;
-        var wrapper = this.get('wrap');
         var result = this.csn();
-        var id, child;
 
-        for (id, child in children) {
+        for (var id, child in children) {
 
             if (children[+id+1] !== undefined && children[+id+1].key === 'passignment_op') {
                 propertyAssignSplit = +id + 1;
@@ -1100,7 +1100,7 @@ export Expression = proto (AdriaNode) {
             //result.prepend('Object.defineProperty(');
             var target, name;
 
-            child = children[propertyAssignSplit - 1];
+            var child = children[propertyAssignSplit - 1];
 
             switch (child.key) {
                 case 'member':
@@ -1134,6 +1134,8 @@ export Expression = proto (AdriaNode) {
 
         // async wrapping
 
+        var wrapper = this.get('wrap');
+
         if (wrapper.isNode()) {
 
             var locals = '';
@@ -1163,14 +1165,14 @@ export ProtoLiteral = proto (AdriaNode) {
     lookupParent: false,
     name: '',
 
-    constructor: function(key, value) {
+    constructor: func(key, value) {
 
         this.constructorArgs = [ ];
         this.constructorDefaults = [ ];
         AdriaNode->constructor(key, value);
     },
 
-    toSourceNode: function() {
+    toSourceNode: func() {
 
         // get own and parent name
 
@@ -1269,7 +1271,7 @@ export ProtoStatement = ProtoLiteral;
 
 export NewProtoLiteral = proto (ProtoLiteral) {
 
-    toSourceNode: function() {
+    toSourceNode: func() {
 
         var result = this.csn();
         result.add('new (');
@@ -1290,9 +1292,9 @@ export NewProtoLiteral = proto (ProtoLiteral) {
 
 export ProtoBodyItem = proto (AdriaNode) {
 
-    toSourceNode: function()  {
+    toSourceNode: func()  {
 
-        var protoNode = this.ancestor(null, 'new_proto_literal|proto_literal|proto_statement');
+        var protoNode = this.ancestor(null, [ 'new_proto_literal', 'proto_literal', 'proto_statement' ]);
         //!var constructorName = protoNode.name;
         var keyNode = this.get('key');
 
@@ -1336,7 +1338,7 @@ export ProtoBodyItem = proto (AdriaNode) {
 
 export ReturnStatement = proto (AdriaNode) {
 
-    toSourceNode: function() {
+    toSourceNode: func() {
 
         var result = this.csn();
         var type = this.get('type');
@@ -1353,21 +1355,23 @@ export FlowStatement = ReturnStatement;
 
 export YieldLiteral = proto (AdriaNode) {
 
-    toSourceNode: function() {
+    toSourceNode: func() {
 
         var result = this.csn();
-        var type = this.get('type');
+        //var type = this.get('type');
 
-        result.add([ type.csn(type.value), ' ' ]);
-        result.add(this.get('value').toSourceNode());
+        //result.add([ type.csn(type.value), ' ' ]);
+        result.add([ 'yield ', this.get('value').toSourceNode() ]);
 
         return result;
     },
 };
 
+export AwaitLiteral = YieldLiteral;
+
 export Try = proto (Scope) {
 
-    toSourceNode: function() {
+    toSourceNode: func() {
 
         var result = this.csn();
         result.add('try {' + this.nl(1));
@@ -1377,21 +1381,21 @@ export Try = proto (Scope) {
     },
 };
 
-(function() {
+(func() {
     var catchId = 1;
 
     export Catch = proto (AdriaNode) {
 
         exceptionName: '',
 
-        toSourceNode: function() {
+        toSourceNode: func() {
 
             this.exceptionName = '___exc' + (catchId++);
 
             var result = this.csn();
             result.add(' catch (' + this.exceptionName + ') {' + this.nl(1));
 
-            this.each(function(node, first, last) {
+            this.each(func(node, first, last) {
 
                 // handle non-first catch all and catch-specific
 
@@ -1420,7 +1424,7 @@ export Try = proto (Scope) {
 
 export CatchSpecific = proto (Scope) {
 
-    toSourceNode: function() {
+    toSourceNode: func() {
 
         var catchNode = this.findProto(Catch);
         var valueNode = this.get('value');
@@ -1438,7 +1442,7 @@ export CatchSpecific = proto (Scope) {
 
 export CatchAll = proto (Scope) {
 
-    toSourceNode: function() {
+    toSourceNode: func() {
 
         var catchNode = this.findProto(Catch);
         var valueNode = this.get('value');
@@ -1455,7 +1459,7 @@ export CatchAll = proto (Scope) {
 
 export Finally = proto (Scope) {
 
-    toSourceNode: function() {
+    toSourceNode: func() {
 
         var result = this.csn();
         result.add(' finally {' + this.nl(1));
@@ -1467,7 +1471,7 @@ export Finally = proto (Scope) {
 
 export ThrowStatement = proto (AdriaNode) {
 
-    toSourceNode: function() {
+    toSourceNode: func() {
 
         var result = this.csn('throw ');
         result.add(this.get('exception').toSourceNode());
@@ -1479,7 +1483,7 @@ export ThrowStatement = proto (AdriaNode) {
 
 export AssertStatement = proto (AdriaNode) {
 
-    toSourceNode: function() {
+    toSourceNode: func() {
 
         var result = this.csn();
 
@@ -1494,7 +1498,7 @@ export AssertStatement = proto (AdriaNode) {
 
             var numParams = 0;
 
-            params.each(function(node, first) {
+            params.each(func(node, first) {
                 numParams++;
             });
 
@@ -1511,7 +1515,7 @@ export AssertStatement = proto (AdriaNode) {
 
 export Statement = proto (AdriaNode) {
 
-    toSourceNode: function() {
+    toSourceNode: func() {
 
         var type = this.children[0].key;
         var result = this.csn();
@@ -1541,17 +1545,17 @@ var AdriaFileNode = proto (AdriaNode) {
      * @param filename
      * @param boolean true if path is a relative nodejs path
      */
-    isRelativePath: function(filename) {
+    isRelativePath: func(filename) {
         return filename.slice(0, 2) === './' || filename.slice(0, 3) === '../';
     },
 
-    makeBaseRelative: function(filename, parser) {
+    makeBaseRelative: func(filename, parser) {
 
         var absName = path.dirname(parser.file) + '/' + filename;
         return path.relative(parser.transform.options.basePath, absName);
     },
 
-    resolvePath: function(fileName, parser) {
+    resolvePath: func(fileName, parser) {
 
         var options = parser.transform.options;
         var relname;
@@ -1586,7 +1590,7 @@ var AdriaFileNode = proto (AdriaNode) {
 
 export ResourceLiteral = proto (AdriaFileNode) {
 
-    toSourceNode: function() {
+    toSourceNode: func() {
 
         var parser = this.parser();
         var options = parser.transform.options;
@@ -1611,7 +1615,7 @@ export ResourceLiteral = proto (AdriaFileNode) {
 
 export RequireLiteral = proto (AdriaFileNode) {
 
-    toSourceNode: function() {
+    toSourceNode: func() {
 
         var parser = this.parser();
         var options = parser.transform.options;
@@ -1631,6 +1635,10 @@ export RequireLiteral = proto (AdriaFileNode) {
 
             parser.transform.usedBuiltins.add(resolvedName);
             moduleName = resolvedName;
+
+            if (resolvedName === 'async.adria') {
+                parser.resultData.globals.add('___Async'); //!todo add a useBuiltin function to handle cases like this
+            }
 
             if (options.platform === 'node') {
                 requireFunction = '___require';
@@ -1666,7 +1674,7 @@ export RequireLiteral = proto (AdriaFileNode) {
 
 export ModuleStatement = proto (AdriaNode) {
 
-    toSourceNode: function() {
+    toSourceNode: func() {
 
         var name = this.get('name').value;
         var moduleNode = this.findProto(Module);
@@ -1683,7 +1691,7 @@ export ModuleStatement = proto (AdriaNode) {
 
 export ExportStatement = proto (AdriaNode) {
 
-    toSourceNode: function() {
+    toSourceNode: func() {
 
         var name = this.get('name').value;
         var moduleNode = this.findProto(Module);
@@ -1700,14 +1708,14 @@ export ExportStatement = proto (AdriaNode) {
 
 export GlobalDef = proto (AdriaNode) {
 
-    toSourceNode: function() {
+    toSourceNode: func() {
 
         var valueNode, nameNode;
         var globals = this.parser().resultData.globals;
         var result = this.csn();
         var nl = this.nl();
 
-        this.eachKey('item', function(node) {
+        this.eachKey('item', func(node) {
             nameNode = node.get('name');
             valueNode = node.get('value');
 
@@ -1726,7 +1734,7 @@ export GlobalDef = proto (AdriaNode) {
 
 export ParentLiteral = proto (AdriaNode) {
 
-    toSourceNode: function() {
+    toSourceNode: func() {
         this.ancestor('function').lookupParent = true;
         return this.csn('___p');
     }
@@ -1734,7 +1742,7 @@ export ParentLiteral = proto (AdriaNode) {
 
 export StorageLiteral = proto (AdriaNode) {
 
-    toSourceNode: function() {
+    toSourceNode: func() {
 
         var propertyItem = this.ancestor(null, 'property_accessor_item');
         var propertySelf = propertyItem.parent;
@@ -1753,14 +1761,14 @@ export StorageLiteral = proto (AdriaNode) {
 
 export ValueType = proto (AdriaNode) {
 
-    toSourceNode: function() {
+    toSourceNode: func() {
         return this.csn(this.value);
     }
 };
 
 export Ident = proto (ValueType) {
 
-    toSourceNode: function() {
+    toSourceNode: func() {
         var name = this.findScope().findRef(this.value);
         return this.csn(name !== null ? name : this.value);
     }
@@ -1771,14 +1779,14 @@ export Numeric = proto (ValueType) { };
 
 export VarDef = proto (AdriaNode) {
 
-    toSourceNode: function() {
+    toSourceNode: func() {
 
         var valueNode, nameNode;
         var scope = this.findScope();
         var result = this.csn();
         var nl = this.nl();
 
-        this.eachKey('item', function(node) {
+        this.eachKey('item', func(node) {
             nameNode = node.get('name');
             valueNode = node.get('value');
 
@@ -1795,11 +1803,11 @@ export VarDef = proto (AdriaNode) {
 
 export ImportStatement = proto (AdriaNode) {
 
-    toSourceNode: function() {
+    toSourceNode: func() {
 
         var scope = this.findScope();
 
-        this.eachKey('item', function(node) {
+        this.eachKey('item', func(node) {
             scope.addImplicit(node.value);
         });
 

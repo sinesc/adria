@@ -34,7 +34,7 @@ var AdriaDebugParser = require('./adriadebug_parser');
  */
 module AdriaDebugTransform = proto(AdriaTransform) {
 
-    constructor: function(piped) {
+    constructor: func(piped) {
 
         AdriaTransform->constructor(piped);
 
@@ -42,7 +42,7 @@ module AdriaDebugTransform = proto(AdriaTransform) {
         this.options['no-scan'] = true;
     },
 
-    run: function() {
+    run: func() {
 
         var options = this.options;
 

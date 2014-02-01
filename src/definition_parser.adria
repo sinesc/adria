@@ -33,7 +33,7 @@ var Path = require('./definition_parser/path');
  */
 module DefinitionParser = proto (Parser) {
 
-    constructor: function() {
+    constructor: func() {
 
         Parser->constructor();
 
@@ -66,7 +66,7 @@ module DefinitionParser = proto (Parser) {
      * @param string name capture name
      * @param string value captured value
      */
-    capture: function(name, value) {
+    capture: func(name, value) {
 
         var currentPath = this.currentPath;
 
@@ -134,7 +134,7 @@ module DefinitionParser = proto (Parser) {
     /**
      * parse file and use callback on captures
      */
-    parse: function(source) {
+    parse: func(source) {
 
         // call parent
 
@@ -154,7 +154,7 @@ module DefinitionParser = proto (Parser) {
      * process loaded .sdt using node_creator and node_pair_integrator callbacks from the target parser
      * effectively, this trains the target parser with a language definition
      */
-    trainOther: function(parser) {
+    trainOther: func(parser) {
 
         var parts = [ 'source', 'target' ];
 
@@ -202,7 +202,7 @@ module DefinitionParser = proto (Parser) {
     /**
      * prepare definition of this parser for .sdt-file parsing
      */
-    trainSelf: function() {
+    trainSelf: func() {
 
         var Type = this.tokenizer.Type;
         var block_root = new Parser.Definition.Node();

@@ -62,4 +62,6 @@ test('function scope', function() {
     assert(test === 2);
 });
 
-test.summary();
+if (test.noSummary !== true) {
+    test.summary();
+}

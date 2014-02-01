@@ -4,15 +4,13 @@ module('async.adria', function(module, resource) {
      * async error object
      *>
 
-    function AsyncError(message) {
-        this.message = message;
-        var stack = Error().stack.split('\n').slice(1);
-        stack[0] = 'AsyncError: ' + message;
-        this.stack = stack.join('\n');
+    function AsyncException(message) {
+        this.skipTrace();
+        Exception.call(this, message);
     }
 
-    AsyncError.prototype = Object.create(Error.prototype);
-    AsyncError.prototype.constructor = AsyncError;
+    AsyncException.prototype = Object.create(Exception.prototype);
+    AsyncException.prototype.constructor = AsyncException;
 
     <*
      * async object
@@ -23,7 +21,7 @@ module('async.adria', function(module, resource) {
         this.next();
     }
 
-    Async.AsyncError = AsyncError;
+    Async.AsyncException = AsyncException;
 
     Async.wrap = function(func, context) {
         return function() {
@@ -41,6 +39,7 @@ module('async.adria', function(module, resource) {
     Async.prototype.error = undefined;
     Async.prototype.waiting = 0;
     Async.prototype.step = 0;
+    Async.prototype.done = false;
 
     <**
      * throw on following next() iteration and provide partial result via exception
@@ -54,10 +53,13 @@ module('async.adria', function(module, resource) {
     };
 
     <**
-     * steps through the yields in the async function. at each yield either a result is returned or
+     * steps through the yields in the async # function. at each yield either a result is returned or
      * an error is thrown. continues until the last yield was processed
      *>
     Async.prototype.next = function() {
+
+        <* the yielded function for which we will wait on its callback before returning that result at the caller yield *>
+
         var arg;
 
         <* todo REFACTOR! *>
@@ -96,6 +98,8 @@ module('async.adria', function(module, resource) {
                 this.step++;
             }
         }
+
+        this.done = this.generator.done;
     };
 
     <**
@@ -110,7 +114,7 @@ module('async.adria', function(module, resource) {
         } else if (args instanceof Object) {
             this.result = { };
         } else {
-            throw new AsyncError('Yielding invalid type ' + (typeof args));
+            throw new AsyncException('Yielding invalid type ' + (typeof args));
         }
 
         this.waiting = 0;
@@ -122,7 +126,7 @@ module('async.adria', function(module, resource) {
                 this.waiting++;
                 arg(this.waitAllCallback.bind(this, this.step, id));
             } else {
-                throw new AsyncError('Property ' + id + ' of yielding object is not a function');
+                throw new AsyncException('Property ' + id + ' of yielding object is not a function');
             }
         }
     };
@@ -153,7 +157,7 @@ module('async.adria', function(module, resource) {
 
         } else if (this.result.hasOwnProperty(originalId)) {
 
-            error = new AsyncError('Callback for item ' + originalId + ' of yield was invoked more than once');
+            error = new AsyncException('Callback for item ' + originalId + ' of yield was invoked more than once');
 
         } else {
 

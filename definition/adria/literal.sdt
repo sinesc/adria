@@ -24,6 +24,8 @@ object_literal {
  */
 
 property_literal {
+    entry -> "prop" -> property_accessor -> return
+    entry -> "prop" -> property_data -> return
     entry -> "property" -> property_accessor -> return
     entry -> "property" -> property_data -> return
 }
@@ -71,6 +73,14 @@ array_literal {
 
     literal_expression:item -> ","[last] -> "]"
 }
+
+/*
+ * scope literal
+ */
+//!TBD
+/*scope_literal {
+    entry -> "scope" -> "{" -> block:body -> "}" -> return
+}*/
 
 /*
  * function literal
@@ -155,6 +165,11 @@ yield_literal {
     "yield":type -> literal_expression:value -> return
 }
 
+await_literal {
+    entry -> "await":type -> return
+    "await":type -> literal_expression:value -> return
+}
+
 /*
  * parent
  */
@@ -192,6 +207,7 @@ base_literal {
     entry -> parent_literal:parent -> return
     entry -> storage_literal:storage -> return
     entry -> yield_literal:yield -> return
+    entry -> await_literal:await -> return
     entry -> "(":brace -> complex_literal -> ")":brace -> return
 }
 

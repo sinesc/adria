@@ -233,4 +233,6 @@ test('prototype extension', function() {
     assert(mytest.myDefaultStorageProp === 'my default value');
 });
 
-test.summary();
+if (test.noSummary !== true) {
+    test.summary();
+}

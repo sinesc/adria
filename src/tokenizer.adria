@@ -39,7 +39,7 @@ module Tokenizer = proto {
      * @param definition array of parser functions to use for token identification
      * @param extra array of additional token types to register with Type enum
      */
-    constructor: function(definition, extra) {
+    constructor: func(definition, extra) {
 
         this.definition = definition;
 
@@ -67,7 +67,7 @@ module Tokenizer = proto {
      * @param filename used in error output
      * @return array of tokens
      */
-    process: function(data, filename = 'unnamed') {
+    process: func(data, filename = 'unnamed') {
 
         var startPos = 0;
         var result = new Result(this);
@@ -129,11 +129,11 @@ function Match(name, data, endPosition, containedRows, lastRowLen) {
 /*
  * predefined tokenizer functions
  */
-Tokenizer.prefab = new (function() {
-    var regexFunc = function(name, regex, lastRegex = null, callback = null) {
+Tokenizer.prefab = new (func() {
+    var regexFunc = func(name, regex, lastRegex = null, callback = null) {
         return {
             name: name,
-            func: function(data, start, lastMatch) {
+            func: func(data, start, lastMatch) {
                 var result = regex.exec(data.substr(start));
 
                 if (result !== null && (lastRegex === null || lastRegex.exec(lastMatch) !== null)) {
@@ -155,19 +155,19 @@ Tokenizer.prefab = new (function() {
         };
     };
 
-    var regexEscape = function(regexString) {
+    var regexEscape = func(regexString) {
         return RegExp.escape(regexString).replace('/', '\\/');
     };
 
-    this.breaker = function() {
+    this.breaker = func() {
         return regexFunc(null, /^(\s+)/);
     };
 
-    this.number = function(name) {
+    this.number = func(name) {
         return regexFunc(name, /^(\-?[0-9]+(\.[0-9]+)?(e\-?[0-9]+)?)/);
     };
 
-    this.delimited = function(name, start, end) {
+    this.delimited = func(name, start, end) {
 
         start   = start || '"';
         end     = end || start;
@@ -176,12 +176,12 @@ Tokenizer.prefab = new (function() {
         return regexFunc(name, regex);
     };
 
-    this.regex = function(name, thisRegex, lastRegex, callback) {
+    this.regex = func(name, thisRegex, lastRegex, callback) {
 
         return regexFunc(name, thisRegex, lastRegex, callback);
     };
 
-    var excludeFunc = function(match) {
+    var excludeFunc = func(match) {
 
         if (this.indexOf(match.data) !== -1) {
             return null;
@@ -190,12 +190,12 @@ Tokenizer.prefab = new (function() {
         return match;
     };
 
-    this.exclude = function(name, regex, excluded) {
+    this.exclude = func(name, regex, excluded) {
 
         return regexFunc(name, regex, null, excludeFunc.bind(excluded));
     };
 
-    this.set = function(name, matches) {
+    this.set = func(name, matches) {
 
         var escaped = [ ];
 
@@ -208,7 +208,7 @@ Tokenizer.prefab = new (function() {
         return regexFunc(name, regex);
     };
 
-    this.group = function(name, matches) {
+    this.group = func(name, matches) {
 
         var escaped = [ ];
 
@@ -221,7 +221,7 @@ Tokenizer.prefab = new (function() {
         return regexFunc(name, regex);
     };
 
-    this.any = function(name) {
+    this.any = func(name) {
         return regexFunc(name, /^[^\s]*/);
     };
 

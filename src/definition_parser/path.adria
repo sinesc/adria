@@ -32,19 +32,19 @@ module Path = proto {
     source: null,
     target: null,
 
-    constructor: function(sourceName, sourceCapture, sourceLabel, sourceCondition, targetName, targetCapture, targetLabel, targetCondition) {
+    constructor: func(sourceName, sourceCapture, sourceLabel, sourceCondition, targetName, targetCapture, targetLabel, targetCondition) {
 
         this.source = new PathElement(sourceName, sourceCapture, sourceLabel, sourceCondition);
         this.target = new PathElement(targetName, targetCapture, targetLabel, targetCondition);
     },
 
-    reset: function() {
+    reset: func() {
 
         this.source = this.target;
         this.target = new PathElement();
     },
 
-    clone: function() {
+    clone: func() {
 
         return new Path(
             this.source.name, this.source.capture, this.source.label, this.source.condition,
@@ -61,7 +61,7 @@ var PathElement = proto {
     label       : '',
     condition   : '',
 
-    constructor: function(name = '', capture = '', label = '', condition = '') {
+    constructor: func(name = '', capture = '', label = '', condition = '') {
         this.name = name;
         this.capture = capture;
         this.label = label;

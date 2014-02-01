@@ -29,7 +29,7 @@ module ASTException = proto (Exception) {
     col     : 0,
     file    : '',
 
-    constructor: function(message, node) {
+    constructor: func(message, node) {
 
         assert(node instanceof CaptureNode);
 

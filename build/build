@@ -26,4 +26,4 @@ md5sum ../bin/ngadria.js
 
 echo "unit testing...";
 ../bin/ngadria.js $TEST_PARAMS
-node ../tests/test.js
+node --harmony ../tests/test.js

@@ -34,10 +34,10 @@ var piped = false;
 var debug = false;
 
 util.processOptions(null, {
-    'target': function(type) {
+    'target': func(type) {
         target = type;
     },
-    '_switch': function(param) {
+    '_switch': func(param) {
         if (param === 'pipe') {
             piped = true;
         } else if (param === 'debug') {
@@ -48,7 +48,7 @@ util.processOptions(null, {
 
 // transformation performer
 
-var handle = function(pipeData) {
+var handle = func(pipeData) {
 
     var transform;
 
@@ -63,7 +63,7 @@ var handle = function(pipeData) {
     transform.run();
 };
 
-var run = function(pipeData) {
+var run = func(pipeData) {
 
     if (debug) {
 
@@ -90,11 +90,11 @@ if (piped) {
 
     var pipeData = '';
 
-    process.stdin.on('data', function(data) {
+    process.stdin.on('data', func(data) {
         pipeData += data.toString();
     });
 
-    process.stdin.on('end', function() {
+    process.stdin.on('end', func() {
         run(pipeData);
     });
 

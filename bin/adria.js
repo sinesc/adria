@@ -54,13 +54,17 @@ var Exception;
         if (message !== undefined) {
             this.message = message;
         }
-        var stack = Error().stack.split('\n').slice(1);
+        var stack = Error().stack.split('\n').slice(this.ownTraceSize);
         var name = this.constructor.name;
         stack[0] = (name === undefined ? 'Exception' : name) + ': ' + message;
         this.stack = stack.join('\n');
     };
     Exception.prototype = Object.create(Error.prototype);
     Exception.prototype.constructor = Exception;
+    Exception.prototype.skipTrace = function skipTrace() {
+        this.ownTraceSize++;
+    };
+    Exception.prototype.ownTraceSize = 2;
     ___require = function(file) {
         var module = modules[file];
         if (typeof module.func === 'function') {
@@ -482,6 +486,8 @@ object_literal {\n\
  */\n\
 \n\
 property_literal {\n\
+    entry -> "prop" -> property_accessor -> return\n\
+    entry -> "prop" -> property_data -> return\n\
     entry -> "property" -> property_accessor -> return\n\
     entry -> "property" -> property_data -> return\n\
 }\n\
@@ -529,6 +535,14 @@ array_literal {\n\
 \n\
     literal_expression:item -> ","[last] -> "]"\n\
 }\n\
+\n\
+/*\n\
+ * scope literal\n\
+ */\n\
+//!TBD\n\
+/*scope_literal {\n\
+    entry -> "scope" -> "{" -> block:body -> "}" -> return\n\
+}*/\n\
 \n\
 /*\n\
  * function literal\n\
@@ -613,6 +627,11 @@ yield_literal {\n\
     "yield":type -> literal_expression:value -> return\n\
 }\n\
 \n\
+await_literal {\n\
+    entry -> "await":type -> return\n\
+    "await":type -> literal_expression:value -> return\n\
+}\n\
+\n\
 /*\n\
  * parent\n\
  */\n\
@@ -650,6 +669,7 @@ base_literal {\n\
     entry -> parent_literal:parent -> return\n\
     entry -> storage_literal:storage -> return\n\
     entry -> yield_literal:yield -> return\n\
+    entry -> await_literal:await -> return\n\
     entry -> "(":brace -> complex_literal -> ")":brace -> return\n\
 }\n\
 \n\
@@ -890,15 +910,13 @@ resource('../templates/adria/async.tpl', 'module(\'async.adria\', function(modul
      * async error object\n\
      *>\n\
 \n\
-    function AsyncError(message) {\n\
-        this.message = message;\n\
-        var stack = Error().stack.split(\'\\n\').slice(1);\n\
-        stack[0] = \'AsyncError: \' + message;\n\
-        this.stack = stack.join(\'\\n\');\n\
+    function AsyncException(message) {\n\
+        this.skipTrace();\n\
+        Exception.call(this, message);\n\
     }\n\
 \n\
-    AsyncError.prototype = Object.create(Error.prototype);\n\
-    AsyncError.prototype.constructor = AsyncError;\n\
+    AsyncException.prototype = Object.create(Exception.prototype);\n\
+    AsyncException.prototype.constructor = AsyncException;\n\
 \n\
     <*\n\
      * async object\n\
@@ -909,7 +927,7 @@ resource('../templates/adria/async.tpl', 'module(\'async.adria\', function(modul
         this.next();\n\
     }\n\
 \n\
-    Async.AsyncError = AsyncError;\n\
+    Async.AsyncException = AsyncException;\n\
 \n\
     Async.wrap = function(func, context) {\n\
         return function() {\n\
@@ -927,6 +945,7 @@ resource('../templates/adria/async.tpl', 'module(\'async.adria\', function(modul
     Async.prototype.error = undefined;\n\
     Async.prototype.waiting = 0;\n\
     Async.prototype.step = 0;\n\
+    Async.prototype.done = false;\n\
 \n\
     <**\n\
      * throw on following next() iteration and provide partial result via exception\n\
@@ -940,10 +959,13 @@ resource('../templates/adria/async.tpl', 'module(\'async.adria\', function(modul
     };\n\
 \n\
     <**\n\
-     * steps through the yields in the async function. at each yield either a result is returned or\n\
+     * steps through the yields in the async # function. at each yield either a result is returned or\n\
      * an error is thrown. continues until the last yield was processed\n\
      *>\n\
     Async.prototype.next = function() {\n\
+\n\
+        <* the yielded function for which we will wait on its callback before returning that result at the caller yield *>\n\
+\n\
         var arg;\n\
 \n\
         <* todo REFACTOR! *>\n\
@@ -982,6 +1004,8 @@ resource('../templates/adria/async.tpl', 'module(\'async.adria\', function(modul
                 this.step++;\n\
             }\n\
         }\n\
+\n\
+        this.done = this.generator.done;\n\
     };\n\
 \n\
     <**\n\
@@ -996,7 +1020,7 @@ resource('../templates/adria/async.tpl', 'module(\'async.adria\', function(modul
         } else if (args instanceof Object) {\n\
             this.result = { };\n\
         } else {\n\
-            throw new AsyncError(\'Yielding invalid type \' + (typeof args));\n\
+            throw new AsyncException(\'Yielding invalid type \' + (typeof args));\n\
         }\n\
 \n\
         this.waiting = 0;\n\
@@ -1008,7 +1032,7 @@ resource('../templates/adria/async.tpl', 'module(\'async.adria\', function(modul
                 this.waiting++;\n\
                 arg(this.waitAllCallback.bind(this, this.step, id));\n\
             } else {\n\
-                throw new AsyncError(\'Property \' + id + \' of yielding object is not a function\');\n\
+                throw new AsyncException(\'Property \' + id + \' of yielding object is not a function\');\n\
             }\n\
         }\n\
     };\n\
@@ -1039,7 +1063,7 @@ resource('../templates/adria/async.tpl', 'module(\'async.adria\', function(modul
 \n\
         } else if (this.result.hasOwnProperty(originalId)) {\n\
 \n\
-            error = new AsyncError(\'Callback for item \' + originalId + \' of yield was invoked more than once\');\n\
+            error = new AsyncException(\'Callback for item \' + originalId + \' of yield was invoked more than once\');\n\
 \n\
         } else {\n\
 \n\
@@ -1127,13 +1151,17 @@ var Exception<: if (enableAssert) { :>, AssertionFailedException<: } :>;\n\
         if (message !== undefined) {\n\
             this.message = message;\n\
         }\n\
-        var stack = Error().stack.split(\'\\n\').slice(1);\n\
+        var stack = Error().stack.split(\'\\n\').slice(this.ownTraceSize);\n\
         var name = this.constructor.name;\n\
         stack[0] = (name === undefined ? \'Exception\' : name) + \': \' + message;\n\
         this.stack = stack.join(\'\\n\');\n\
     };\n\
     Exception.prototype = Object.create(Error.prototype);\n\
-    Exception.prototype.constructor = Exception;<: if (enableApplication) { :>\n\
+    Exception.prototype.constructor = Exception;\n\
+    Exception.prototype.skipTrace = function skipTrace() {\n\
+        this.ownTraceSize++;\n\
+    };\n\
+    Exception.prototype.ownTraceSize = 2;<: if (enableApplication) { :>\n\
     application = function(Constructor /*, params... */) {\n\
         function Application() {\n\
             application = this;\n\
@@ -2676,11 +2704,13 @@ module('language_parser/capture_node.adria', function(module, resource) {
             }
             return result;
         };
-        ___self.prototype.ancestor = function ancestor(key, value) {
+        ___self.prototype.ancestor = function ancestor(key, value, dummy) {
+            value = (value !== undefined ? value : (null));
+            dummy = (dummy !== undefined ? dummy : (this.dummy));
             var current;
             current = this;
-            key = (typeof key !== 'string' ? null : key.split('|'));
-            value = (typeof value !== 'string' ? null : value.split('|'));
+            key = typeof key === 'string' ? [ key ] : key;
+            value = typeof value === 'string' ? [ value ] : value;
             if (key !== null && value !== null) {
                 while (current.parent instanceof CaptureNode && key.indexOf(current.parent.key) === -1 && value.indexOf(current.parent.value) === -1) {
                     current = current.parent;
@@ -2697,17 +2727,18 @@ module('language_parser/capture_node.adria', function(module, resource) {
             if (current.parent instanceof CaptureNode) {
                 return current.parent;
             } else {
-                return null;
+                return dummy;
             }
         };
-        ___self.prototype.findProto = function findProto(Constructor, fromParent) {
+        ___self.prototype.findProto = function findProto(Constructor, fromParent, dummy) {
             fromParent = (fromParent !== undefined ? fromParent : (true));
+            dummy = (dummy !== undefined ? dummy : (this.dummy));
             var current;
             current = fromParent ? this.parent : this;
             while (current instanceof CaptureNode && current instanceof Constructor === false) {
                 current = current.parent;
             }
-            return current instanceof Constructor ? current : null;
+            return current instanceof Constructor ? current : dummy;
         };
         ___self.prototype.parser = function parser() {
             var current;
@@ -2725,8 +2756,8 @@ module('language_parser/capture_node.adria', function(module, resource) {
             return child;
         };
         ___self.prototype.get = function get(key, index, dummy) {
-            index = (index === undefined ? 0 : index);
-            dummy = (dummy === undefined ? this.dummy : null);
+            index = (index !== undefined ? index : (0));
+            dummy = (dummy !== undefined ? dummy : (this.dummy));
             if (this.children instanceof Array) {
                 var id, child;
                 for (id in this.children) {
@@ -2739,9 +2770,9 @@ module('language_parser/capture_node.adria', function(module, resource) {
             return dummy;
         };
         ___self.prototype.path = function path(pathString, dummy) {
+            dummy = (dummy !== undefined ? dummy : (this.dummy));
             var step, current;
             current = this;
-            dummy = (dummy === undefined ? this.dummy : null);
             pathString = pathString.split('.');
             var id;
             for (id in pathString) {
@@ -2751,7 +2782,7 @@ module('language_parser/capture_node.adria', function(module, resource) {
                 } else {
                     current = current.get(step[0], parseInt(step[1].slice(0, -1)));
                 }
-                if (current === null) {
+                if (current.isDummy()) {
                     return dummy;
                 }
             }
@@ -3199,16 +3230,15 @@ module('language_parser/ast_exception.adria', function(module, resource) {
     module.exports = ASTException;
 });
 module('targets/adria_node.adria', function(module, resource) {
-    var path, fs, SourceNode, LanguageParser, CaptureNode, Transform, util, Set, Map, ASTException, AdriaNode, AccessOperationProtocall, ConstLiteral, Scope, Module, InvokeOperation, AsyncWrapOperation, FunctionLiteral, FunctionStatement, GeneratorLiteral, GeneratorStatement, AsyncLiteral, AsyncStatement, FunctionParamList, BaseLiteral, DoWhileStatement, WhileStatement, IfConditional, IfUnconditional, IfStatement, SwitchStatement, ForCountStatement, ForInStatement, ObjectLiteral, PropertyLiteral, ArrayLiteral, Expression, ProtoLiteral, ProtoStatement, NewProtoLiteral, ProtoBodyItem, ReturnStatement, FlowStatement, YieldLiteral, Try, Catch, CatchSpecific, CatchAll, Finally, ThrowStatement, AssertStatement, Statement, InterruptibleStatement, AdriaFileNode, ResourceLiteral, RequireLiteral, ModuleStatement, ExportStatement, GlobalDef, ParentLiteral, StorageLiteral, ValueType, Ident, Name, String, Numeric, VarDef, ImportStatement;
+    var path, fs, Set, Map, SourceNode, util, LanguageParser, CaptureNode, ASTException, AdriaNode, AccessOperationProtocall, ConstLiteral, Scope, Module, InvokeOperation, AsyncWrapOperation, FunctionLiteral, FunctionStatement, GeneratorLiteral, GeneratorStatement, AsyncLiteral, AsyncStatement, FunctionParamList, BaseLiteral, DoWhileStatement, WhileStatement, IfConditional, IfUnconditional, IfStatement, SwitchStatement, ForCountStatement, ForInStatement, ObjectLiteral, PropertyLiteral, ArrayLiteral, Expression, ProtoLiteral, ProtoStatement, NewProtoLiteral, ProtoBodyItem, ReturnStatement, FlowStatement, YieldLiteral, AwaitLiteral, Try, Catch, CatchSpecific, CatchAll, Finally, ThrowStatement, AssertStatement, Statement, InterruptibleStatement, AdriaFileNode, ResourceLiteral, RequireLiteral, ModuleStatement, ExportStatement, GlobalDef, ParentLiteral, StorageLiteral, ValueType, Ident, Name, String, Numeric, VarDef, ImportStatement;
     path = require('path');
     fs = require('fs');
-    SourceNode = require('source-map').SourceNode;
-    LanguageParser = ___require('language_parser.adria');
-    CaptureNode = LanguageParser.CaptureNode;
-    Transform = ___require('transform.adria');
-    util = ___require('util.adria');
     Set = ___require('../../astdlib/astd/set.adria');
     Map = ___require('../../astdlib/astd/map.adria');
+    SourceNode = require('source-map').SourceNode;
+    util = ___require('util.adria');
+    LanguageParser = ___require('language_parser.adria');
+    CaptureNode = LanguageParser.CaptureNode;
     ASTException = ___require('language_parser/ast_exception.adria');
     AdriaNode = (function(___parent) {
         var ___self = function AdriaNode() {
@@ -3219,7 +3249,7 @@ module('targets/adria_node.adria', function(module, resource) {
         var AdriaNode = ___self;
         ___self.prototype.findScope = function findScope(fromParent) {
             fromParent = (fromParent !== undefined ? fromParent : (false));
-            return this.findProto(Scope, fromParent);
+            return this.findProto(Scope, fromParent, null);
         };
         ___self.prototype.checkDefined = function checkDefined(name) {
             var parser;
@@ -3245,8 +3275,14 @@ module('targets/adria_node.adria', function(module, resource) {
             result = null;
             nameNode = this.get('name');
             if (nameNode.isNode() === false) {
-                nameNode = this.ancestor(null, 'module_statement|export_statement|expression|dec_def|proto_body_item');
-                if (nameNode !== null) {
+                nameNode = this.ancestor(null, [
+                    'module_statement',
+                    'export_statement',
+                    'expression',
+                    'dec_def',
+                    'proto_body_item'
+                ]);
+                if (nameNode.isNode()) {
                     if (nameNode.value === 'dec_def' || nameNode.value === 'module_statement' || nameNode.value === 'export_statement') {
                         result = nameNode.get('name').toSourceNode();
                     } else if (nameNode.value === 'proto_body_item') {
@@ -3620,6 +3656,7 @@ module('targets/adria_node.adria', function(module, resource) {
         ___self.prototype = Object.create(___parent.prototype);
         ___self.prototype.constructor = ___self;
         var AsyncLiteral = ___self;
+        ___self.prototype.callbackMarker = -1;
         ___self.prototype.toSourceNode = function toSourceNode() {
             var parser, result;
             parser = this.parser();
@@ -3635,7 +3672,7 @@ module('targets/adria_node.adria', function(module, resource) {
             ]);
             result.add([
                 'return function(',
-                this.get('param_list').toSourceNode(),
+                this.get('param_list').toSourceNode(false),
                 ') {' + this.nl(1)
             ]);
             result.add('return new ___Async(___self.apply(this, arguments));' + this.nl(-1));
@@ -3661,17 +3698,22 @@ module('targets/adria_node.adria', function(module, resource) {
         ___self.prototype = Object.create(___parent.prototype);
         ___self.prototype.constructor = ___self;
         var FunctionParamList = ___self;
-        ___self.prototype.toSourceNode = function toSourceNode() {
-            var name, defaultArg, valueNode, result, functionNode, scope;
+        ___self.prototype.toSourceNode = function toSourceNode(declare) {
+            declare = (declare !== undefined ? declare : (true));
+            var result, functionNode, scope;
             result = this.csn();
-            functionNode = this.ancestor('function|generator|async');
+            functionNode = this.ancestor([ 'function', 'generator', 'async' ]);
             scope = this.findScope();
             this.eachKey('item', function(node) {
+                var name, valueNode;
                 name = node.get('name').toSourceNode();
                 result.add(name);
-                scope.addImplicit(name.toString());
+                if (declare) {
+                    scope.addImplicit(name.toString());
+                }
                 valueNode = node.get('value');
                 if (valueNode.isNode()) {
+                    var defaultArg;
                     defaultArg = new SourceNode();
                     defaultArg.add([
                         name,
@@ -4099,11 +4141,11 @@ module('targets/adria_node.adria', function(module, resource) {
             });
         };
         ___self.prototype.toSourceNode = function toSourceNode() {
-            var children, propertyAssignSplit, wrapper, result, id, child;
+            var children, propertyAssignSplit, result, wrapper;
             children = this.children;
             propertyAssignSplit = -1;
-            wrapper = this.get('wrap');
             result = this.csn();
+            var id, child;
             for (id in children) {
                 child = children[id];
                 if (children[+id + 1] !== undefined && children[+id + 1].key === 'passignment_op') {
@@ -4146,7 +4188,7 @@ module('targets/adria_node.adria', function(module, resource) {
                 }
             }
             if (propertyAssignSplit > -1) {
-                var target, name;
+                var target, name, child;
                 child = children[propertyAssignSplit - 1];
                 switch (child.key) {
                     case 'member':
@@ -4173,13 +4215,14 @@ module('targets/adria_node.adria', function(module, resource) {
                     result = children[propertyAssignSplit + 1].assignmentToSourceNode(name, target);
                 }
             }
+            wrapper = this.get('wrap');
             if (wrapper.isNode()) {
                 var locals, params;
                 locals = '';
                 params = wrapper.params.join(', ');
-                var ___id_scp2;
-                for (___id_scp2 = 0; ___id_scp2 < wrapper.params.length;___id_scp2++) {
-                    locals += '___' + ___id_scp2 + ', ';
+                var id;
+                for (id = 0; id < wrapper.params.length;id++) {
+                    locals += '___' + id + ', ';
                 }
                 result = this.csn([
                     '(function(' + locals + '___callback) {',
@@ -4303,7 +4346,7 @@ module('targets/adria_node.adria', function(module, resource) {
         var ProtoBodyItem = ___self;
         ___self.prototype.toSourceNode = function toSourceNode() {
             var protoNode, keyNode;
-            protoNode = this.ancestor(null, 'new_proto_literal|proto_literal|proto_statement');
+            protoNode = this.ancestor(null, [ 'new_proto_literal', 'proto_literal', 'proto_statement' ]);
             keyNode = this.get('key');
             if (keyNode.value === 'constructor') {
                 var functionNode;
@@ -4365,15 +4408,14 @@ module('targets/adria_node.adria', function(module, resource) {
         ___self.prototype.constructor = ___self;
         var YieldLiteral = ___self;
         ___self.prototype.toSourceNode = function toSourceNode() {
-            var result, type;
+            var result;
             result = this.csn();
-            type = this.get('type');
-            result.add([ type.csn(type.value), ' ' ]);
-            result.add(this.get('value').toSourceNode());
+            result.add([ 'yield ', this.get('value').toSourceNode() ]);
             return result;
         };
         return ___self;
     })(AdriaNode);
+    AwaitLiteral = YieldLiteral;
     Try = (function(___parent) {
         var ___self = function Try() {
             ___parent.apply(this, arguments);
@@ -4646,6 +4688,9 @@ module('targets/adria_node.adria', function(module, resource) {
             if (parser.transform.builtins[resolvedName] !== undefined) {
                 parser.transform.usedBuiltins.add(resolvedName);
                 moduleName = resolvedName;
+                if (resolvedName === 'async.adria') {
+                    parser.resultData.globals.add('___Async');
+                }
                 if (options.platform === 'node') {
                     requireFunction = '___require';
                 }
@@ -4896,6 +4941,7 @@ module('targets/adria_node.adria', function(module, resource) {
     module.exports.ReturnStatement = ReturnStatement;
     module.exports.FlowStatement = FlowStatement;
     module.exports.YieldLiteral = YieldLiteral;
+    module.exports.AwaitLiteral = AwaitLiteral;
     module.exports.Try = Try;
     module.exports.Catch = Catch;
     module.exports.CatchSpecific = CatchSpecific;
@@ -4969,11 +5015,12 @@ module('targets/adria_parser.adria', function(module, resource) {
                 'try',
                 'catch',
                 'finally',
-                'function',
-                'proto',
-                'property',
-                'parent',
                 'yield',
+                'await',
+                'func',
+                'proto',
+                'prop',
+                'parent',
                 'storage',
                 'require',
                 'assert',
@@ -4983,7 +5030,9 @@ module('targets/adria_parser.adria', function(module, resource) {
                 'delete',
                 'new',
                 'instanceof',
-                'typeof'
+                'typeof',
+                'function',
+                'property'
             ]);
             matchKeywords = function matchKeywords(match) {
                 if (keywords.has(match.data)) {

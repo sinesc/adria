@@ -21,10 +21,12 @@
  * IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-var thrown, testId, start, last, oks, fails, exceptions;
-var multiMode = false;
+
+var Async = require('async');
 
 // ensure the test was compiled with assertions enabled
+
+var thrown = null;
 
 try {
     assert(false);
@@ -32,7 +34,7 @@ try {
     thrown = e;
 }
 
-if (thrown === undefined) {
+if (thrown === null) {
     console.log('assertion support is disabled, please recompile with --assert');
     process.exit(1);
 }
@@ -45,15 +47,97 @@ if (thrown.stack.split(':', 1)[0] !== 'AssertionFailedException') {
 
 // set up module
 
-module test = function(name, func) {
+var testId, start, last, oks, fails, exceptions;
+
+var inAsync = false;
+var queue = [ ];
+
+module test = function(name, testFunction) {
+
+    queue.push({ name: name, test: testFunction });
+
+    if (inAsync) {
+        return;
+    } else {
+        nextItem();
+    }
+};
+
+export summary = func() {
+
+    queue.push({ summary: true });
+
+    if (inAsync) {
+        return;
+    } else {
+        nextItem();
+    }
+};
+
+var asyncCallback = func(exception = null) {
+
+    inAsync = false;
+
+    if (exception !== null) {
+        exceptions.push(exception);
+        fails++;
+        print('FAIL');
+    } else {
+        oks++;
+        print('ok');
+    }
+
+    nextItem();
+};
+
+var nextItem = func() {
+
+    while (queue.length > 0) {
+
+        var item = queue.shift();
+
+        if (item.test) {
+            if (runTest(item)) {
+                break;
+            }
+        } else if (item.summary) {
+            showSummary();
+        }
+    }
+};
+
+var showSummary = func(item) {
+
+    log((oks + fails) + ' tests done, ' + oks + ' ok, ' + fails + (fails > 0 ? ' FAILURES' : ' failures'));
+
+    for (var id, exception in exceptions) {
+        console.log('failure ' + (+id + 1), exception.stack);
+    }
+};
+
+var runTest = func(item) {
 
     var success = true;
+    var asyncObject = null;
 
-    log('test ' + testId++ + ': ' + name + ' ', false);
+    log('test ' + testId++ + ': ' + item.name + ' ', false);
 
     try {
-        func();
+
+        if ((asyncObject = item.test(asyncCallback)) instanceof Async) {
+
+            // async test, exit here and wait for callback
+
+            if (asyncObject.done !== true) {
+                inAsync = true;
+                return true;
+            }
+        }
+
     } catch (e) {
+
+        // test failed, log exception
+
         success = false;
         exceptions.push(e);
         fails++;
@@ -64,6 +148,8 @@ module test = function(name, func) {
         oks++;
         print('ok');
     }
+
+    return false;
 };
 
 export log = function(message, nl = true) {
@@ -87,32 +173,7 @@ export fail = function(message) {
     throw new Error(message);
 };
 
-export begin = function() {
-    multiMode = true;
-};
-
-export end = function() {
-    multiMode = false;
-};
-
-export summary = function() {
-
-    if (multiMode) {
-        return;
-    }
-
-    log((oks + fails) + ' tests done, ' + oks + ' ok, ' + fails + (fails > 0 ? ' FAILURES' : ' failures'));
-
-    for (var id, exception in exceptions) {
-        console.log('failure ' + (+id + 1), exception.stack);
-    }
-};
-
 export reset = function() {
-
-    if (multiMode) {
-        return;
-    }
 
     testId      = 1;
     start       = Date.now();

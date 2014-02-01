@@ -29,14 +29,14 @@ var crypto = require('crypto');
  */
 proto DebugLog {
 
-    constructor: function() {
+    constructor: func() {
 
         this.start  = Date.now();
         this.last   = this.start;
         console.log('=============================: Log started');
     },
 
-    print: function(source, message, indent) {
+    print: func(source, message, indent) {
 
         var now         = Date.now();
         var diffStart   = now - this.start;
@@ -52,7 +52,7 @@ var debugLog = null;
 var indent = 0;
 var enabled = false;
 
-export log = function(source, message, offset) {
+export log = func(source, message, offset) {
 
     if (enabled !== true) {
         return;
@@ -75,11 +75,11 @@ export log = function(source, message, offset) {
     }
 };
 
-log.enable = function() {
+log.enable = func() {
     enabled = true;
 };
 
-log.disable = function() {
+log.disable = func() {
     enabled = false;
 };
 
@@ -91,7 +91,7 @@ log.disable = function() {
  * @param depth recursion depth
  * @param showHidden also show hidden properties
  */
-export dump = function(obj, depth, showHidden) {
+export dump = func(obj, depth, showHidden) {
 
     depth = (depth === undefined ? 2 : depth);
     showHidden = (showHidden === undefined ? false : showHidden);
@@ -103,7 +103,7 @@ export dump = function(obj, depth, showHidden) {
 /**
  * enum type
  */
-var Enumeration = function(options) {
+var Enumeration = func(options) {
 
     var bit = 0;
 
@@ -120,7 +120,7 @@ var Enumeration = function(options) {
     return Object.freeze(this);
 };
 
-export Enum = function(options) {
+export Enum = func(options) {
     return new Enumeration(options);
 };
 
@@ -133,7 +133,7 @@ export Enum = function(options) {
  * @param context execution context for given handlers
  * @param handlers object of handler functions
  */
-export processOptions = function(context, handlers) {
+export processOptions = func(context, handlers) {
 
     var next = '_default';
 
@@ -175,11 +175,11 @@ export processOptions = function(context, handlers) {
  *
  * @return string
  */
-export home = function() {
+export home = func() {
     return process.env[process.platform == 'win32' ? 'USERPROFILE' : 'HOME'];
 };
 
-export normalizeExtension = function(fullname, defaultExtension) {
+export normalizeExtension = func(fullname, defaultExtension) {
 
     var slash = fullname.lastIndexOf('/');
     var baseName = slash > 0 ? fullname.slice(slash) : fullname;
@@ -193,7 +193,7 @@ export normalizeExtension = function(fullname, defaultExtension) {
  * @param inpunt string
  * @return string
  */
-export md5 = function(input) {
+export md5 = func(input) {
 
     var md5sum = crypto.createHash('md5');
     md5sum.update(input);

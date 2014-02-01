@@ -141,4 +141,6 @@ test('type-name', function() {
     }
 });
 
-test.summary();
+if (test.noSummary !== true) {
+    test.summary();
+}

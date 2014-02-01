@@ -57,7 +57,7 @@ module Transform = proto {
      *
      * @param piped data received via stdin
      */
-    constructor: function(piped) {
+    constructor: func(piped) {
 
         this.options    = { basePath: '', paths: [ ], files: [ ], outFile: null };
         this.piped      = piped;
@@ -77,28 +77,28 @@ module Transform = proto {
     /**
      * initialize options definition, extend with own options
      */
-    initOptions: function() {
+    initOptions: func() {
 
         this.defineOptions({
-            '_default': function(file) {
+            '_default': func(file) {
                 this['files'].push(file);
             },
-            '_switch': function(param) {
+            '_switch': func(param) {
                 this[param] = true;
             },
-            'base': function(path) {
+            'base': func(path) {
                 this['basePath'] = (path.hasPostfix('/') ? path : path + '/');
             },
-            'path': function(path) {
+            'path': func(path) {
                 if (this['paths'] === undefined) {
                     this['paths'] = [];
                 }
                 this['paths'].push((path.hasPostfix('/') ? path : path + '/'));
             },
-            'out': function(file) {
+            'out': func(file) {
                 this['outFile'] = file;
             },
-            'target': function(target) {
+            'target': func(target) {
                 this['target'] = target;
             }
         });
@@ -109,7 +109,7 @@ module Transform = proto {
      *
      * @param optionsDefinition object of handler functions
      */
-    defineOptions: function(optionsDefinition) {
+    defineOptions: func(optionsDefinition) {
 
         if (this.optionsDefinition === null) {
             this.optionsDefinition = { };
@@ -123,12 +123,12 @@ module Transform = proto {
     /**
      * processes options definition into options
      */
-    processOptions: function() {
+    processOptions: func() {
         util.processOptions(this.options, this.optionsDefinition);
     },
 
     /**
      * entry point, run transformation
      */
-    run: function() { },
+    run: func() { },
 };

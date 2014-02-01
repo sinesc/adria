@@ -28,7 +28,7 @@ export Type = Enum([ 'NONE', 'BLOCK', 'JUMP', 'RETURN' ]);
 export StackItem = proto {
     node: null,
     token: null,
-    constructor: function(node, token) {
+    constructor: func(node, token) {
         this.node = node;
         this.token = token;
     },
@@ -50,11 +50,11 @@ module Node = proto {
     label: '',
     description: '',
 
-    constructor: function() {
+    constructor: func() {
         this.children = [ ];
     },
 
-    hasChild: function(node) {
+    hasChild: func(node) {
 
         var children = this.children;
 
@@ -73,7 +73,7 @@ module Node = proto {
      *
      * @param node a definition node
      */
-    add: function(node) {
+    add: func(node) {
 
         assert(node instanceof Node);
 
@@ -129,7 +129,7 @@ module Node = proto {
      * @param string description text to use during error generation
      * @return Parser.Definition.Node the new node
      */
-    createAndAdd: function(tokenType, match, capture, description) {
+    createAndAdd: func(tokenType, match, capture, description) {
 
         var node = new Node();
         node.capture        = capture;
@@ -146,7 +146,7 @@ module Node = proto {
      * @param token
      * @return boolean
      */
-    matches: function(token) {
+    matches: func(token) {
 
         // types have to overlap
 
@@ -171,7 +171,7 @@ module Node = proto {
      *
      * @param stack current stack
      */
-    reachesExit: function(stack) {
+    reachesExit: func(stack) {
 
         var children = this.children;
         var lastChild = children.length -1;
@@ -261,7 +261,7 @@ module Node = proto {
      * @param object known if specified, function returns empty string and fills known with expected tokens
      * @return string comma-separated list of expected tokens
      */
-    toString: function(owner, known) {
+    toString: func(owner, known) {
 
         var data;
 

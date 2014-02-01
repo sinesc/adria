@@ -43,7 +43,7 @@ module CaptureNode = proto {
      * @param key
      * @param value
      */
-    constructor: function(key, value) {
+    constructor: func(key, value) {
         this.key    = key;
         this.value  = value;
     },
@@ -51,7 +51,7 @@ module CaptureNode = proto {
     /**
      * convert to JSON, loses parent
      */
-    toJSON: function() {
+    toJSON: func() {
 
         // recursively include all children
 
@@ -77,7 +77,7 @@ module CaptureNode = proto {
     /**
      * static, create from JSON, restores parent
      */
-    fromJSON: function(json, parentNode, typeMapper) {
+    fromJSON: func(json, parentNode, typeMapper) {
 
         var Type = typeMapper(null, json._);
 
@@ -104,7 +104,7 @@ module CaptureNode = proto {
      * @param results array of GeneratorState
      * @return CaptureNode root node of the capture tree
      */
-    fromResults: (function() {
+    fromResults: (func() {
 
         /**
          * compares two stacks and returns number of parent-acends and list of capture desends to get from
@@ -114,7 +114,7 @@ module CaptureNode = proto {
          * @param lastStack stack at last processed token
          * @param minStackLen the minimum size the stack had between the tokens for stack and lastStack
          */
-        var stackDiff = function(stack, lastStack, minStackLen) {
+        var stackDiff = func(stack, lastStack, minStackLen) {
 
             // find deepest capture node that is present in both current and last stack
 
@@ -212,23 +212,23 @@ module CaptureNode = proto {
         };
     })(),
 
-    isNode: function() {
+    isNode: func() {
         return this.col !== -1;
     },
 
-    isDummy: function() {
+    isDummy: func() {
         return this.col === -1;
     },
 
-    isLeaf: function() {
+    isLeaf: func() {
         return (this.children instanceof Array === false);
     },
 
-    isBranch: function() {
+    isBranch: func() {
         return (this.children instanceof Array);
     },
 
-    length: function() {
+    length: func() {
         return (this.children instanceof Array ? this.children.length : 0);
     },
 
@@ -237,7 +237,7 @@ module CaptureNode = proto {
      *
      * @return int depth
      */
-    depth: function() {
+    depth: func() {
 
         var result = 0;
         var current = this;
@@ -254,14 +254,17 @@ module CaptureNode = proto {
     /**
      * returns ancestor with matching key and/or value
      *
-     * @return CaptureNode or null
+     * @param string/array key
+     * @param string/array value
+     * @param any dummy result when ancestor is not found
+     * @return CaptureNode/dummy
      */
-    ancestor: function(key, value) {
+    ancestor: func(key, value = null, dummy = this.dummy) {
 
         var current = this;
 
-        key = (typeof key !== 'string' ? null : key.split('|')); //!todo use an array as parameter...
-        value = (typeof value !== 'string' ? null : value.split('|'));
+        key = typeof key === 'string' ? [ key ] : key;
+        value = typeof value === 'string' ? [ value ] : value;
 
         if (key !== null && value !== null) {
             while (current.parent instanceof CaptureNode && key.indexOf(current.parent.key) === -1 && value.indexOf(current.parent.value) === -1) {
@@ -280,7 +283,7 @@ module CaptureNode = proto {
         if (current.parent instanceof CaptureNode) {
             return current.parent;
         } else {
-            return null;
+            return dummy;
         }
     },
     
@@ -289,9 +292,10 @@ module CaptureNode = proto {
      *
      * @param function Constructor prototype constructor to find
      * @param boolean fromParent default true, will also check this if false
-     * @return CaptureNode or null
+     * @param any dummy result when constructor is not found
+     * @return CaptureNode/dummy
      */
-    findProto: function(Constructor, fromParent = true) {
+    findProto: func(Constructor, fromParent = true, dummy = this.dummy) {
 
         var current = fromParent ? this.parent : this;
 
@@ -299,7 +303,7 @@ module CaptureNode = proto {
             current = current.parent;
         }
 
-        return current instanceof Constructor ? current : null;
+        return current instanceof Constructor ? current : dummy;
     },
 
     /**
@@ -307,7 +311,7 @@ module CaptureNode = proto {
      *
      * @return LanguageParser or null
      */
-    parser: function() {
+    parser: func() {
 
         var current = this;
 
@@ -324,7 +328,7 @@ module CaptureNode = proto {
      * @param CaptureNode child new node to add
      * @return CaptureNode given CaptureNode
      */
-    add: function(child) {
+    add: func(child) {
 
         if (this.children == null) {
             this.children = [ ];
@@ -339,12 +343,10 @@ module CaptureNode = proto {
      *
      * @param string key node key to find
      * @param int index which of multiple key-matching nodes
-     * @return CaptureNode or null
+     * @param any dummy result when ancestor is not found
+     * @return CaptureNode/dummy
      */
-    get: function(key, index, dummy) {
-
-        index = (index === undefined ? 0 : index);
-        dummy = (dummy === undefined ? this.dummy : null);
+    get: func(key, index = 0, dummy = this.dummy) {
 
         if (this.children instanceof Array) {
 
@@ -364,14 +366,15 @@ module CaptureNode = proto {
      * chains multiple get calls from input path, split by ., id indicated in array notation
      * i.e. this.path('value.function[3].body')
      *
-     * @return CaptureNode or null
+     * @param string pathString
+     * @param any dummy result when ancestor is not found
+     * @return CaptureNode/dummy
      */
-    path: function(pathString, dummy) {
+    path: func(pathString, dummy = this.dummy) {
 
         var step;
         var current = this;
 
-        dummy = (dummy === undefined ? this.dummy : null);
         pathString = pathString.split('.');
 
         for (var id in pathString) {
@@ -383,7 +386,7 @@ module CaptureNode = proto {
                 current = current.get(step[0], parseInt(step[1].slice(0, -1)));
             }
 
-            if (current === null) {
+            if (current.isDummy()) {
                 return dummy;
             }
         }
@@ -399,7 +402,7 @@ module CaptureNode = proto {
      * @param Type node_type type of the newly created and added node. must be subtype of StringNode
      * @return StringNode the newly created StringNode
      */
-    addNew: function(key, value, Type) {
+    addNew: func(key, value, Type) {
 
         var child = new Type(key, value);
 
@@ -416,7 +419,7 @@ module CaptureNode = proto {
       * @param from start inclusive child index
       * @param to end inclusive child index
       */
-    extract: function(from, to) {
+    extract: func(from, to) {
 
         return this.children.splice(from, to - from + 1);
     },
@@ -428,7 +431,7 @@ module CaptureNode = proto {
       * @param to inclusive end child index
       * @param Constructor optional constructor for the new node, defaults to parent type
       */
-    nest: function(from, to, Constructor = this.constructor) {
+    nest: func(from, to, Constructor = this.constructor) {
 
         var node = new Constructor(this.key, this.value);
 
@@ -448,7 +451,7 @@ module CaptureNode = proto {
      *
      * @param indent change in indentation
      */
-    nl: function(indent) {
+    nl: func(indent) {
 
         indent = (indent === undefined ? 0 : indent);
 
@@ -462,7 +465,7 @@ module CaptureNode = proto {
      *
      * @param code
      */
-    csn: function(code) {
+    csn: func(code) {
 
         return new SourceNode(this.row, this.col -1, this.parser().file, code); //!todo why is everthing offset by one if I don't subtract 1 here? col start at 0, row at 1? unlikely
     },
@@ -472,7 +475,7 @@ module CaptureNode = proto {
      *
      * @return string
      */
-    toString: function() {
+    toString: func() {
 
         var result = '';
 
@@ -490,7 +493,7 @@ module CaptureNode = proto {
      *
      * @return string
      */
-    toSourceNode: function() {
+    toSourceNode: func() {
 
         var result = new SourceNode(null, null);
 
@@ -508,7 +511,7 @@ module CaptureNode = proto {
      *
      * @param state userdefined scan state object passed to every child
      */
-    scan: function(state) {
+    scan: func(state) {
 
         if (this.children instanceof Array) {
             for (var id, child in this.children) {
@@ -522,7 +525,7 @@ module CaptureNode = proto {
      *
      * @param state userdefined preprocessing state object passed to every child
      */
-    preprocess: function(state) {
+    preprocess: func(state) {
 
         if (this.children instanceof Array) {
             for (var id, child in this.children) {
@@ -534,9 +537,9 @@ module CaptureNode = proto {
     /**
      * iterate over all childnodes
      *
-     * @param NodeCallback function(node, first, last)
+     * @param NodeCallback func(node, first, last)
      */
-    each: function(fn) {
+    each: func(fn) {
 
         var children = this.children;
 
@@ -554,9 +557,9 @@ module CaptureNode = proto {
      * iterate over all childnodes with given key
      *
      * @param string key node key
-     * @param NodeCallback function(node, first, last)
+     * @param NodeCallback func(node, first, last)
      */
-    eachKey: function(key, fn) {
+    eachKey: func(key, fn) {
 
         var part = key.split('.');
 
@@ -602,7 +605,7 @@ module CaptureNode = proto {
      *
      * @param string fileName
      */
-    setTemplate: function(fileName) {
+    setTemplate: func(fileName) {
 
         this.tpl = new Template();
         this.tpl.debug = this.parser().transform.options.debug;
@@ -614,7 +617,7 @@ module CaptureNode = proto {
      *
      * @return string generated template string
      */
-    processTemplate: function() {
+    processTemplate: func() {
 
         assert(this.tpl instanceof Template);
 
@@ -627,7 +630,7 @@ module CaptureNode = proto {
      * @param string uri qualified variable name
      * @param any value
      */
-    assign: function(uri, value) {
+    assign: func(uri, value) {
 
         this.tpl.assign(uri, value);  //!todo assign to uri like target
     },

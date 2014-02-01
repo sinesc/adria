@@ -29,14 +29,14 @@ module Cache = proto {
 
     baseDir: util.home() + '/.adria/cache/',
 
-    constructor: function() {
+    constructor: func() {
         this.checkBaseDir();
     },
 
     /**
      * ensures the base cache directory exists
      */
-    checkBaseDir: function() {
+    checkBaseDir: func() {
 
         if (this.baseDir.slice(0, 1) !== '/' || this.baseDir.slice(-1) !== '/') {
             throw new Error('cache.baseDir needs to be an absolute path');
@@ -66,7 +66,7 @@ module Cache = proto {
      *
      * @param file
      */
-    cacheName: function(file) {
+    cacheName: func(file) {
 
         var absPath = path.resolve(process.cwd(), file);
         return this.baseDir + util.md5(absPath);
@@ -79,7 +79,7 @@ module Cache = proto {
      * @param variants array of variants to fetch as well
      * @result object of cache result variants
      */
-    fetch: function(file, variants) {
+    fetch: func(file, variants) {
 
         var cacheFile = this.cacheName(file);
 
@@ -118,7 +118,7 @@ module Cache = proto {
      * @param file
      * @param variants object of cached variants
      */
-    insert: function(file, variants) {
+    insert: func(file, variants) {
 
         assert(fs.existsSync(file));
 

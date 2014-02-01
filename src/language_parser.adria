@@ -75,7 +75,7 @@ module LanguageParser = proto(Parser) {
      *
      * @param transform the applications transform object
      */
-    constructor: function(transform) {
+    constructor: func(transform) {
 
         Parser->constructor(transform);
 
@@ -89,7 +89,7 @@ module LanguageParser = proto(Parser) {
      *
      * @return object
      */
-    clone: function() {
+    clone: func() {
 
         var parser = parent->clone();
         parser.trainer = this.trainer;
@@ -107,7 +107,7 @@ module LanguageParser = proto(Parser) {
      * reset definition, then train this parser with currently loaded .sdt-file definitions
      * this is done using the integrate_node_pair() and createNode() methods
      */
-    trainSelf: function() {
+    trainSelf: func() {
 
         assert(this.trainer != null);
 
@@ -122,7 +122,7 @@ module LanguageParser = proto(Parser) {
      * @param string data definition string
      * @param string filename name (display purpose only)
      */
-    setDefinition: function(data, filename) {
+    setDefinition: func(data, filename) {
 
         util.log('LanguageParser', 'setting definition file ' + filename);
 
@@ -143,7 +143,7 @@ module LanguageParser = proto(Parser) {
      *
      * @param string filename name
      */
-    loadDefinition: function(filename) {
+    loadDefinition: func(filename) {
 
         util.log('LanguageParser', 'loading definition file ' + filename);
 
@@ -155,7 +155,7 @@ module LanguageParser = proto(Parser) {
     /**
      * called during capture list to tree conversion process to select an appropriate node-type
      */
-    mapType: function(capture_name, block_name) {
+    mapType: func(capture_name, block_name) {
         return CaptureNode;
     },
 
@@ -168,7 +168,7 @@ module LanguageParser = proto(Parser) {
      * @param string condition condition part
      * @return Parser.Definition.Node new definition node
      */
-    createNode: function(name, capture, label, condition) {
+    createNode: func(name, capture, label, condition) {
 
         var Node = Parser.Definition.Node;
         var node = new Node();
@@ -248,7 +248,7 @@ module LanguageParser = proto(Parser) {
      * @param pair
      * @param blockName
      */
-    integrateNodePair: function(pair, blockName) {
+    integrateNodePair: func(pair, blockName) {
 
         // connect both nodes of the pair (add return type nodes to the tail(!), others to the head)
 
@@ -268,7 +268,7 @@ module LanguageParser = proto(Parser) {
      * @param string filename name (for display)
      * @param string data contents
      */
-    setSource: function(filename, data) {
+    setSource: func(filename, data) {
 
         // load source file
 
@@ -291,7 +291,7 @@ module LanguageParser = proto(Parser) {
      *
      * @param filename
      */
-    loadSourceFromCache: function(filename) {
+    loadSourceFromCache: func(filename) {
 
         this.cacheData = this.transform.cache.fetch(filename, [ 'base'/*, 'resultData'*/ ]);
 
@@ -307,7 +307,7 @@ module LanguageParser = proto(Parser) {
      *
      * @param string filename name
      */
-    loadSource: function(filename) {
+    loadSource: func(filename) {
 
         // try to load from cache
 
@@ -327,7 +327,7 @@ module LanguageParser = proto(Parser) {
      *
      * @param state userdefined scan state object passed to every node
      */
-    scan: function(state) {
+    scan: func(state) {
 
         var InitialType = this.mapType('', this.definition.initialBlock);
         InitialType::scan.call(this.captureTree, state);
@@ -338,7 +338,7 @@ module LanguageParser = proto(Parser) {
      *
      * @param state userdefined preprocess state object passed to every node
      */
-    preprocess: function(state) {
+    preprocess: func(state) {
 
         var InitialType = this.mapType('', this.definition.initialBlock);
         InitialType::preprocess.call(this.captureTree, state);
@@ -349,7 +349,7 @@ module LanguageParser = proto(Parser) {
      *
      * @return string output string
      */
-    output: function() {
+    output: func() {
 
         var result;
 

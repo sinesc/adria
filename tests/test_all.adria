@@ -22,13 +22,12 @@
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 var test = require('./test');
-test.begin();
+test.noSummary = true;
 
 require('./test_assert');
 require('./test_exception');
 require('./test_property');
 require('./test_scope');
-//require('./test_async');
+require('./test_async');
 
-test.end();
 test.summary();

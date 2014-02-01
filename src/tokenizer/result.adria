@@ -27,12 +27,12 @@ var Position = proto {
     col: 0,
     row: 0,
 
-    constructor: function(col, row) {
+    constructor: func(col, row) {
         this.col = col;
         this.row = row;
     },
 
-    toString: function() {
+    toString: func() {
         return 'line ' + this.row + ', column ' + this.col;
     },
 };
@@ -44,7 +44,7 @@ var Token = proto {
     start: 0,
     pos: null,
 
-    constructor: function(data, type, start, col, row) {
+    constructor: func(data, type, start, col, row) {
 
         this.data = data;
         this.type = type;
@@ -55,7 +55,7 @@ var Token = proto {
 
 module Result = proto {
 
-    constructor: function(tokenizer) {
+    constructor: func(tokenizer) {
         this.tokenizer = tokenizer;
         this.tokens = [ ];
     },
@@ -69,7 +69,7 @@ module Result = proto {
      * @param col calculated column
      * @param row calculated row
      */
-    add: function(data, type, start, col, row) {
+    add: func(data, type, start, col, row) {
         this.tokens.push(new Token(data, type, start, col, row));
     },
 
@@ -79,15 +79,15 @@ module Result = proto {
      * @param id token id to retrieve
      * @return token object or undefined
      */
-    get: function(tokenId) {
+    get: func(tokenId) {
         return this.tokens[tokenId];
     },
 
     /**
      * return number of tokens in result
      */
-    length: property {
-        get: function() {
+    length: prop {
+        get: func() {
             return this.tokens.length;
         }
     },

@@ -79,7 +79,7 @@ module GeneratorState = proto {
      * @param object generator
      * @param string token
      */
-    setGenerator: function(generator, token) {
+    setGenerator: func(generator, token) {
 
         this.generator = generator;
         this.token = token;
@@ -93,7 +93,7 @@ module GeneratorState = proto {
      * fetches next result from generator and makes it accessible via the node, stack and minStack
      * properties. if there are no futher results, the done property will be set to true
      */
-    next: function() {
+    next: func() {
 
         var state = this.generator.next();
 

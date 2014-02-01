@@ -33,7 +33,7 @@ module Template = proto {
     regexp      : null,
     debug       : false,
 
-    constructor: function(delimiterOpen = '<', delimiterClose = '>', delimiterStatement = ':', delimiterExpression = '=', delimiterComment = '*') {
+    constructor: func(delimiterOpen = '<', delimiterClose = '>', delimiterStatement = ':', delimiterExpression = '=', delimiterComment = '*') {
 
         this.data = { };
 
@@ -58,12 +58,12 @@ module Template = proto {
      * @param string name reference name from within template file
      * @param any value data to assign
      */
-    assign: function(name, value) {
+    assign: func(name, value) {
 
         this.data[name] = value;
     },
 
-    parse: function(input) {
+    parse: func(input) {
 
         var regexp = this.regexp;
         var match;
@@ -87,7 +87,7 @@ module Template = proto {
         return jsString;
     },
 
-    exec: function(tplString) {
+    exec: func(tplString) {
 
         var varDefs = 'var result = "";\n';
 
@@ -97,18 +97,18 @@ module Template = proto {
 
         var finalString = '(function(data) { ' + varDefs + tplString + 'return result; })(this)';
 
-        return (function() {
+        return (func() {
             return eval(finalString);
         }).call(this.data);
     },
 
-    fetch: function(input) {
+    fetch: func(input) {
 
         var tplString = this.parse(input);
         return this.exec(tplString);
     },
 
-    fetchFile: function(file) {
+    fetchFile: func(file) {
         return this.fetch(fs.readFileSync(this.basePath + file, 'UTF-8'));
     },
 

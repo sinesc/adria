@@ -55,7 +55,7 @@ module AdriaTransform = proto (Transform) {
         'async.adria': resource('../../templates/adria/async.tpl'),
     },
 
-    constructor: function(piped) {
+    constructor: func(piped) {
 
         Transform->constructor(piped);
 
@@ -89,15 +89,15 @@ module AdriaTransform = proto (Transform) {
         this.defineImplicits();
     },
 
-    initOptions: function() {
+    initOptions: func() {
 
         Transform->initOptions(this);
 
         this.defineOptions({
-            'file-extension': function(extension) {
+            'file-extension': func(extension) {
                 this.fileExt = '.' + extension;
             },
-            'platform': function(platform) {
+            'platform': func(platform) {
                 this.platform = platform;
             }
         });
@@ -106,7 +106,7 @@ module AdriaTransform = proto (Transform) {
     /**
      * defines implictly known references
      */
-    defineImplicits: function() {
+    defineImplicits: func() {
 
         this.implicits.add([
             'window',
@@ -140,7 +140,7 @@ module AdriaTransform = proto (Transform) {
      * @param moduleName name of the module
      * @param data module source code
      */
-    buildModule: function(moduleName, data) {
+    buildModule: func(moduleName, data) {
 
         // create parser from proto-parser
 
@@ -184,7 +184,7 @@ module AdriaTransform = proto (Transform) {
     /**
      * generate JavaScript SourceNode output tree from built modules
      */
-    generateOutputTree: function() {
+    generateOutputTree: func() {
 
         var options = this.options;
         var node = new SourceNode(null, null);
@@ -254,7 +254,7 @@ module AdriaTransform = proto (Transform) {
         return node;
     },
 
-    scan: function() {
+    scan: func() {
 
         for (var id, currentModule in this.modules) {
             currentModule.parser.scan({ });
@@ -264,7 +264,7 @@ module AdriaTransform = proto (Transform) {
     /**
      * entry point, run transformation
      */
-    run: function() {
+    run: func() {
 
         // create a prototype parser to clone from (to avoid training overhead)
 
@@ -319,7 +319,7 @@ module AdriaTransform = proto (Transform) {
         }
     },
 
-    postProcess: function(code) {
+    postProcess: func(code) {
 
         // remove blank lines
 

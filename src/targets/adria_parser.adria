@@ -38,7 +38,7 @@ module AdriaParser = proto(LanguageParser) {
     indent: 0,
     resultData: null,
 
-    constructor: function(transform) {
+    constructor: func(transform) {
 
         LanguageParser->constructor(transform);
 
@@ -52,7 +52,7 @@ module AdriaParser = proto(LanguageParser) {
     /**
      * returns new instance suitable for parsing
      */
-    clone: function() {
+    clone: func() {
 
         var parser = parent->clone();
 
@@ -69,21 +69,23 @@ module AdriaParser = proto(LanguageParser) {
      * initialize a tokenizer, load definition files into a trainer and call parent's trainself, which
      * will use the trainer to genererate the definition for this parser
      */
-    trainSelf: function() {
+    trainSelf: func() {
 
         var keywords = new Set([
             'var', 'global',
             'if', 'else',
             'for', 'in', 'do', 'while', 'break', 'continue',
             'switch', 'case',
-            'throw', 'try', 'catch', 'finally',
-            'function', 'proto', 'property', 'parent', 'yield', 'storage',
+            'throw', 'try', 'catch', 'finally', 'yield', 'await',
+            'func', 'proto', 'prop', 'parent', 'storage', //!todo TBD 'scope',
             'require', 'assert', 'resource', 'module', 'export',
             'delete', 'new',
-            'instanceof', 'typeof'
+            'instanceof', 'typeof',
+            //!todo remove
+            'function', 'property'
         ]);
 
-        var matchKeywords = function(match) {
+        var matchKeywords = func(match) {
 
             if (keywords.has(match.data)) {
                 match.name = 'KEYWORD';
@@ -122,7 +124,7 @@ module AdriaParser = proto(LanguageParser) {
      * @param string captureName node capture name (unused at the moment)
      * @param string blockName name of the block containing the node (mapped to classname)
      */
-    mapType: function(captureName, blockName) {
+    mapType: func(captureName, blockName) {
 
         var typeName = blockName.snakeToCamel(true);
 
@@ -138,7 +140,7 @@ module AdriaParser = proto(LanguageParser) {
      *
      * @return Parser.Definition.Node
      */
-    createNode: function(name, capture, label, condition) {
+    createNode: func(name, capture, label, condition) {
 
         var node = LanguageParser.prototype.createNode.call(this, name, capture, label, condition);
 
@@ -173,7 +175,7 @@ module AdriaParser = proto(LanguageParser) {
      *
      * @see LanguageParser::loadSourceFromCache
      */
-    loadSourceFromCache: function(filename) {
+    loadSourceFromCache: func(filename) {
 
         LanguageParser.prototype.loadSourceFromCache.call(this, filename);
 

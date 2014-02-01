@@ -33,13 +33,17 @@ var Exception<: if (enableAssert) { :>, AssertionFailedException<: } :>;
         if (message !== undefined) {
             this.message = message;
         }
-        var stack = Error().stack.split('\n').slice(1);
+        var stack = Error().stack.split('\n').slice(this.ownTraceSize);
         var name = this.constructor.name;
         stack[0] = (name === undefined ? 'Exception' : name) + ': ' + message;
         this.stack = stack.join('\n');
     };
     Exception.prototype = Object.create(Error.prototype);
-    Exception.prototype.constructor = Exception;<: if (enableApplication) { :>
+    Exception.prototype.constructor = Exception;
+    Exception.prototype.skipTrace = function skipTrace() {
+        this.ownTraceSize++;
+    };
+    Exception.prototype.ownTraceSize = 2;<: if (enableApplication) { :>
     application = function(Constructor /*, params... */) {
         function Application() {
             application = this;
