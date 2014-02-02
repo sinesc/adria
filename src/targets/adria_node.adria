@@ -1355,19 +1355,28 @@ export FlowStatement = ReturnStatement;
 
 export YieldLiteral = proto (AdriaNode) {
 
+    checkEnvironment: func() {
+        if (this.ancestor([ 'function', 'generator', 'async' ]).key !== 'generator') {
+            throw new ASTException('Encountered "yield" outside of generator', this);
+        }
+    },
+
     toSourceNode: func() {
 
-        var result = this.csn();
-        //var type = this.get('type');
+        this.checkEnvironment();
 
-        //result.add([ type.csn(type.value), ' ' ]);
-        result.add([ 'yield ', this.get('value').toSourceNode() ]);
-
-        return result;
+        return this.csn([ 'yield ', this.get('value').toSourceNode() ]);
     },
 };
 
-export AwaitLiteral = YieldLiteral;
+export AwaitLiteral = proto (YieldLiteral) {
+
+    checkEnvironment: func() {
+        if (this.ancestor([ 'function', 'generator', 'async' ]).key !== 'async') {
+            throw new ASTException('Encountered "await" outside of async function', this);
+        }
+    },
+};
 
 export Try = proto (Scope) {
 

@@ -26,11 +26,9 @@ var test = require('./test');
 
 // prepare some functions
 
+var SleepException = proto (Exception) { };
+
 var sleep = function(ms, callback) {
-if (typeof callback !== 'function') {
-    console.log('cb is', callback);
-    debugger;
-}
     setTimeout(function() {
         callback(null, ms);
     }, ms);
@@ -38,12 +36,12 @@ if (typeof callback !== 'function') {
 
 var sleepError = function(ms, callback) {
     setTimeout(function() {
-        callback(new Error('expected error'), 'not returned');
+        callback(new SleepException('expected error'), 'not returned');
     }, ms);
 };
 
 var sleepThrow = function() {
-    throw new Error('expected error');
+    throw new SleepException('expected error');
 };
 
 // tests
@@ -73,7 +71,7 @@ test('wrap throwing', func#(done) {
         wrap = await sleepThrow(10, #);
     } catch (e) {
         thrown = true;
-        assert(e instanceof Error);
+        assert(e instanceof SleepException);
     }
 
     assert(thrown === true);
@@ -81,20 +79,20 @@ test('wrap throwing', func#(done) {
     done();
 });
 
-test('wrap, then yield', func#(done) {
+test('wrap, then await', func#(done) {
 
     var wrap = sleep(10, #);
-    var result = yield wrap;
+    var result = await wrap;
     assert(result === 10);
-    
+
     done();
 });
 
-test('yield wrap', func#(done) {
+test('await wrap', func#(done) {
 
-    var result = yield sleep(11, #);
+    var result = await sleep(11, #);
     assert(result === 11);
-    
+
     done();
 });
 
@@ -109,13 +107,13 @@ test('wrap throwing, await it', func#(done) {
     }
 
     try {
-        result = yield wrap;
+        result = await wrap;
     } catch (e) {
         thrown = e;
     }
 
-    assert(thrown instanceof Error && thrown.message === 'expected error');
-    
+    assert(thrown instanceof SleepException && thrown.message === 'expected error');
+
     done();
 });
 
@@ -130,48 +128,48 @@ test('wrap error, await it', func#(done) {
     }
 
     try {
-        result = yield wrap;
+        result = await wrap;
     } catch (e) {
         thrown = e;
     }
 
-    assert(thrown instanceof Error && thrown.message === 'expected error');
-    
+    assert(thrown instanceof SleepException && thrown.message === 'expected error');
+
     done();
 });
 
-test('wrap and yield multiple, array', func#(done) {
+test('wrap and await multiple, array', func#(done) {
 
-    var result = yield [
+    var result = await [
         sleep(15, #),
         sleep(5, #),
         sleep(10, #),
     ];
 
     assert(result instanceof Array && result[0] === 15 && result[1] === 5 && result[2] === 10);
-    
+
     done();
 });
 
-test('wrap and yield multiple, object', func#(done) {
+test('wrap and await multiple, object', func#(done) {
 
-    var result = yield {
+    var result = await {
         a: sleep(15, #),
         b: sleep(5, #),
         c: sleep(10, #),
     };
 
     assert(result instanceof Object && result.a === 15 && result.b === 5 && result.c === 10);
-    
+
     done();
 });
 
-test('wrap and yield multiple, single invalid argument', func#(done) {
+test('wrap and await multiple, single invalid argument', func#(done) {
 
     var result = undefined, thrown = undefined;
 
     try {
-        result = yield [
+        result = await [
             sleep(15, #),
             sleep(5, function() { }),       // not a wrap op
         ];
@@ -180,16 +178,16 @@ test('wrap and yield multiple, single invalid argument', func#(done) {
     }
 
     assert(result === undefined && thrown instanceof Async.AsyncException);
-    
+
     done();
 });
 
-test('wrap and yield multiple, single error', func#(done) {
+test('wrap and await multiple, single error', func#(done) {
 
     var result = undefined, thrown = undefined;
 
     try {
-        result = yield [
+        result = await [
             sleepError(10, #),
             sleep(15, #),
         ];
@@ -197,17 +195,17 @@ test('wrap and yield multiple, single error', func#(done) {
         thrown = e;
     }
 
-    assert(result === undefined && thrown instanceof Error && thrown.message === 'expected error');
-    
+    assert(result === undefined && thrown instanceof SleepException && thrown.message === 'expected error');
+
     done();
 });
 
-test('wrap and yield multiple, all error', func#(done) {
+test('wrap and await multiple, all error', func#(done) {
 
     var result = undefined, thrown = undefined;
 
     try {
-        result = yield [
+        result = await [
             sleepError(10, #),
             sleepError(10, #),
         ];
@@ -215,8 +213,8 @@ test('wrap and yield multiple, all error', func#(done) {
         thrown = e;
     }
 
-    assert(result === undefined && thrown instanceof Error && thrown.message === 'expected error');
-    
+    assert(result === undefined && thrown instanceof SleepException && thrown.message === 'expected error');
+
     done();
 });
 

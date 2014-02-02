@@ -5,7 +5,6 @@ module('async.adria', function(module, resource) {
      *>
 
     function AsyncException(message) {
-        this.skipTrace();
         Exception.call(this, message);
     }
 

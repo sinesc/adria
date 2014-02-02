@@ -51,20 +51,19 @@ var Exception;
         resources[name] = data;
     };
     Exception = function Exception(message) {
-        if (message !== undefined) {
-            this.message = message;
+        this.message = message === undefined ? this.message : message;
+        this.name = this.constructor.name === undefined ? 'Exception' : this.constructor.name;
+        var current = this;
+        var ownTraceSize = 0;
+        while ((current = Object.getPrototypeOf(current)) instanceof Error) {
+            ownTraceSize++;
         }
-        var stack = Error().stack.split('\n').slice(this.ownTraceSize);
-        var name = this.constructor.name;
-        stack[0] = (name === undefined ? 'Exception' : name) + ': ' + message;
+        var stack = Error().stack.split('\n').slice(ownTraceSize);
+        stack[0] = this.name + ': ' + message;
         this.stack = stack.join('\n');
     };
     Exception.prototype = Object.create(Error.prototype);
     Exception.prototype.constructor = Exception;
-    Exception.prototype.skipTrace = function skipTrace() {
-        this.ownTraceSize++;
-    };
-    Exception.prototype.ownTraceSize = 2;
     ___require = function(file) {
         var module = modules[file];
         if (typeof module.func === 'function') {
@@ -911,7 +910,6 @@ resource('../templates/adria/async.tpl', 'module(\'async.adria\', function(modul
      *>\n\
 \n\
     function AsyncException(message) {\n\
-        this.skipTrace();\n\
         Exception.call(this, message);\n\
     }\n\
 \n\
@@ -1148,20 +1146,19 @@ var Exception<: if (enableAssert) { :>, AssertionFailedException<: } :>;\n\
         resources[name] = data;\n\
     };\n\
     Exception = function Exception(message) {\n\
-        if (message !== undefined) {\n\
-            this.message = message;\n\
+        this.message = message === undefined ? this.message : message;\n\
+        this.name = this.constructor.name === undefined ? \'Exception\' : this.constructor.name;\n\
+        var current = this;\n\
+        var ownTraceSize = 0;\n\
+        while ((current = Object.getPrototypeOf(current)) instanceof Error) {\n\
+            ownTraceSize++;\n\
         }\n\
-        var stack = Error().stack.split(\'\\n\').slice(this.ownTraceSize);\n\
-        var name = this.constructor.name;\n\
-        stack[0] = (name === undefined ? \'Exception\' : name) + \': \' + message;\n\
+        var stack = Error().stack.split(\'\\n\').slice(ownTraceSize);\n\
+        stack[0] = this.name + \': \' + message;\n\
         this.stack = stack.join(\'\\n\');\n\
     };\n\
     Exception.prototype = Object.create(Error.prototype);\n\
-    Exception.prototype.constructor = Exception;\n\
-    Exception.prototype.skipTrace = function skipTrace() {\n\
-        this.ownTraceSize++;\n\
-    };\n\
-    Exception.prototype.ownTraceSize = 2;<: if (enableApplication) { :>\n\
+    Exception.prototype.constructor = Exception;<: if (enableApplication) { :>\n\
     application = function(Constructor /*, params... */) {\n\
         function Application() {\n\
             application = this;\n\
@@ -4407,15 +4404,31 @@ module('targets/adria_node.adria', function(module, resource) {
         ___self.prototype = Object.create(___parent.prototype);
         ___self.prototype.constructor = ___self;
         var YieldLiteral = ___self;
+        ___self.prototype.checkEnvironment = function checkEnvironment() {
+            if (this.ancestor([ 'function', 'generator', 'async' ]).key !== 'generator') {
+                throw new ASTException('Encountered "yield" outside of generator', this);
+            }
+        };
         ___self.prototype.toSourceNode = function toSourceNode() {
-            var result;
-            result = this.csn();
-            result.add([ 'yield ', this.get('value').toSourceNode() ]);
-            return result;
+            this.checkEnvironment();
+            return this.csn([ 'yield ', this.get('value').toSourceNode() ]);
         };
         return ___self;
     })(AdriaNode);
-    AwaitLiteral = YieldLiteral;
+    AwaitLiteral = (function(___parent) {
+        var ___self = function AwaitLiteral() {
+            ___parent.apply(this, arguments);
+        }
+        ___self.prototype = Object.create(___parent.prototype);
+        ___self.prototype.constructor = ___self;
+        var AwaitLiteral = ___self;
+        ___self.prototype.checkEnvironment = function checkEnvironment() {
+            if (this.ancestor([ 'function', 'generator', 'async' ]).key !== 'async') {
+                throw new ASTException('Encountered "await" outside of async function', this);
+            }
+        };
+        return ___self;
+    })(YieldLiteral);
     Try = (function(___parent) {
         var ___self = function Try() {
             ___parent.apply(this, arguments);

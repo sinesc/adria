@@ -30,20 +30,19 @@ var Exception<: if (enableAssert) { :>, AssertionFailedException<: } :>;
         resources[name] = data;
     };
     Exception = function Exception(message) {
-        if (message !== undefined) {
-            this.message = message;
+        this.message = message === undefined ? this.message : message;
+        this.name = this.constructor.name === undefined ? 'Exception' : this.constructor.name;
+        var current = this;
+        var ownTraceSize = 0;
+        while ((current = Object.getPrototypeOf(current)) instanceof Error) {
+            ownTraceSize++;
         }
-        var stack = Error().stack.split('\n').slice(this.ownTraceSize);
-        var name = this.constructor.name;
-        stack[0] = (name === undefined ? 'Exception' : name) + ': ' + message;
+        var stack = Error().stack.split('\n').slice(ownTraceSize);
+        stack[0] = this.name + ': ' + message;
         this.stack = stack.join('\n');
     };
     Exception.prototype = Object.create(Error.prototype);
-    Exception.prototype.constructor = Exception;
-    Exception.prototype.skipTrace = function skipTrace() {
-        this.ownTraceSize++;
-    };
-    Exception.prototype.ownTraceSize = 2;<: if (enableApplication) { :>
+    Exception.prototype.constructor = Exception;<: if (enableApplication) { :>
     application = function(Constructor /*, params... */) {
         function Application() {
             application = this;

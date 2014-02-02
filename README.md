@@ -9,14 +9,14 @@ adria
 About
 -----
 
+**Disclaimer:** This is a spare time project not meant to be used in a production environment. Features and syntax are still in flux and will be for quite some time.
+
 Adria is a programming language for NodeJS and the browser and the name for the self-hosting transcompiler used to generate .js from .adria. The language
 compiles to JavaScript and is syntactically very similar to it, mostly extending it with new features.
 Adria aims to make prototypal inheritance as simple to use as classical inheritance by adding syntax for prototype creation, extension and inheritance. It
 also adds adds asynchronous function statements and literals to reign in "NodeJS callback hell". The language uses a CommonJS like module system, its
 compiler resolves your application's sourcecode-dependencies and (by default) merges required sourcecode into one sourcemapped file.
 It can also merge in any other textual files (i.e. WebGL shaders) you request via the resource literal - which at runtime will return the resource.
-
-The project is in its early stages and some features rely on upcoming standards. It's good to play around with.
 
 A few features in short
 -----------------------
@@ -27,20 +27,20 @@ A few features in short
 
 // demo function using NodeJS callback style
 
-var sleep = function(ms, callback) {
-    setTimeout(function() {
-        callback(null, '<sleept ' + ms + 'ms>');    // second argument will be the yielded return value
+var sleep = func(ms, callback) {
+    setTimeout(func() {
+        callback(null, '<sleept ' + ms + 'ms>');    // second argument will be the await return value
     }, ms);                                         // first is error and would be thrown from within testAsync
 };
 
 // simple async function, # takes the place of the callback parameter
 
-var testAsync = function#() {
+var testAsync = func#() {
 
-    var result = yield sleep(1000, #);
+    var result = await sleep(1000, #);
     console.log('sleep done', result);
 
-    result += yield sleep(1000, #);
+    result += await sleep(1000, #);
     console.log('sleep done', result);
 };
 
@@ -78,10 +78,10 @@ for (var key, value in [ 'zero', 'one', 'two', 'three' ]) {
 ```javascript
 proto Base {
     text: 'hi',
-    constructor: function() {
+    constructor: func() {
         console.log(this.constructor.name);
     },
-    greet: function(name) {
+    greet: func(name) {
         return this.text + ' ' + name;
     }
 }
@@ -92,7 +92,7 @@ proto Base {
 ```javascript
 proto Sub (Base) {
     text: 'hello',
-    greet: function(name) {
+    greet: func(name) {
         return Base->greet(name + '!'); // calls Base's prototype function greet in the context of Sub
     }
 }
@@ -112,9 +112,9 @@ console.log(sub.greet('world'));
 ### Asynchronous wait in parallel
 
 ```javascript
-var testAsync = function#(callback) {   // has a callback, so could be used as yield argument in another function#
+var testAsync = func#(callback) {   // has a callback, so could be used as await argument in another func#
 
-    var val = yield {                   // also supports arrays, does not have to be a static literal
+    var val = await {                   // also supports arrays, does not have to be a static literal
         sleepOne    : sleep(1200, #),
         sleepTwo    : sleep(1600, #),
         sleepThree  : sleep(500, #),
@@ -127,7 +127,7 @@ var testAsync = function#(callback) {   // has a callback, so could be used as y
 
 var now = process.hrtime();
 
-testAsync(function(err, val) {          // instead of using the callback, we could yield this from another function#
+testAsync(func(err, val) {          // instead of using the callback, we could await this from another func#
     var diff = process.hrtime(now);
     console.log(diff[0] + '.' + diff[1] + 's');
     console.log(val);
@@ -146,10 +146,10 @@ console.log('start');
 
 ```javascript
 Sub::message = property {               // prototype access operator and property assignment
-    get: function() {
+    get: func() {
         return 'Greeting is "' + this.text + '"';
     },
-    set: function(value) {
+    set: func(value) {
         this.text = value;
     }
 };

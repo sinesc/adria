@@ -13,7 +13,7 @@ This document details only differences between Javascript and Adria
 
 ## Incompatibilities
 
-- Adria adds the following keywords: `proto`, `property`, `parent`, `require`, `resource`, `global` and `assert`
+- Adria adds the following keywords: `proto`, `property`, `parent`, `await`, `require`, `resource`, `global` and `assert`
     Keywords may not be used as identifiers, but they may be used as object property names.
 
 - With the exception of block-statements, all statements must be semicolon-terminated. Block-statements are statements that end on a block, i.e. `while { }` but not `do { } while ()`. Note: function/proto-literals are not statements in themselves.
@@ -52,34 +52,36 @@ Support for catching specific types of exceptions was added. If an exception is 
 
 ### async function literals and statements
 
-`var fn = function# [<name>] (<parameter list>) { };`
+`var fn = func# [<name>] (<parameter list>) { };`
 
-`function# <name> (<parameter list>) { }`
+`func# <name> (<parameter list>) { }`
 
-Creates a new asynchronous function. Asynchronous functions cannot return a specific value, they always return an Async object. Asynchronous functions add support for the yield literal, which will halt execution of the function until its function-argument invokes a callback, passed in via the #-token or until all of its array- or object-argument functions have invoked their callbacks. While the function is halted, other code may run.
+Creates a new asynchronous function. Asynchronous functions cannot return a specific value, they always return an Async object. Asynchronous functions add support for the await literal, which will pause execution of the function until its function-argument invokes a callback, passed in via the #-token or until all of its array- or object-argument functions have invoked their callbacks. While the function is paused, other code may run.
+
+Note: async-functions currently require ES Harmony generators. A future version will drop this requirement (also applies to adria generator functions). Also note: Any exception thrown from an async function after the first await cannot be caught (at this time).
 
 In the following examples, a simple sleep function is used. The function follows the NodeJS `callback(err, val)` style and could be replaced with any of NodeJS's callback based functions, i.e. `fs.readFile`.
 
 ```javascript
-var sleep = function(ms, callback) {
-    setTimeout(function() {
+var sleep = func(ms, callback) {
+    setTimeout(func() {
         callback(null, '<sleept ' + ms + 'ms>');
     }, ms);
 };
 ```
-An asynchronous function can wait for another function to invoke its callback by yielding the results of a wrap-operation on it. The wrap operation looks like an invocation except
-that one of the parameters used is the `#` token. A wrap operation marks the position of the callback and sets the functions parameters. If the slight overhead of this operation
+An asynchronous function can wait for another function to invoke its callback by awaiting the results of a wrap-operation on it. The wrap operation looks like an invocation except
+that one of the parameters used is the `#` token. A wrap operation marks the position of the callback and sets the functions parameters. If the overhead of this operation
 is not acceptable in a given situation, the application-wide available Async object also provides a wrap method that does not bind function parameters, allowing the programmer
 to pre-wrap all required functions.
 
 ```javascript
-var testAsync = function#(callback) {
+var testAsync = func#(callback) {
 
-    var result = yield sleep(1000, #);
+    var result = await sleep(1000, #);
     console.log('sleep done', result);
 
     var sleep1000 = sleep(1000, #);    // wrap is allowed anywhere
-    result += yield sleep1000;
+    result += await sleep1000;
     console.log('sleep done', result);
 };
 
@@ -92,23 +94,23 @@ console.log('start sleeping');
 // sleep done <sleept 1000ms><sleept 1000ms>    [another 1000ms later]
 ```
 
-To wait for multiple functions, yield supports array or object arguments. The result of a yield operation will then equally be an array or object containing the individual function results associated with their original key, but not neccessarily in the order of original association. The latter is only of practical relevance when using object arguments and iterating over the result keys.
+To wait for multiple functions, await supports array or object arguments. The result of an await operation will then equally be an array or object containing the individual function results associated with their original key, but not neccessarily in the order of original association. The latter is only of practical relevance when using object arguments and iterating over the result keys.
 
-The following example combines serial and parallel yields:
+The following example combines serial and parallel awaits:
 
 ```javascript
-var testAsync = function#(callback) {
+var testAsync = func#(callback) {
 
     console.log('start');
 
     // wait for single function
 
-    var result = (yield sleep(1000, #)) + '\n';
+    var result = (await sleep(1000, #)) + '\n';
     console.log('single sleep done');
 
     // wait for an array of functions
 
-    var anArray = yield [
+    var anArray = await [
         sleep(1200, #),
         sleep(1300, #),
         sleep(500, #),
@@ -120,7 +122,7 @@ var testAsync = function#(callback) {
 
     // wait for a set of functions
 
-    var anObject = yield {
+    var anObject = await {
         sleepOne    : sleep(1200, #),
         sleepTwo    : sleep(1300, #),
         sleepThree  : sleep(500, #),
@@ -133,7 +135,7 @@ var testAsync = function#(callback) {
     callback(result);
 };
 
-testAsync(function(result) {
+testAsync(func(result) {
     console.log('the final result:\n' + result);
 });
 
@@ -178,11 +180,11 @@ This syntax equals `<constructor>.prototype.<callable>.call(this, ...)`
 ```javascript
 proto Base {
     text: "Text from Base",
-    print: function() { console.log(this.text); },
+    print: func() { console.log(this.text); },
 }
 proto Sub {
     text: "Text from Sub",
-    print: function() { Base->print(); },
+    print: func() { Base->print(); },
 }
 
 (new Sub).print();
@@ -200,10 +202,10 @@ Refers to the parent of the current this-context's constructor.
 ```javascript
 proto Base {
     text: "I'm the base!",
-    testFunc: function() {
+    testFunc: func() {
         return 'testFunc in Base';
     },
-    demonstrate: function() {
+    demonstrate: func() {
         console.log(this.text);
         console.log(parent::text);
         console.log(this.testFunc());
@@ -213,7 +215,7 @@ proto Base {
 
 proto Sub (Base) {
     text: "I'm better than the base!",
-    testFunc: function() {
+    testFunc: func() {
         return 'testFunc in Sub';
     },
 }
@@ -241,15 +243,15 @@ Adria allows property assignments. The left side of the assignment must be a val
 ```javascript
 proto MyProto {
     message: property {
-        get: function() {
+        get: func() {
             return 'THE MESSAGE';
         }
     },
-    print: function() { console.log(this.loudMessage); }
+    print: func() { console.log(this.loudMessage); }
 }
 
 MyProto::loudMessage = property {
-    get: function() {
+    get: func() {
         return '!!!! ' + this.message + ' !!!!';
     }
 };

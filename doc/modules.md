@@ -9,9 +9,10 @@ adria
 Module structure
 ----------------
 
-During compilation the compiler will merge all `require`d files from within the project's basepath into one output file.
-Each file will be represented as a module to the other files (= modules). Modules can expose individual properties via the `export` statement and/or expose a single function/object as the `module` itself.
-Modules can `require` each other, which grants them access to another module's exposed properties. The compiler will resolve module-dependencies at compiletime and merge them in the correct order.
+Each module is contained in exactly one file. During compilation the compiler will merge all modules `require`d by the module to be compiled (the main module) from within the project's basepath into one output file.
+Modules can expose individual properties via the `export` statement and/or expose a single function/object as the `module` itself.
+Modules can `require` each other, which grants them access to another module's exposed properties. The compiler will resolve non-circular module-dependencies at compile time and merge them in the order of first requirement.
+Execution of an application begins in the main module. `require`d modules will be executed the first time they are required, allowing the programmer to solve circular dependencies dynamically.
 
 ### export
 
@@ -35,11 +36,11 @@ console.log(utils.helloUniverse());
 **File utils.adria**
 
 ```javascript
-export helloWorld = function() {
+export helloWorld = func() {
     return 'Hello World';
 };
 
-export helloUniverse = function() {
+export helloUniverse = func() {
     return 'Hello Universe';
 };
 ```
@@ -77,7 +78,7 @@ var my = new MyProto();
 
 ```javascript
 module MyProto = proto {
-    constructor: function() {
+    constructor: func() {
         console.log('hello world');
     }
 };
@@ -108,21 +109,21 @@ items.add(new Items.Item('Hello', 'World'));
 export Item = proto {
     key: '',
     value: '',
-    constructor: function(key, value) {
+    constructor: func(key, value) {
         this.key = key;
         this.value = value;
     },
-    toString: function() {
+    toString: func() {
         return '[key: ' + this.key + ', value: ' + this.value + ']';
     },
 };
 
 module Items = proto {
     items: null,
-    constructor: function() {
+    constructor: func() {
         this.items = [];
     },
-    add: function(item) {
+    add: func(item) {
         this.items.push(item);
         console.log('added item ' + item);
     },
