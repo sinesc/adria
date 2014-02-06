@@ -33,52 +33,52 @@ var TestObj = proto {
     plainField: 'plainFieldValue',
     testData: 'testData',
 
-    nonStorageProp: property {
-        get: function() {
+    nonStorageProp: prop {
+        get: func() {
             return this.testData;
         },
-        set: function(value) {
+        set: func(value) {
             this.testData = value;
         },
     },
 
-    plainProp: property {
+    plainProp: prop {
         storage: 'plainPropStorage',
         default: null,
-        get: function() {
+        get: func() {
             return storage;
         },
-        set: function(value) {
+        set: func(value) {
             storage = value;
         },
     },
 
-    'stringProp': property {
+    'stringProp': prop {
         storage: 'stringPropStorage',
         default: null,
-        get: function() {
+        get: func() {
             return storage;
         },
-        set: function(value) {
+        set: func(value) {
             storage = value;
         },
     },
 
-    anonStorageProp: property {
-        get: function() {
+    anonStorageProp: prop {
+        get: func() {
             return storage;
         },
-        set: function(value) {
+        set: func(value) {
             storage = value;
         },
     },
 
-    anonDefaultStorageProp: property {
+    anonDefaultStorageProp: prop {
         default: 'anonStorageDefault',
-        get: function() {
+        get: func() {
             return storage;
         },
-        set: function(value) {
+        set: func(value) {
             storage = value;
         },
     }
@@ -92,7 +92,7 @@ var TestObj = proto {
  * @param storageName name of storage property for given property
  * @aram initialValue expected initial value in storage
  */
-var testProp = function(Type, propName, storageName, initialValue) {
+var testProp = func(Type, propName, storageName, initialValue) {
 
     var testObj = new Type();
     var testValue = propName + 'Test';
@@ -124,7 +124,7 @@ var testProp = function(Type, propName, storageName, initialValue) {
  * tests
  */
 
-test('simple fields', function() {
+test('simple fields', func() {
 
     var testObj = new TestObj();
 
@@ -161,35 +161,35 @@ test('non-storage properties', function() {
     assert(descriptor.configurable === false);
 });
 
-test('storage properties', function() {
+test('storage properties', func() {
     testProp(TestObj, 'plainProp', 'plainPropStorage', null);
 });
 
-test('string named storage properties', function() {
+test('string named storage properties', func() {
     testProp(TestObj, 'stringProp', 'stringPropStorage', null);
 });
 
-test('anon nodefault storage properties', function() {
+test('anon nodefault storage properties', func() {
     testProp(TestObj, 'anonStorageProp', '_anonStorageProp', undefined);
 });
 
-test('anon default storage properties', function() {
+test('anon default storage properties', func() {
     testProp(TestObj, 'anonDefaultStorageProp', '_anonDefaultStorageProp', 'anonStorageDefault');
 });
 
-test('storage scope', function() {
+test('storage scope', func() {
 
     var ResObj = proto {
-        plainProp: property {
+        plainProp: prop {
             storage: 'plainPropStorage',
             default: null,
-            get: function() {
-                return (function() {
+            get: func() {
+                return (func() {
                     return storage;
                 })();
             },
-            set: function(value) {
-                (function() {
+            set: func(value) {
+                (func() {
                     storage = value;
                 })();
             },
@@ -203,26 +203,26 @@ test('storage scope', function() {
     assert(test.plainProp === 'test');
 });
 
-test('prototype extension', function() {
+test('prototype extension', func() {
 
     proto MyTestObj (TestObj) { }
 
-    MyTestObj::myAnonStorageProp = property {
-        get: function() {
+    MyTestObj::myAnonStorageProp = prop {
+        get: func() {
             return storage;
         },
-        set: function(value) {
+        set: func(value) {
             storage = value;
         },
     };
 
-    MyTestObj::myDefaultStorageProp = property {
+    MyTestObj::myDefaultStorageProp = prop {
         default: 'my default value',
         storage: 'myDefaultStorage',
-        get: function() {
+        get: func() {
             return storage;
         },
-        set: function(value) {
+        set: func(value) {
             storage = value;
         },
     };

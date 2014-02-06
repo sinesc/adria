@@ -23,7 +23,7 @@
  */
 var test = require('./test');
 
-test('assert exception type', function() {
+test('assert exception type', func() {
 
     var caught = false;
 
@@ -40,7 +40,7 @@ test('assert exception type', function() {
     }
 });
 
-test('assert default message', function() {
+test('assert default message', func() {
 
     var caught = false;
 
@@ -58,7 +58,7 @@ test('assert default message', function() {
     }
 });
 
-test('assert user message', function() {
+test('assert user message', func() {
 
     var caught = false;
 

@@ -39,7 +39,7 @@ proto SubTestException (TestException) {
  * tests
  */
 
-test('rethrow', function() {
+test('rethrow', func() {
 
     try {
 
@@ -59,7 +59,7 @@ test('rethrow', function() {
     test.fail('failed to rethrow exception');
 });
 
-test('finally', function() {
+test('finally', func() {
 
     var ran = false;
 
@@ -84,13 +84,13 @@ test('finally', function() {
     test.fail('failed to rethrow exception');
 });
 
-test('instanceof Error', function() {
+test('instanceof Error', func() {
 
     assert(Exception.prototype instanceof Error);
     assert(new Exception() instanceof Error);
 });
 
-test('inheritance, base', function() {
+test('inheritance, base', func() {
 
     try {
         throw new TestException();
@@ -101,7 +101,7 @@ test('inheritance, base', function() {
     }
 });
 
-test('inheritance, sub', function() {
+test('inheritance, sub', func() {
 
     try {
         throw new SubTestException();
@@ -114,7 +114,7 @@ test('inheritance, sub', function() {
     }
 });
 
-test('default message', function() {
+test('default message', func() {
 
     try {
         throw new TestException();
@@ -123,7 +123,7 @@ test('default message', function() {
     }
 });
 
-test('custom message', function() {
+test('custom message', func() {
 
     try {
         throw new TestException('custom123');
@@ -132,7 +132,7 @@ test('custom message', function() {
     }
 });
 
-test('type-name', function() {
+test('type-name', func() {
 
     try {
         throw new SubTestException();

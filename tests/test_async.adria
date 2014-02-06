@@ -28,19 +28,19 @@ var test = require('./test');
 
 var SleepException = proto (Exception) { };
 
-var sleep = function(ms, callback) {
-    setTimeout(function() {
+var sleep = func(ms, callback) {
+    setTimeout(func() {
         callback(null, ms);
     }, ms);
 };
 
-var sleepError = function(ms, callback) {
-    setTimeout(function() {
+var sleepError = func(ms, callback) {
+    setTimeout(func() {
         callback(new SleepException('expected error'), 'not returned');
     }, ms);
 };
 
-var sleepThrow = function() {
+var sleepThrow = func() {
     throw new SleepException('expected error');
 };
 
@@ -171,7 +171,7 @@ test('wrap and await multiple, single invalid argument', func#(done) {
     try {
         result = await [
             sleep(15, #),
-            sleep(5, function() { }),       // not a wrap op
+            sleep(5, func() { }),       // not a wrap op
         ];
     } catch (e) {
         thrown = e;

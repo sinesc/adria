@@ -1384,7 +1384,11 @@ export Try = proto (Scope) {
 
         var result = this.csn();
         result.add('try {' + this.nl(1));
-        result.add(this.get('body').toSourceNode());
+
+        var body = this.get('body').toSourceNode();
+
+        result.add(this.refsToSourceNode());
+        result.add(body);
         result.add(this.nl(-1) + '}');
         return result;
     },
@@ -1393,7 +1397,7 @@ export Try = proto (Scope) {
 (func() {
     var catchId = 1;
 
-    export Catch = proto (AdriaNode) {
+    export Catch = proto (AdriaNode) { //!todo needs to be a scope for each match
 
         exceptionName: '',
 

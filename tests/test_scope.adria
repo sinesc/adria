@@ -40,16 +40,16 @@ proto TestObj {
  * tests
  */
 
-test('constructor scope', function() {
+test('constructor scope', func() {
 
     var test = new TestObj();
 });
 
-test('function scope', function() {
+test('function scope', func() {
 
     var test = 1;
 
-    (function() {
+    (func() {
         assert(test === 1);
         test = 2;
     })();

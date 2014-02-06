@@ -241,6 +241,12 @@ module AdriaTransform = proto (Transform) {
             tmpNode.setSourceContent(currentModule.filename, currentModule.sourceCode);
         }
 
+        // start builtins
+
+        for (var id, name in usedBuiltins) {
+            node.add('\n' + (options.platform === 'node' ? '___' : '') + 'require(\'' + name + '\');');
+        }
+
         // start entry module
 
         for (var id, file in options.files) {

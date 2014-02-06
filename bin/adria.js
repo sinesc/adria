@@ -487,8 +487,6 @@ object_literal {\n\
 property_literal {\n\
     entry -> "prop" -> property_accessor -> return\n\
     entry -> "prop" -> property_data -> return\n\
-    entry -> "property" -> property_accessor -> return\n\
-    entry -> "property" -> property_data -> return\n\
 }\n\
 \n\
 property_accessor {\n\
@@ -4437,10 +4435,12 @@ module('targets/adria_node.adria', function(module, resource) {
         ___self.prototype.constructor = ___self;
         var Try = ___self;
         ___self.prototype.toSourceNode = function toSourceNode() {
-            var result;
+            var result, body;
             result = this.csn();
             result.add('try {' + this.nl(1));
-            result.add(this.get('body').toSourceNode());
+            body = this.get('body').toSourceNode();
+            result.add(this.refsToSourceNode());
+            result.add(body);
             result.add(this.nl(-1) + '}');
             return result;
         };
@@ -5044,8 +5044,7 @@ module('targets/adria_parser.adria', function(module, resource) {
                 'new',
                 'instanceof',
                 'typeof',
-                'function',
-                'property'
+                'function'
             ]);
             matchKeywords = function matchKeywords(match) {
                 if (keywords.has(match.data)) {
@@ -5316,6 +5315,11 @@ module('targets/adria_transform.adria', function(module, resource) {
                 currentModule = this.modules[id];
                 tmpNode = node.add(new SourceNode(null, null, currentModule.filename, currentModule.result));
                 tmpNode.setSourceContent(currentModule.filename, currentModule.sourceCode);
+            }
+            var id, name;
+            for (id in usedBuiltins) {
+                name = usedBuiltins[id];
+                node.add('\n' + (options.platform === 'node' ? '___' : '') + 'require(\'' + name + '\');');
             }
             var id, file;
             for (id in options.files) {

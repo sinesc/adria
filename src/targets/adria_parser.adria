@@ -82,7 +82,7 @@ module AdriaParser = proto(LanguageParser) {
             'delete', 'new',
             'instanceof', 'typeof',
             //!todo remove
-            'function', 'property'
+            'function'
         ]);
 
         var matchKeywords = func(match) {

@@ -26,8 +26,6 @@ object_literal {
 property_literal {
     entry -> "prop" -> property_accessor -> return
     entry -> "prop" -> property_data -> return
-    entry -> "property" -> property_accessor -> return
-    entry -> "property" -> property_data -> return
 }
 
 property_accessor {

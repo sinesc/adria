@@ -52,7 +52,7 @@ var testId, start, last, oks, fails, exceptions;
 var inAsync = false;
 var queue = [ ];
 
-module test = function(name, testFunction) {
+module test = func(name, testFunction) {
 
     queue.push({ name: name, test: testFunction });
 
@@ -152,7 +152,7 @@ var runTest = func(item) {
     return false;
 };
 
-export log = function(message, nl = true) {
+export log = func(message, nl = true) {
 
     var now         = Date.now();
     var diffStart   = now - start;
@@ -163,17 +163,17 @@ export log = function(message, nl = true) {
     process.stdout.write(('+' + diffLast + '/' + diffStart) + 'ms: ' + message + (nl ? '\n' : ''));
 };
 
-export print = function(message, nl = true) {
+export print = func(message, nl = true) {
 
     process.stdout.write(message + (nl ? '\n' : ''));
 };
 
-export fail = function(message) {
+export fail = func(message) {
 
     throw new Error(message);
 };
 
-export reset = function() {
+export reset = func() {
 
     testId      = 1;
     start       = Date.now();
