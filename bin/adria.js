@@ -3782,6 +3782,9 @@ module('targets/adria_node.adria', function(module, resource) {
                     this.parent.findScope().addImplicit(this.name.toString());
                 }
                 result.add([ '(', this.get('param_list').toSourceNode(), ') {' + this.nl() ]);
+                if (this instanceof AsyncLiteral && this.useCallback) {
+                    result.add('try {' + this.nl(1));
+                }
                 var id;
                 for (id in this.defaultArgs) {
                     result.add([ this.defaultArgs[id], ';' + this.nl() ]);
@@ -3800,6 +3803,11 @@ module('targets/adria_node.adria', function(module, resource) {
                         this.nl() + this.storeCallback() + '(null, undefined);',
                         this.nl(-1) + '}'
                     ]);
+                    result.add([
+                        ' catch (___exc) {' + this.nl(1) + this.storeCallback() + '(___exc, undefined);',
+                        this.nl(-1) + '}'
+                    ]);
+                    result.add(this.nl(-1) + '}');
                 } else {
                     result.add([ body, this.nl(-1) + '}' ]);
                 }
@@ -4614,11 +4622,9 @@ module('targets/adria_node.adria', function(module, resource) {
             hostFunction = this.findProto(FunctionLiteral);
             if (hostFunction instanceof AsyncLiteral && hostFunction.useCallback) {
                 result.add([
-                    hostFunction.storeCallback(),
-                    '(null, ',
+                    hostFunction.storeCallback() + '(null, ',
                     this.get('value').toSourceNode(),
-                    ');',
-                    this.nl()
+                    ');' + this.nl() + 'return;' + this.nl()
                 ]);
             } else {
                 result.add([

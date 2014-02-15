@@ -520,9 +520,17 @@ export AsyncWrapOperation = proto (AdriaNode) {
                 this.parent.findScope().addImplicit(this.name.toString());
             }
 
-            // handle parameters and default arguments
+            // handle parameters
 
             result.add([ '(', this.get('param_list').toSourceNode(), ') {' + this.nl() ]);
+
+            // try/catch around async functions
+
+            if (this instanceof AsyncLiteral && this.useCallback) {
+                result.add('try {' + this.nl(1));
+            }
+
+            // set default parameters
 
             for (var id in this.defaultArgs) {
                 result.add([ this.defaultArgs[id], ';' + this.nl() ]);
@@ -548,6 +556,8 @@ export AsyncWrapOperation = proto (AdriaNode) {
 
             if (this instanceof AsyncLiteral && this.useCallback) {
                 result.add([ body, this.nl() + this.storeCallback() + '(null, undefined);', this.nl(-1) + '}' ]);
+                result.add([ ' catch (___exc) {' + this.nl(1) + this.storeCallback() + '(___exc, undefined);', this.nl(-1) + '}' ]);
+                result.add(this.nl(-1) + '}');
             } else {
                 result.add([ body, this.nl(-1) + '}' ]);
             }
@@ -1385,7 +1395,7 @@ export ReturnStatement = proto (AdriaNode) {
 
         if (hostFunction instanceof AsyncLiteral && hostFunction.useCallback) {
 
-            result.add([ hostFunction.storeCallback(), '(null, ', this.get('value').toSourceNode(), ');', this.nl() ]);
+            result.add([ hostFunction.storeCallback() + '(null, ', this.get('value').toSourceNode(), ');' + this.nl() + 'return;' + this.nl() ]);
 
         } else {
 

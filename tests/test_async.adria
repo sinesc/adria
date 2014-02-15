@@ -26,7 +26,7 @@ var test = require('./test');
 
 // prepare some functions
 
-var SleepException = proto (Exception) { };
+var TestException = proto(Exception) { };
 
 var sleep = func(ms, callback) {
     setTimeout(func() {
@@ -36,12 +36,12 @@ var sleep = func(ms, callback) {
 
 var sleepError = func(ms, callback) {
     setTimeout(func() {
-        callback(new SleepException('expected error'), 'not returned');
+        callback(new TestException('expected error'), 'not returned');
     }, ms);
 };
 
 var sleepThrow = func() {
-    throw new SleepException('expected error');
+    throw new TestException('expected error');
 };
 
 var asyncReturn = func#(#) {
@@ -52,6 +52,12 @@ var asyncReturn = func#(#) {
 var asyncAutoReturn = func#(#) {
 
     await sleep(10, #);
+};
+
+var asyncAutoCatch = func#(#) {
+
+    await sleep(10, #);
+    throw new TestException('catch please');
 };
 
 
@@ -82,7 +88,7 @@ test('wrap throwing', func#(done) {
         wrap = await sleepThrow(10, #);
     } catch (e) {
         thrown = true;
-        assert(e instanceof SleepException);
+        assert(e instanceof TestException);
     }
 
     assert(thrown === true);
@@ -123,7 +129,7 @@ test('wrap throwing, await it', func#(done) {
         thrown = e;
     }
 
-    assert(thrown instanceof SleepException && thrown.message === 'expected error');
+    assert(thrown instanceof TestException && thrown.message === 'expected error');
 
     done();
 });
@@ -144,7 +150,7 @@ test('wrap error, await it', func#(done) {
         thrown = e;
     }
 
-    assert(thrown instanceof SleepException && thrown.message === 'expected error');
+    assert(thrown instanceof TestException && thrown.message === 'expected error');
 
     done();
 });
@@ -206,7 +212,7 @@ test('wrap and await multiple, single error', func#(done) {
         thrown = e;
     }
 
-    assert(result === undefined && thrown instanceof SleepException && thrown.message === 'expected error');
+    assert(result === undefined && thrown instanceof TestException && thrown.message === 'expected error');
 
     done();
 });
@@ -224,7 +230,7 @@ test('wrap and await multiple, all error', func#(done) {
         thrown = e;
     }
 
-    assert(result === undefined && thrown instanceof SleepException && thrown.message === 'expected error');
+    assert(result === undefined && thrown instanceof TestException && thrown.message === 'expected error');
 
     done();
 });
@@ -247,6 +253,29 @@ test('async auto return', func#(done) {
     assert(result === undefined);
     clearTimeout(failover);
 
+    done();
+});
+
+test('async auto catch', func#(done) {
+
+    var failover = setTimeout(function() {
+        done(new Exception('async did not return'));
+    }, 100);
+
+    var caught = false;
+    var result;
+
+    try {
+        result = await asyncAutoCatch(#);
+    } catch (e) {
+        assert(e instanceof TestException);
+        caught = true;
+    }
+
+    assert(result === undefined);
+    assert(caught === true);
+
+    clearTimeout(failover);
     done();
 });
 

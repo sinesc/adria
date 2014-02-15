@@ -11,15 +11,24 @@ About
 
 **Disclaimer:** This is a spare time project not meant to be used in a production environment. Features and syntax are still in flux and will be for quite some time.
 
-Adria is a programming language for NodeJS and the browser and the name for the self-hosting transcompiler used to generate .js from .adria. The language
-compiles to JavaScript and is syntactically very similar to it, mostly extending it with new features.
-Adria aims to make prototypal inheritance as simple to use as classical inheritance by adding syntax for prototype creation, extension and inheritance. It
-also adds adds asynchronous function statements and literals to reign in "NodeJS callback hell". The language uses a CommonJS like module system, its
-compiler resolves your application's sourcecode-dependencies and (by default) merges required sourcecode into one sourcemapped file.
-It can also merge in any other textual files (i.e. WebGL shaders) you request via the resource literal - which at runtime will return the resource.
+This is a short and incomplete list of features:
 
-A few features in short
------------------------
+- part of the curly-brackets family, syntactically quite similar to Javascript
+- commonJS like module structure, resolved and compiled to single file by command-line compiler (does not prevent circular references resolution at runtime)
+- also supports merging in other resources via `resource` keyword, i.e. `var contributors = resource('contributors.txt');`
+- block scope `var` keyword
+- default parameters: `func assertEquals(actual, expected = true) { ... }`
+- `proto` keyword for prototype creation/inheritance: `var Sub = proto (Base) { ... };` (or as statement: `proto Sub (Base) { ... }`)
+- expression focussed syntax (i.e. allows prototype properties to inline further prototypes)
+- keywords are good and lower the barrier of entry, but they should be short: `func`, `proto`, `prop`, `await`...
+- sometimes operators are good too, `::` accesses the prototype: `MyBase::newFunc = func() { };`
+- property expression syntax via `prop` keyword: `MyBase::myProp = prop { get: ... set: ... };`
+- `->` calls the left-hand side constructors right-hand side prototype property into the current context: `MyParent->someMethod(...)` (would be MyParent.prototype.someMethod.call(this, ...) in Javascript)
+- `parent` keyword returns the parent constructor for the current `this` context (dynamically, so if a method gets `call`ed this will return that contexts parent constructor): `parent->someMethod(...)` as above.
+- `await` keyword to wait for asynchronous functions or callback functions and `([...,] # [, ...])` operator (async-wrap): `var result = await fs.readFile(name, #);` (waits for `fs.readFile` to invoke the callback passed as second parameter)
+
+A few feature examples
+----------------------
 
 ### Asynchronous functions (serially wait for callbacks)
 
@@ -93,7 +102,7 @@ proto Base {
 proto Sub (Base) {
     text: 'hello',
     greet: func(name) {
-        return Base->greet(name + '!'); // calls Base's prototype function greet in the context of Sub
+        return Base->greet(name + '!'); // calls Bases prototype function greet in the context of Sub
     }
 }
 
@@ -109,10 +118,10 @@ console.log(sub.greet('world'));
 // hello world! [sub.greet]
 ```
 
-### Asynchronous wait in parallel
+### Asynchronous wait in parallel using return
 
 ```javascript
-var testAsync = func#(callback) {   // has a callback, so could be used as await argument in another func#
+var testAsync = func#(#) {   // has a callback, so could be used as await argument in another func#
 
     var val = await {                   // also supports arrays, does not have to be a static literal
         sleepOne    : sleep(1200, #),
@@ -120,7 +129,7 @@ var testAsync = func#(callback) {   // has a callback, so could be used as await
         sleepThree  : sleep(500, #),
     };
 
-    callback(null, val);
+    return val;     // will pass val to the function passed in via the parameter signified by #
 };
 
 // longest sleep is 1600ms, so testAsync should invoke callback after about 1600ms
@@ -145,7 +154,7 @@ console.log('start');
 ### Prototype extension (here with a property)
 
 ```javascript
-Sub::message = property {               // prototype access operator and property assignment
+Sub::message = prop {               // prototype access operator and property assignment
     get: func() {
         return 'Greeting is "' + this.text + '"';
     },

@@ -34,8 +34,8 @@ Default parameters may be provided for parameters not followed by undefaulted pa
 
 `new <constructor>( [<parameter>] ) { <proto body> }`
 
-Creates a new prototype inheriting from given constuctor's prototype, extends it with proto body and returns an
-object created from the new prototype's constructor. This syntax is short for
+Creates a new prototype inheriting from given constuctors prototype, extends it with proto body and returns an
+object created from the new prototypes constructor. This syntax is short for
 `new (proto (<constructor>) { <proto body> })( [<parameter>] )`
 
 ### for/in statement
@@ -48,7 +48,7 @@ Support for an optional value argument was added.
 
 `try { ... } catch (<type> <exception>) { ... } [ catch ([<type>] <exception>) { ... } ... ] [ finally { ... } ]`
 
-Support for catching specific types of exceptions was added. If an exception is "not instanceof" the first catch-block's type, the exception is passed to the next block until it is caught. If the last catch block is not unconditional and the exception fails that instanceof test as well, it will be rethrown. When mixing unconditional and conditional catch blocks, the unconditional block must come last.
+Support for catching specific types of exceptions was added. If an exception is "not instanceof" the first catch-blocks type, the exception is passed to the next block until it is caught. If the last catch block is not unconditional and the exception fails that instanceof test as well, it will be rethrown. When mixing unconditional and conditional catch blocks, the unconditional block must come last.
 
 ## Added syntax
 
@@ -58,11 +58,11 @@ Support for catching specific types of exceptions was added. If an exception is 
 
 `func# <name> (<parameter list>) { }`
 
-Creates a new asynchronous function. Asynchronous functions cannot return a specific value, they always return an Async object. Asynchronous functions add support for the await literal, which will pause execution of the function until its function-argument invokes a callback, passed in via the #-token or until all of its array- or object-argument functions have invoked their callbacks. While the function is paused, other code may run.
+Creates a new asynchronous function. Asynchronous functions cannot return a specific value, they always return an Async object. Asynchronous functions add support for the `await` literal, which will pause execution of the function until its function-argument invokes a callback, passed in via the #-token or until all of its array- or object-argument functions have invoked their callbacks. While the function is paused, other code may run.
 
-Note: async-functions currently require ES Harmony generators. A future version will drop this requirement (also applies to adria generator functions). Also note: Any exception thrown from an async function after the first await cannot be caught (at this time).
+*Note: async-functions currently require ES Harmony generators. A future version will drop this requirement (also applies to adria generator functions). Also note: Any exception thrown from an async function after the first await cannot be caught from outside the async function unless callback signification is used (see below).*
 
-In the following examples, a simple sleep function is used. The function follows the NodeJS `callback(err, val)` style and could be replaced with any of NodeJS's callback based functions, i.e. `fs.readFile`.
+In the following examples, a simple sleep function is used. The function follows the NodeJS `callback(err, val)` style and could be replaced with any of NodeJSs callback based functions, i.e. `fs.readFile`.
 
 ```javascript
 var sleep = func(ms, callback) {
@@ -71,13 +71,12 @@ var sleep = func(ms, callback) {
     }, ms);
 };
 ```
-An asynchronous function can wait for another function to invoke its callback by awaiting the results of a wrap-operation on it. The wrap operation looks like an invocation except
-that one of the parameters used is the `#` token. A wrap operation marks the position of the callback and sets the functions parameters. If the overhead of this operation
-is not acceptable in a given situation, the application-wide available Async object also provides a wrap method that does not bind function parameters, allowing the programmer
-to pre-wrap all required functions.
+#### Wrap operation
+
+An asynchronous function can wait for another function to invoke its callback by awaiting the results of a wrap-operation on it. The wrap operation looks like an invocation except that one of the parameters used is the `#` token. A wrap operation marks the position of the callback and sets the functions parameters. If the overhead of this operation is not acceptable in a given situation, the application-wide available Async object also provides a wrap method that does not bind function parameters, allowing the programmer to pre-wrap all required functions.
 
 ```javascript
-var testAsync = func#(callback) {
+var testAsync = func#() {
 
     var result = await sleep(1000, #);
     console.log('sleep done', result);
@@ -96,7 +95,9 @@ console.log('start sleeping');
 // sleep done <sleept 1000ms><sleept 1000ms>    [another 1000ms later]
 ```
 
-To wait for multiple functions, await supports array or object arguments. The result of an await operation will then equally be an array or object containing the individual function results associated with their original key, but not neccessarily in the order of original association. The latter is only of practical relevance when using object arguments and iterating over the result keys.
+#### Waiting in parallel
+
+To wait for multiple functions, `await` supports array or object arguments. The result of an await operation will then equally be an array or object containing the individual function results associated with their original key, but not neccessarily in the order of original association. The latter is only of practical relevance when using object arguments and iterating over the result keys.
 
 The following example combines serial and parallel awaits:
 
@@ -134,11 +135,11 @@ var testAsync = func#(callback) {
 
     result += JSON.stringify(anObject) + '\n';
 
-    callback(result);
+    callback(null, result);
 };
 
-testAsync(func(result) {
-    console.log('the final result:\n' + result);
+testAsync(func(err, val) {
+    console.log('the final result:\n' + val);
 });
 
 // start
@@ -151,13 +152,26 @@ testAsync(func(result) {
 // {"sleepThree":"<sleept 500ms>","sleepOne":"<sleept 1200ms>","sleepTwo":"<sleept 1300ms>"}
 ```
 
+#### Indicating a callback
+
+Since asynchronous functions cannot directly return a value, it is possible to use `#` in the functions parameter list to signify the position of a callback function, that the `return` statement in an asynchronous function will be mapped to. As a result, `return 'test;'` will translate to `<callback>(null, 'test'); return;` in the usual nodejs (err, val) style.
+
+```javascript
+var asyncReturn = func#(#) {
+
+    return await sleep(10, #);
+};
+```
+
+Additionally, when `#` is provided, Adria ensures that the callback is always invoked at the end of the function or in the case of an uncaught exception.
+
 ### proto statement and literal
 
 `proto <name> [(<parent>)] <object literal>`
 
-Creates a new constructor and populates its `prototype`-property with the object literal's properties.
+Creates a new constructor and populates its `prototype`-property with the object literals properties.
 If the object literal has a `constructor` property, it must be a function and will constitute the new constructor, otherwise a blank function will be used.
-If a parent constructor is given, the parent's prototype will be used as base for the new constructor's prototype and if no constructor property was defined, the blank function will call the parent constructor with all given parameters.
+If a parent constructor is given, the parents prototype will be used as base for the new constructors prototype and if no constructor property was defined, the blank function will call the parent constructor with all given parameters.
 
 Like Javascript functions, `proto` also offers a literal notation:
 
@@ -169,14 +183,14 @@ If `name` is not given, Adria will try to infer it from the left side of the ass
 
 `<constructor>::<property>`
 
-The prototype operator `::` can be used to access properties of a constructor's prototype. Note that if the property is a function, the function's `this`-reference will point to the prototype.
+The prototype operator `::` can be used to access properties of a constructors prototype. Note that if the property is a function, the functions `this`-reference will point to the prototype.
 This syntax equals `<constructor>.prototype.<property>`.
 
 ### prototype-context-call operator
 
 `<constructor>-><callable>(...)`
 
-The `->`-operator invokes a function from constructor's `prototype` within the current `this`-context.
+The `->`-operator invokes a function from constructors `prototype` within the current `this`-context.
 This syntax equals `<constructor>.prototype.<callable>.call(this, ...)`
 
 ```javascript
@@ -197,8 +211,8 @@ proto Sub {
 
 `parent`
 
-Refers to the parent of the current this-context's constructor.
-*Note that if a method was `call`ed or `apply`ed, `parent` will refer to the parent of that context's constructor.* This is intended behaviour. Adria does not try to imitate classical behaviour with a bound this-context in Javascript.
+Refers to the parent of the current this-contexts constructor.
+*Note that if a method was `call`ed or `apply`ed, `parent` will refer to the parent of that contexts constructor.* This is intended behaviour. Adria does not try to imitate classical behaviour with a bound this-context in Javascript.
 `parent` is available wherever `this` is available. It is **not limited** to `proto`-defined objects.
 
 ```javascript

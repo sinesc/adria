@@ -9,9 +9,9 @@ adria
 Module structure
 ----------------
 
-Each module is contained in exactly one file. During compilation the compiler will merge all modules `require`d by the module to be compiled (the main module) from within the project's basepath into one output file.
+Each module is contained in exactly one file. During compilation the compiler will merge all modules `require`d by the module to be compiled (the main module) from within the projects basepath into one output file.
 Modules can expose individual properties via the `export` statement and/or expose a single function/object as the `module` itself.
-Modules can `require` each other, which grants them access to another module's exposed properties. The compiler will resolve non-circular module-dependencies at compile time and merge them in the order of first requirement.
+Modules can `require` each other, which grants them access to another modules exposed properties. The compiler will resolve non-circular module-dependencies at compile time and merge them in the order of first requirement.
 Execution of an application begins in the main module. `require`d modules will be executed the first time they are required, allowing the programmer to solve circular dependencies dynamically.
 
 ### export
