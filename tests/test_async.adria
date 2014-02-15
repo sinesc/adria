@@ -44,6 +44,17 @@ var sleepThrow = func() {
     throw new SleepException('expected error');
 };
 
+var asyncReturn = func#(#) {
+
+    return await sleep(10, #);
+};
+
+var asyncAutoReturn = func#(#) {
+
+    await sleep(10, #);
+};
+
+
 // tests
 
 test('wrap, then await', func#(done) {
@@ -214,6 +225,27 @@ test('wrap and await multiple, all error', func#(done) {
     }
 
     assert(result === undefined && thrown instanceof SleepException && thrown.message === 'expected error');
+
+    done();
+});
+
+test('async return', func#(done) {
+
+    var result = await asyncReturn(#);
+    assert(result === 10);
+
+    done();
+});
+
+test('async auto return', func#(done) {
+
+    var failover = setTimeout(function() {
+        done(new Exception('async did not return'));
+    }, 100);
+
+    var result = await asyncAutoReturn(#);
+    assert(result === undefined);
+    clearTimeout(failover);
 
     done();
 });

@@ -22,94 +22,13 @@
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 var fs = require('fs');
+var ASTDTemplate = require('astd/template');
 
-/**
- * Simple object to support js inlining into template documents
- */
-module Template = proto {
+module Template = proto (ASTDTemplate) {
 
-    basePath    : 'templates/',
-    data        : null,
-    regexp      : null,
-    debug       : false,
-
-    constructor: func(delimiterOpen = '<', delimiterClose = '>', delimiterStatement = ':', delimiterExpression = '=', delimiterComment = '*') {
-
-        this.data = { };
-
-        var openStatement   = RegExp.escape(delimiterOpen) + RegExp.escape(delimiterStatement);
-        var closeStatement  = RegExp.escape(delimiterStatement) + RegExp.escape(delimiterClose);
-        var openExpression  = RegExp.escape(delimiterOpen) + RegExp.escape(delimiterExpression);
-        var closeExpression = RegExp.escape(delimiterExpression) + RegExp.escape(delimiterClose);
-        var openComment     = RegExp.escape(delimiterOpen) + RegExp.escape(delimiterComment);
-        var closeComment    = RegExp.escape(delimiterComment) + RegExp.escape(delimiterClose);
-
-        var statement = '(' + openStatement + ').+?' + closeStatement;
-        var expression = '(' + openExpression + ').+?' + closeExpression;
-        var comment = '(' + openComment + ')[\\s\\S]+?' + closeComment;
-        var text = '(?:(?!' + openStatement + '|' + openExpression + '|' + openComment + ')[\\s\\S])+';
-
-        this.regexp = new RegExp(statement + '|' + expression + '|' + comment + '|' + text, 'g');
-    },
-
-    /**
-     * assign data to template
-     *
-     * @param string name reference name from within template file
-     * @param any value data to assign
-     */
-    assign: func(name, value) {
-
-        this.data[name] = value;
-    },
-
-    parse: func(input) {
-
-        var regexp = this.regexp;
-        var match;
-        var jsString = '';
-
-        while (match = regexp.exec(input)) {
-
-            // handle string, statement, expression and comment
-
-            if (match[1] === undefined && match[2] === undefined && match[3] === undefined) {
-                jsString += 'result += "' + match[0].jsify('"') + '";\n';
-            } else if (match[1] !== undefined) {
-                jsString += match[0].slice(2, -2) + '\n';
-            } else if (match[2] !== undefined) {
-                jsString += 'result += ' + match[0].slice(2, -2) + ';\n';
-            } else if (this.debug && match[3] !== undefined) {
-                jsString += 'result += "/*' + match[0].slice(2, -2).jsify('"') + '*/";\n';
-            }
-        }
-
-        return jsString;
-    },
-
-    exec: func(tplString) {
-
-        var varDefs = 'var result = "";\n';
-
-        for (var name, value in this.data) {
-            varDefs += 'var ' + name + ' = data.' + name + ';\n';
-        }
-
-        var finalString = '(function(data) { ' + varDefs + tplString + 'return result; })(this)';
-
-        return (func() {
-            return eval(finalString);
-        }).call(this.data);
-    },
-
-    fetch: func(input) {
-
-        var tplString = this.parse(input);
-        return this.exec(tplString);
-    },
+    basePath: 'templates/',
 
     fetchFile: func(file) {
         return this.fetch(fs.readFileSync(this.basePath + file, 'UTF-8'));
     },
-
 };

@@ -81,10 +81,10 @@ var asyncCallback = func(exception = null) {
     if (exception !== null) {
         exceptions.push(exception);
         fails++;
-        print('FAIL');
+        print('(FAILED)');
     } else {
         oks++;
-        print('ok');
+        print('(ok)');
     }
 
     nextItem();

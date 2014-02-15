@@ -550,7 +550,7 @@ async_literal {\n\
 \n\
     entry -> "function" -> "#":async -> "(" -> ")" -> block:body -> return\n\
     "#":async -> ident:name -> "("\n\
-    "(" -> function_param_list:param_list -> ")"\n\
+    "(" -> async_param_list:param_list -> ")"\n\
 }\n\
 \n\
 generator_literal {\n\
@@ -595,6 +595,14 @@ function_param_list {\n\
     // creating a backlink from defaulted parameters to standard parameters\n\
 \n\
     function_param:item -> ","[one_way_bridge] -> function_param_default:item\n\
+}\n\
+\n\
+async_param_list {\n\
+\n\
+    //!todo cheapo solution for testing\n\
+    entry -> "#":callback -> function_param_list -> return\n\
+    entry -> function_param_list -> "#":callback -> return\n\
+    entry -> function_param_list -> return\n\
 }\n\
 \n\
 /*\n\
@@ -903,9 +911,9 @@ dec_list {\n\
 ');
 resource('../templates/adria/async.tpl', 'module(\'async.adria\', function(module, resource) {\n\
 \n\
-    <*\n\
+    {*\n\
      * async error object\n\
-     *>\n\
+     *}\n\
 \n\
     function AsyncException(message) {\n\
         Exception.call(this, message);\n\
@@ -914,9 +922,9 @@ resource('../templates/adria/async.tpl', 'module(\'async.adria\', function(modul
     AsyncException.prototype = Object.create(Exception.prototype);\n\
     AsyncException.prototype.constructor = AsyncException;\n\
 \n\
-    <*\n\
+    {*\n\
      * async object\n\
-     *>\n\
+     *}\n\
 \n\
     function Async(generator) {\n\
         this.generator = generator;\n\
@@ -930,7 +938,7 @@ resource('../templates/adria/async.tpl', 'module(\'async.adria\', function(modul
             var args = Array.prototype.slice.call(arguments);\n\
             return function(callback) {\n\
                 args.push(callback);\n\
-                func.apply(context, args);\n\
+                return func.apply(context, args);\n\
             };\n\
         };\n\
     };\n\
@@ -943,28 +951,28 @@ resource('../templates/adria/async.tpl', 'module(\'async.adria\', function(modul
     Async.prototype.step = 0;\n\
     Async.prototype.done = false;\n\
 \n\
-    <**\n\
+    {**\n\
      * throw on following next() iteration and provide partial result via exception\n\
      *\n\
      * @param error\n\
-     *>\n\
+     *}\n\
     Async.prototype.throw = function(error) {\n\
 \n\
         error.partialResult = this.result;\n\
         this.error = error;\n\
     };\n\
 \n\
-    <**\n\
+    {**\n\
      * steps through the yields in the async # function. at each yield either a result is returned or\n\
      * an error is thrown. continues until the last yield was processed\n\
-     *>\n\
+     *}\n\
     Async.prototype.next = function() {\n\
 \n\
-        <* the yielded function for which we will wait on its callback before returning that result at the caller yield *>\n\
+        {* the yielded function for which we will wait on its callback before returning that result at the caller yield *}\n\
 \n\
         var arg;\n\
 \n\
-        <* todo REFACTOR! *>\n\
+        {* todo REFACTOR! *}\n\
 \n\
         while ((arg = (this.error === undefined ? this.generator.next(this.result) : this.generator.throw(this.error))).done === false) {\n\
 \n\
@@ -975,7 +983,7 @@ resource('../templates/adria/async.tpl', 'module(\'async.adria\', function(modul
             try {\n\
 \n\
                 if (typeof arg === \'function\') {\n\
-                    <: if (enableAssert) { :>assert(arg.prototype === undefined, \'Yielded function is not wrapped (forgot \\\'#\\\' ?)\');<: } :>\n\
+                    {! if (enableAssert): !}assert(arg.prototype === undefined, \'Yielded function is not wrapped (forgot \\\'#\\\' ?)\');{! endif !}\n\
                     arg(this.callback.bind(this, this.step));\n\
                 } else {\n\
                     this.waitAll(arg);\n\
@@ -983,15 +991,15 @@ resource('../templates/adria/async.tpl', 'module(\'async.adria\', function(modul
 \n\
             } catch (e) {\n\
 \n\
-                <* yielded expression threw immediately, meaning we\'re synchronous *>\n\
+                {* yielded expression threw immediately, meaning we\'re synchronous *}\n\
 \n\
                 this.sync = 1;\n\
                 this.throw(e);\n\
             }\n\
 \n\
-            <* check if the function returned before or after the callback was invoked\n\
+            {* check if the function returned before or after the callback was invoked\n\
                synchronous: just continue looping, don\'t call next in callback to avoid recursion\n\
-               asynchronous: break here and have the callback call next() again when done *>\n\
+               asynchronous: break here and have the callback call next() again when done *}\n\
 \n\
             if (this.sync === 0) {\n\
                 this.sync = -1;\n\
@@ -1004,11 +1012,11 @@ resource('../templates/adria/async.tpl', 'module(\'async.adria\', function(modul
         this.done = this.generator.done;\n\
     };\n\
 \n\
-    <**\n\
+    {**\n\
      * used by next to call multiple functions and wait for all of them to call back\n\
      *\n\
      * @param args an array or object of async-wrapped functions\n\
-     *>\n\
+     *}\n\
     Async.prototype.waitAll = function(args) {\n\
 \n\
         if (args instanceof Array) {\n\
@@ -1024,7 +1032,7 @@ resource('../templates/adria/async.tpl', 'module(\'async.adria\', function(modul
         for (var id in args) {\n\
             var arg = args[id];\n\
             if (typeof arg === \'function\') {\n\
-                <: if (enableAssert) { :>assert(arg.prototype === undefined, \'Property \' + id + \' of yielded object is not a wrapped function (forgot \\\'#\\\' ?)\');<: } :>\n\
+                {! if (enableAssert): !}assert(arg.prototype === undefined, \'Property \' + id + \' of yielded object is not a wrapped function (forgot \\\'#\\\' ?)\');{! endif !}\n\
                 this.waiting++;\n\
                 arg(this.waitAllCallback.bind(this, this.step, id));\n\
             } else {\n\
@@ -1033,7 +1041,7 @@ resource('../templates/adria/async.tpl', 'module(\'async.adria\', function(modul
         }\n\
     };\n\
 \n\
-    <**\n\
+    {**\n\
      * callback given to functions during waitAll. tracks number of returned functions and\n\
      * calls the normal async callback when all returned or one excepted\n\
      *\n\
@@ -1041,13 +1049,13 @@ resource('../templates/adria/async.tpl', 'module(\'async.adria\', function(modul
      * @param originalId the array or object key from the original yield\n\
      * @param err typically nodejs callback provide an error as first parameter if there was one. we\'ll throw it\n\
      * @param val the result\n\
-     *>\n\
+     *}\n\
     Async.prototype.waitAllCallback = function(originalStep, originalId, err, val) {\n\
 \n\
-        <* check if callback is from the current step (may not be if a previous waitAll step threw) *>\n\
+        {* check if callback is from the current step (may not be if a previous waitAll step threw) *}\n\
 \n\
         if (this.step !== originalStep) {\n\
-<* console.log(\'discarded waitAllCallback\', originalStep, originalId, err, val); *>\n\
+{* console.log(\'discarded waitAllCallback\', originalStep, originalId, err, val); *}\n\
             return;\n\
         }\n\
 \n\
@@ -1063,13 +1071,13 @@ resource('../templates/adria/async.tpl', 'module(\'async.adria\', function(modul
 \n\
         } else {\n\
 \n\
-            <* add this callbacks result to set of results *>\n\
+            {* add this callbacks result to set of results *}\n\
 \n\
             this.result[originalId] = (arguments.length === 3 ? err : val);\n\
             this.waiting--;\n\
         }\n\
 \n\
-        <* yield error or when all is done, result *>\n\
+        {* yield error or when all is done, result *}\n\
 \n\
         if (error !== null) {\n\
             this.callback(originalStep, error);\n\
@@ -1078,19 +1086,19 @@ resource('../templates/adria/async.tpl', 'module(\'async.adria\', function(modul
         }\n\
     };\n\
 \n\
-    <**\n\
+    {**\n\
      * callback given to singular functions\n\
      *\n\
      * @param originalStep the step at which the original function was called\n\
      * @param err typically nodejs callback provide an error as first parameter if there was one. we\'ll throw it\n\
      * @param val the result\n\
-     *>\n\
+     *}\n\
     Async.prototype.callback = function(originalStep, err, val) {\n\
 \n\
-        <* check if callback is from the current step (may not be if a previous waitAll step threw) *>\n\
+        {* check if callback is from the current step (may not be if a previous waitAll step threw) *}\n\
 \n\
         if (this.step !== originalStep) {\n\
-<* console.log(\'discarded callblack\', originalStep, err, val); *>\n\
+{* console.log(\'discarded callblack\', originalStep, err, val); *}\n\
             return;\n\
         }\n\
 \n\
@@ -1112,22 +1120,22 @@ resource('../templates/adria/async.tpl', 'module(\'async.adria\', function(modul
     module.exports = Async;\n\
 });\n\
 ');
-resource('../templates/adria/framework.tpl', 'var <:if (platform == \'node\') { :>___<: } :>require;\n\
-var resource;<:if (enableApplication) { :>\n\
-var application;<: } :>\n\
-var module;<: if (platform == \'node\') { :>\n\
-var window = global;<: } :><: if (enableAssert) { :>\n\
-var assert;<: } :><: if (globals.length != 0) { :>\n\
-var <= globals.join(\', \') =>;<: } :>\n\
-var Exception<: if (enableAssert) { :>, AssertionFailedException<: } :>;\n\
+resource('../templates/adria/framework.tpl', 'var {! if (platform == \'node\'): !}___{! endif !}require;\n\
+var resource;{! if (enableApplication): !}\n\
+var application;{! endif !}\n\
+var module;{! if (platform == \'node\'): !}\n\
+var window = global;{! endif !}{! if (enableAssert): !}\n\
+var assert;{! endif !}{! if (globals.length != 0): !}\n\
+var {% globals.join(\', \') %};{! endif !}\n\
+var Exception{! if (enableAssert): !}, AssertionFailedException{! endif !};\n\
 (function() {\n\
     var resources = { };\n\
     var modules = { };\n\
-    var getResource = function(name) {<: if (enableAssert) { :>\n\
+    var getResource = function(name) {{! if (enableAssert): !}\n\
         if (resources[name] === undefined) {\n\
             throw Error(\'missing resource \' + name);\n\
         }\n\
-        <: } :>\n\
+        {! endif !}\n\
         return resources[name];\n\
     };\n\
     var Module = function(name, func) {\n\
@@ -1156,7 +1164,7 @@ var Exception<: if (enableAssert) { :>, AssertionFailedException<: } :>;\n\
         this.stack = stack.join(\'\\n\');\n\
     };\n\
     Exception.prototype = Object.create(Error.prototype);\n\
-    Exception.prototype.constructor = Exception;<: if (enableApplication) { :>\n\
+    Exception.prototype.constructor = Exception;{! if (enableApplication): !}\n\
     application = function(Constructor /*, params... */) {\n\
         function Application() {\n\
             application = this;\n\
@@ -1166,19 +1174,19 @@ var Exception<: if (enableAssert) { :>, AssertionFailedException<: } :>;\n\
         var args = Array.prototype.slice.call(arguments);\n\
         args[0] = null;\n\
         return new (Function.prototype.bind.apply(Application, args));\n\
-    };<: } :>\n\
-    <: if (platform == \'node\') { :>___<: } :>require = function(file) {\n\
-        var module = modules[file];<: if (enableAssert) { :>\n\
+    };{! endif !}\n\
+    {! if (platform == \'node\') { !}___{! } !}require = function(file) {\n\
+        var module = modules[file];{! if (enableAssert): !}\n\
         if (module === undefined) {\n\
             throw Error(\'missing dependency \' + file);\n\
-        }<: } :>\n\
+        }{! endif !}\n\
         if (typeof module.func === \'function\') {\n\
             var func = module.func;\n\
             delete module.func;\n\
             func(module, getResource);\n\
         }\n\
         return module.exports;\n\
-    };<: if (enableAssert) { :>\n\
+    };{! if (enableAssert): !}\n\
     AssertionFailedException = function AssertionFailedException(message) {\n\
         Exception.call(this, message);\n\
     };\n\
@@ -1188,87 +1196,163 @@ var Exception<: if (enableAssert) { :>, AssertionFailedException<: } :>;\n\
         if (assertion !== true) {\n\
             throw new AssertionFailedException(message);\n\
         }\n\
-    };<: } :>\n\
+    };{! endif !}\n\
 })();\n\
 ');
-module('prototype.adria', function(module, resource) {
-    Object.defineProperty(Object.prototype, 'clone', {
-        value: function() {
-            return Object.create(Object.getPrototypeOf(this));
-        },
-        writable: true
-    });
-    String.prototype.snakeToCamel = (function() {
-        var firstToUpper;
-        firstToUpper = function firstToUpper(match1) {
-            return match1.replace('_', '').toUpperCase();
+module('../../astdlib/astd/prototype/merge.adria', function(module, resource) {
+    var merge;
+    merge = function merge(from, to) {
+        var props;
+        props = Object.getOwnPropertyNames(from);
+        var propId, propName;
+        for (propId in props) {
+            propName = props[propId];
+            if (to.hasOwnProperty(propName) === false && propName !== 'extend') {
+                Object.defineProperty(to, propName, Object.getOwnPropertyDescriptor(from, propName));
+            }
+        }
+    };
+    module.exports = merge;
+});
+module('../../astdlib/astd/prototype/string.adria', function(module, resource) {
+    var merge, extend, StringExtensions, random, repeat;
+    merge = ___require('../../astdlib/astd/prototype/merge.adria');
+    extend = function extend() {
+        merge(StringExtensions, String);
+        merge(StringExtensions.prototype, String.prototype);
+    };
+    StringExtensions = (function() {
+        var ___self = function StringExtensions() {}
+        var StringExtensions = ___self;
+        ___self.prototype.snakeToCamel = (function() {
+            var firstToUpper;
+            firstToUpper = function firstToUpper(match1) {
+                return match1.replace('_', '').toUpperCase();
+            };
+            return function snakeToCamel(upperFirst) {
+                if (upperFirst) {
+                    return this.replace(/((?:^|\_)[a-z])/g, firstToUpper);
+                } else {
+                    return this.replace(/(\_[a-z])/g, firstToUpper);
+                }
+            };
+        })();
+        ___self.prototype.hasPrefix = function hasPrefix(prefix) {
+            return (this.substr(0, prefix.length) === prefix);
         };
-        return function snakeToCamel(upperFirst) {
-            if (upperFirst) {
-                return this.replace(/((?:^|\_)[a-z])/g, firstToUpper);
+        ___self.prototype.stripPrefix = function stripPrefix(prefix) {
+            var len;
+            if (prefix instanceof Array) {
+                var i;
+                for (i in prefix) {
+                    len = prefix[i].length;
+                    if (this.substr(0, len) === prefix[i]) {
+                        return this.substr(len);
+                    }
+                }
+                return this.valueOf();
+            }
+            len = prefix.length;
+            return (this.substr(0, len) === prefix ? this.substr(len) : this.valueOf());
+        };
+        ___self.prototype.hasPostfix = function hasPostfix(postfix) {
+            return (this.substr(-postfix.length) === postfix);
+        };
+        ___self.prototype.stripPostfix = function stripPostfix(postfix) {
+            var len;
+            if (postfix instanceof Array) {
+                var i;
+                for (i in postfix) {
+                    len = postfix[i].length;
+                    if (this.substr(-len) === postfix[i]) {
+                        return this.substr(0, this.length - len);
+                    }
+                }
+                return this.valueOf();
+            }
+            len = postfix.length;
+            return (this.substr(-len) === postfix ? this.substr(0, this.length - len) : this.valueOf());
+        };
+        ___self.prototype.format = function format() {
+            var args;
+            args = Array.prototype.slice.call(arguments);
+            if (args.length === 1 && args[0] instanceof Object) {
+                args = args[0];
+            }
+            return this.replace(/(.?)\$([0-9a-z]+)(\:([0-9a-z\:\-]+\.?))?/ig, function(str, prefix, matchname, optmatch, options) {
+                var formatted;
+                if (prefix === '$') {
+                    return '$' + matchname + (optmatch !== undefined ? optmatch : '');
+                }
+                formatted = args[matchname];
+                if (options !== undefined) {
+                    if (options.slice(-1) === '.') {
+                        options = options.slice(0, -1);
+                    }
+                    if (options === 'currency') {
+                        formatted = Math.floor(formatted * 100) / 100;
+                    }
+                    if (options.substr(0, 4) === 'pad:') {
+                        formatted = String.prototype.padLeft.call('' + formatted, options.substr(4), ' ');
+                    }
+                }
+                return (args[matchname] !== undefined ? prefix + formatted : str);
+            });
+        };
+        ___self.prototype.repeat = function repeat(count) {
+            var result, pattern;
+            if (count < 1) {
+                return '';
+            }
+            result = '';
+            pattern = this.valueOf();
+            while (count > 1) {
+                if (count & 1) {
+                    result += pattern;
+                }
+                count >>= 1;
+                pattern += pattern;
+            }
+            result += pattern;
+            return result;
+        };
+        ___self.prototype.occurances = function occurances(search) {
+            var count, index;
+            count = 0;
+            index = this.indexOf(search);
+            while (index !== -1) {
+                count++;
+                index = this.indexOf(search, index + 1);
+            }
+            return count;
+        };
+        ___self.prototype.padLeft = function padLeft(paddedLength, padChar) {
+            padChar = (padChar !== undefined ? padChar : (' '));
+            return padChar.repeat(Math.max(0, paddedLength - this.length)) + this.valueOf();
+        };
+        ___self.prototype.padRight = function padRight(paddedLength, padChar) {
+            padChar = (padChar !== undefined ? padChar : (' '));
+            return this.valueOf() + padChar.repeat(Math.max(0, paddedLength - this.length));
+        };
+        ___self.prototype.jsify = function jsify(quoteType) {
+            if (quoteType === "'") {
+                return this.replace(/([\\'])/g, "\\$1").replace(/\r?\n/g, '\\n\\\n').replace(/\0/g, "\\0");
+            } else if (quoteType === '"') {
+                return this.replace(/([\\"])/g, "\\$1").replace(/\r?\n/g, '\\n\\\n').replace(/\0/g, "\\0");
             } else {
-                return this.replace(/(\_[a-z])/g, firstToUpper);
+                return this.replace(/([\\"'])/g, "\\$1").replace(/\r?\n/g, '\\n\\\n').replace(/\0/g, "\\0");
             }
         };
+        ___self.prototype.capitalize = function capitalize() {
+            return this.charAt(0).toUpperCase() + this.slice(1);
+        };
+        ___self.prototype.decapitalize = function decapitalize() {
+            return this.charAt(0).toLowerCase() + this.slice(1);
+        };
+        return ___self;
     })();
-    String.prototype.jsify = function jsify(quoteType) {
-        if (quoteType === "'") {
-            return this.replace(/([\\'])/g, "\\$1").replace(/\r?\n/g, '\\n\\\n').replace(/\0/g, "\\0");
-        } else if (quoteType === '"') {
-            return this.replace(/([\\"])/g, "\\$1").replace(/\r?\n/g, '\\n\\\n').replace(/\0/g, "\\0");
-        } else {
-            return this.replace(/([\\"'])/g, "\\$1").replace(/\r?\n/g, '\\n\\\n').replace(/\0/g, "\\0");
-        }
-    };
-    String.prototype.format = function format() {
-        var args;
-        args = Array.prototype.slice.call(arguments);
-        if (args.length === 1 && args[0] instanceof Object) {
-            args = args[0];
-        }
-        return this.replace(/(.?)\$([0-9a-z]+)(\:[0-9a-z]+)?/ig, function(str, prefix, matchname, options) {
-            if (prefix == '$') {
-                return '$' + matchname + (options !== undefined ? options : '');
-            }
-            return (args[matchname] !== undefined ? prefix + args[matchname] : str);
-        });
-    };
-    String.prototype.repeat = function repeat(count) {
-        var result, pattern;
-        if (count < 1) {
-            return '';
-        }
-        result = '';
-        pattern = this.valueOf();
-        while (count > 1) {
-            if (count & 1) {
-                result += pattern;
-            }
-            count >>= 1;
-            pattern += pattern;
-        }
-        result += pattern;
-        return result;
-    };
-    String.repeat = function repeat(count, string) {
-        string = (string === undefined ? ' ' : string);
-        return string.repeat(count);
-    };
-    String.prototype.occurances = function occurances(search) {
-        var count, index;
-        count = 0;
-        index = this.indexOf(search);
-        while (index !== -1) {
-            count++;
-            index = this.indexOf(search, index + 1);
-        }
-        return count;
-    };
-    String.prototype.padLeft = function padLeft(paddedLength, padChar) {
-        padChar = (padChar !== undefined ? padChar : ' ');
-        return padChar.repeat(paddedLength - this.length) + this.valueOf();
-    };
-    String.random = function random(length, chars) {
+    random = function random(length, chars) {
+        length = (length !== undefined ? length : (16));
         chars = (chars !== undefined ? chars : ('0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ'));
         var numChars, result;
         numChars = chars.length;
@@ -1280,27 +1364,83 @@ module('prototype.adria', function(module, resource) {
         }
         return result;
     };
-    String.prototype.stripPostfix = function stripPostfix(postfix) {
-        var len;
-        if (postfix instanceof Array) {
-            var i;
-            for (i in postfix) {
-                len = postfix[i].length;
-                if (this.substr(-len) === postfix[i]) {
-                    return this.substr(0, this.length - len);
-                }
-            }
-            return this.valueOf();
-        }
-        len = postfix.length;
-        return (this.substr(-len) === postfix ? this.substr(0, this.length - len) : this.valueOf());
+    repeat = function repeat(count, string) {
+        string = (string !== undefined ? string : (' '));
+        return StringExtensions.prototype.repeat.call(string, count);
     };
-    String.prototype.hasPostfix = function hasPostfix(postfix) {
-        return (this.substr(-postfix.length) === postfix);
+    module.exports = StringExtensions;
+    module.exports.extend = extend;
+    module.exports.random = random;
+    module.exports.repeat = repeat;
+});
+module('../../astdlib/astd/prototype/regexp.adria', function(module, resource) {
+    var merge, extend, RegExpExtensions, escape;
+    merge = ___require('../../astdlib/astd/prototype/merge.adria');
+    extend = function extend() {
+        merge(RegExpExtensions, RegExp);
+        merge(RegExpExtensions.prototype, RegExp.prototype);
     };
-    RegExp.escape = function escape(string) {
+    RegExpExtensions = (function() {
+        var ___self = function RegExpExtensions() {}
+        var RegExpExtensions = ___self;
+        return ___self;
+    })();
+    escape = function escape(string) {
         return string.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&');
     };
+    module.exports = RegExpExtensions;
+    module.exports.extend = extend;
+    module.exports.escape = escape;
+});
+module('../../astdlib/astd/prototype/object.adria', function(module, resource) {
+    var merge, extend, ObjectExtensions;
+    merge = ___require('../../astdlib/astd/prototype/merge.adria');
+    extend = function extend() {
+        merge(ObjectExtensions, Object);
+        merge(ObjectExtensions.prototype, Object.prototype);
+    };
+    ObjectExtensions = (function() {
+        var ___self = function ObjectExtensions() {}
+        var ObjectExtensions = ___self;
+        Object.defineProperty(___self.prototype, "merge", {
+            value: function merge(overwrite) {
+                var noFlag, args;
+                noFlag = overwrite instanceof Object;
+                args = Array.prototype.slice.call(arguments, noFlag ? 0 : 1);
+                overwrite = (noFlag ? true : overwrite);
+                var argId, argValue, props;
+                for (argId in args) {
+                    argValue = args[argId];
+                    props = Object.getOwnPropertyNames(argValue);
+                    if (overwrite === false) {
+                        var propId, propName;
+                        for (propId in props) {
+                            propName = props[propId];
+                            if (this.hasOwnProperty(propName) === false) {
+                                Object.defineProperty(this, propName, Object.getOwnPropertyDescriptor(argValue, propName));
+                            }
+                        }
+                    } else {
+                        var propId, propName;
+                        for (propId in props) {
+                            propName = props[propId];
+                            Object.defineProperty(this, propName, Object.getOwnPropertyDescriptor(argValue, propName));
+                        }
+                    }
+                }
+            },
+            writable: true
+        });
+        Object.defineProperty(___self.prototype, "clone", {
+            value: function clone() {
+                return Object.create(Object.getPrototypeOf(this));
+            },
+            writable: true
+        });
+        return ___self;
+    })();
+    module.exports = ObjectExtensions;
+    module.exports.extend = extend;
 });
 module('util.adria', function(module, resource) {
     var sysutil, crypto, DebugLog, debugLog, indent, enabled, log, dump, Enumeration, Enum, processOptions, home, normalizeExtension, md5;
@@ -1558,78 +1698,121 @@ module('../../astdlib/astd/set.adria', function(module, resource) {
     })();
     module.exports = Set;
 });
-module('template.adria', function(module, resource) {
-    var fs, Template;
-    fs = require('fs');
+module('../../astdlib/astd/template.adria', function(module, resource) {
+    var Template;
     Template = (function() {
-        var ___self = function Template(delimiterOpen, delimiterClose, delimiterStatement, delimiterExpression, delimiterComment) {
-            delimiterOpen = (delimiterOpen !== undefined ? delimiterOpen : ('<'));
-            delimiterClose = (delimiterClose !== undefined ? delimiterClose : ('>'));
-            delimiterStatement = (delimiterStatement !== undefined ? delimiterStatement : (':'));
-            delimiterExpression = (delimiterExpression !== undefined ? delimiterExpression : ('='));
-            delimiterComment = (delimiterComment !== undefined ? delimiterComment : ('*'));
-            var openStatement, closeStatement, openExpression, closeExpression, openComment, closeComment, statement, expression, comment, text;
+        var ___self = function Template() {
             this.data = {  };
-            openStatement = RegExp.escape(delimiterOpen) + RegExp.escape(delimiterStatement);
-            closeStatement = RegExp.escape(delimiterStatement) + RegExp.escape(delimiterClose);
-            openExpression = RegExp.escape(delimiterOpen) + RegExp.escape(delimiterExpression);
-            closeExpression = RegExp.escape(delimiterExpression) + RegExp.escape(delimiterClose);
-            openComment = RegExp.escape(delimiterOpen) + RegExp.escape(delimiterComment);
-            closeComment = RegExp.escape(delimiterComment) + RegExp.escape(delimiterClose);
+            this.preprocessors = {  };
+        };
+        var Template = ___self;
+        ___self.prototype.data = null;
+        ___self.prototype.debug = false;
+        ___self.prototype.statementDelimiters = [ '{!', '!}' ];
+        ___self.prototype.expressionDelimiters = [ '{%', '%}' ];
+        ___self.prototype.commentDelimiters = [ '{*', '*}' ];
+        ___self.prototype.source = '';
+        ___self.prototype.preprocessors = null;
+        ___self.prototype.assign = function assign(name, value) {
+            if (name instanceof Object && value === undefined) {
+                this.data.merge(name);
+            } else {
+                this.data[name] = value;
+            }
+        };
+        ___self.prototype.registerPreprocessor = function registerPreprocessor(name, context, handler) {
+            if (typeof context === 'function' && handler === undefined) {
+                handler = context;
+                context = this;
+            }
+            this.preprocessors[name] = handler.bind(context);
+        };
+        ___self.prototype.setup = function setup() {
+            var openStatement, closeStatement, openExpression, closeExpression, openComment, closeComment, statement, expression, comment, text;
+            openStatement = RegExp.escape(this.statementDelimiters[0]);
+            closeStatement = RegExp.escape(this.statementDelimiters[1]);
+            openExpression = RegExp.escape(this.expressionDelimiters[0]);
+            closeExpression = RegExp.escape(this.expressionDelimiters[1]);
+            openComment = RegExp.escape(this.commentDelimiters[0]);
+            closeComment = RegExp.escape(this.commentDelimiters[1]);
             statement = '(' + openStatement + ').+?' + closeStatement;
             expression = '(' + openExpression + ').+?' + closeExpression;
             comment = '(' + openComment + ')[\\s\\S]+?' + closeComment;
             text = '(?:(?!' + openStatement + '|' + openExpression + '|' + openComment + ')[\\s\\S])+';
-            this.regexp = new RegExp(statement + '|' + expression + '|' + comment + '|' + text, 'g');
-        };
-        var Template = ___self;
-        ___self.prototype.basePath = 'templates/';
-        ___self.prototype.data = null;
-        ___self.prototype.regexp = null;
-        ___self.prototype.debug = false;
-        ___self.prototype.assign = function assign(name, value) {
-            this.data[name] = value;
+            return new RegExp(statement + '|' + expression + '|' + comment + '|' + text, 'g');
         };
         ___self.prototype.parse = function parse(input) {
             var regexp, match, jsString;
-            regexp = this.regexp;
+            regexp = this.setup();
             jsString = '';
             while (match = regexp.exec(input)) {
                 if (match[1] === undefined && match[2] === undefined && match[3] === undefined) {
-                    jsString += 'result += "' + match[0].jsify('"') + '";\n';
+                    jsString += 'this.source += "' + match[0].jsify('"') + '";\n';
                 } else if (match[1] !== undefined) {
-                    jsString += match[0].slice(2, -2) + '\n';
+                    var preprocessor, statement;
+                    statement = match[0].slice(2, -2);
+                    statement = statement.replace(/\:\s*$/, '{');
+                    statement = statement.replace(/^\s*while/, '} while');
+                    statement = statement.replace(/^\s*end(if|for|while)/, '}');
+                    if ((preprocessor = this.checkPreprocessor(statement)) !== null) {
+                        jsString += this.runPreprocessor(preprocessor, statement);
+                    } else {
+                        jsString += statement + '\n';
+                    }
                 } else if (match[2] !== undefined) {
-                    jsString += 'result += ' + match[0].slice(2, -2) + ';\n';
+                    jsString += 'this.source += ' + match[0].slice(2, -2) + ';\n';
                 } else if (this.debug && match[3] !== undefined) {
-                    jsString += 'result += "/*' + match[0].slice(2, -2).jsify('"') + '*/";\n';
+                    jsString += 'this.source += "/*' + match[0].slice(2, -2).jsify('"') + '*/";\n';
                 }
             }
             return jsString;
         };
+        ___self.prototype.checkPreprocessor = function checkPreprocessor(statement) {
+            var nameMatch;
+            nameMatch = statement.match(/^\s*([a-z][a-z0-9_]*)\s*\(/);
+            if (nameMatch !== null && this.preprocessors[nameMatch[1]] !== undefined) {
+                return nameMatch[1];
+            } else {
+                return null;
+            }
+        };
+        ___self.prototype.runPreprocessor = function runPreprocessor(name, statement) {
+            return eval('(function() { var ' + name + ' = this.preprocessors[name]; return ' + statement + '; }).call(this)');
+        };
         ___self.prototype.exec = function exec(tplString) {
-            var varDefs, finalString;
-            varDefs = 'var result = "";\n';
+            var varDefs;
+            varDefs = 'this.source = "";\n';
             var name, value;
             for (name in this.data) {
                 value = this.data[name];
-                varDefs += 'var ' + name + ' = data.' + name + ';\n';
+                varDefs += 'var ' + name + ' = this.data.' + name + ';\n';
             }
-            finalString = '(function(data) { ' + varDefs + tplString + 'return result; })(this)';
-            return (function() {
-                return eval(finalString);
-            }).call(this.data);
+            return eval('(function() { ' + varDefs + tplString + 'return this.source; }).call(this)');
         };
         ___self.prototype.fetch = function fetch(input) {
-            var tplString;
-            tplString = this.parse(input);
-            return this.exec(tplString);
+            return this.exec(this.parse(input));
         };
+        return ___self;
+    })();
+    module.exports = Template;
+});
+module('template.adria', function(module, resource) {
+    var fs, ASTDTemplate, Template;
+    fs = require('fs');
+    ASTDTemplate = ___require('../../astdlib/astd/template.adria');
+    Template = (function(___parent) {
+        var ___self = function Template() {
+            ___parent.apply(this, arguments);
+        }
+        ___self.prototype = Object.create(___parent.prototype);
+        ___self.prototype.constructor = ___self;
+        var Template = ___self;
+        ___self.prototype.basePath = 'templates/';
         ___self.prototype.fetchFile = function fetchFile(file) {
             return this.fetch(fs.readFileSync(this.basePath + file, 'UTF-8'));
         };
         return ___self;
-    })();
+    })(ASTDTemplate);
     module.exports = Template;
 });
 module('cache.adria', function(module, resource) {
@@ -3225,7 +3408,7 @@ module('language_parser/ast_exception.adria', function(module, resource) {
     module.exports = ASTException;
 });
 module('targets/adria_node.adria', function(module, resource) {
-    var path, fs, Set, Map, SourceNode, util, LanguageParser, CaptureNode, ASTException, AdriaNode, AccessOperationProtocall, ConstLiteral, Scope, Module, InvokeOperation, AsyncWrapOperation, FunctionLiteral, FunctionStatement, GeneratorLiteral, GeneratorStatement, AsyncLiteral, AsyncStatement, FunctionParamList, BaseLiteral, DoWhileStatement, WhileStatement, IfConditional, IfUnconditional, IfStatement, SwitchStatement, ForCountStatement, ForInStatement, ObjectLiteral, PropertyLiteral, ArrayLiteral, Expression, ProtoLiteral, ProtoStatement, NewProtoLiteral, ProtoBodyItem, ReturnStatement, FlowStatement, YieldLiteral, AwaitLiteral, Try, Catch, CatchSpecific, CatchAll, Finally, ThrowStatement, AssertStatement, Statement, InterruptibleStatement, AdriaFileNode, ResourceLiteral, RequireLiteral, ModuleStatement, ExportStatement, GlobalDef, ParentLiteral, StorageLiteral, ValueType, Ident, Name, String, Numeric, VarDef, ImportStatement;
+    var path, fs, Set, Map, SourceNode, util, LanguageParser, CaptureNode, ASTException, AdriaNode, AccessOperationProtocall, ConstLiteral, Scope, Module, InvokeOperation, AsyncWrapOperation, FunctionLiteral, FunctionStatement, GeneratorLiteral, GeneratorStatement, AsyncLiteral, AsyncStatement, FunctionParamList, AsyncParamList, BaseLiteral, DoWhileStatement, WhileStatement, IfConditional, IfUnconditional, IfStatement, SwitchStatement, ForCountStatement, ForInStatement, ObjectLiteral, PropertyLiteral, ArrayLiteral, Expression, ProtoLiteral, ProtoStatement, NewProtoLiteral, ProtoBodyItem, ReturnStatement, FlowStatement, YieldLiteral, AwaitLiteral, Try, Catch, CatchSpecific, CatchAll, Finally, ThrowStatement, AssertStatement, Statement, InterruptibleStatement, AdriaFileNode, ResourceLiteral, RequireLiteral, ModuleStatement, ExportStatement, GlobalDef, ParentLiteral, StorageLiteral, ValueType, Ident, Name, String, Numeric, VarDef, ImportStatement;
     path = require('path');
     fs = require('fs');
     Set = ___require('../../astdlib/astd/set.adria');
@@ -3563,6 +3746,7 @@ module('targets/adria_node.adria', function(module, resource) {
             var ___self = function FunctionLiteral(key, value) {
                 this.defaultArgs = [  ];
                 Scope.prototype.constructor.call(this, key, value);
+                this.thisId = thisId++;
             };
             ___self.prototype = Object.create(___parent.prototype);
             ___self.prototype.constructor = ___self;
@@ -3571,10 +3755,9 @@ module('targets/adria_node.adria', function(module, resource) {
             ___self.prototype.name = null;
             ___self.prototype.lookupParent = false;
             ___self.prototype.thisId = 0;
+            ___self.prototype.provideContext = false;
             ___self.prototype.storeContext = function storeContext() {
-                if (this.thisId === 0) {
-                    this.thisId = thisId++;
-                }
+                this.provideContext = true;
                 return '___ths' + this.thisId;
             };
             ___self.prototype.toSourceNode = function toSourceNode() {
@@ -3605,13 +3788,21 @@ module('targets/adria_node.adria', function(module, resource) {
                 }
                 body = this.get('body').toSourceNode();
                 result.add(this.refsToSourceNode());
-                if (this.thisId > 0) {
+                if (this.provideContext) {
                     result.add('var ' + this.storeContext() + ' = this;' + this.nl());
                 }
                 if (this.lookupParent) {
                     this.addParentLookup(result, this.name);
                 }
-                result.add([ body, this.nl(-1) + '}' ]);
+                if (this instanceof AsyncLiteral && this.useCallback) {
+                    result.add([
+                        body,
+                        this.nl() + this.storeCallback() + '(null, undefined);',
+                        this.nl(-1) + '}'
+                    ]);
+                } else {
+                    result.add([ body, this.nl(-1) + '}' ]);
+                }
                 return result;
             };
             return ___self;
@@ -3651,7 +3842,11 @@ module('targets/adria_node.adria', function(module, resource) {
         ___self.prototype = Object.create(___parent.prototype);
         ___self.prototype.constructor = ___self;
         var AsyncLiteral = ___self;
-        ___self.prototype.callbackMarker = -1;
+        ___self.prototype.useCallback = false;
+        ___self.prototype.storeCallback = function storeCallback() {
+            this.useCallback = true;
+            return '___cbh' + this.thisId;
+        };
         ___self.prototype.toSourceNode = function toSourceNode() {
             var parser, result;
             parser = this.parser();
@@ -3693,13 +3888,8 @@ module('targets/adria_node.adria', function(module, resource) {
         ___self.prototype = Object.create(___parent.prototype);
         ___self.prototype.constructor = ___self;
         var FunctionParamList = ___self;
-        ___self.prototype.toSourceNode = function toSourceNode(declare) {
-            declare = (declare !== undefined ? declare : (true));
-            var result, functionNode, scope;
-            result = this.csn();
-            functionNode = this.ancestor([ 'function', 'generator', 'async' ]);
-            scope = this.findScope();
-            this.eachKey('item', function(node) {
+        ___self.prototype.handle = function handle(declare, functionNode, scope, result, node) {
+            if (node.key === 'item') {
                 var name, valueNode;
                 name = node.get('name').toSourceNode();
                 result.add(name);
@@ -3722,11 +3912,45 @@ module('targets/adria_node.adria', function(module, resource) {
                     ]);
                     functionNode.defaultArgs.push(defaultArg);
                 }
-            });
+                return true;
+            }
+            return false;
+        };
+        ___self.prototype.toSourceNode = function toSourceNode(declare) {
+            declare = (declare !== undefined ? declare : (true));
+            var result, functionNode, scope;
+            result = this.csn();
+            functionNode = this.ancestor([ 'function', 'generator', 'async' ]);
+            scope = this.findScope();
+            this.each(this.handle.bind(this, declare, functionNode, scope, result));
             return result.join(', ');
         };
         return ___self;
     })(AdriaNode);
+    AsyncParamList = (function(___parent) {
+        var ___self = function AsyncParamList() {
+            ___parent.apply(this, arguments);
+        }
+        ___self.prototype = Object.create(___parent.prototype);
+        ___self.prototype.constructor = ___self;
+        var AsyncParamList = ___self;
+        ___self.prototype.handle = function handle(declare, functionNode, scope, result, node) {
+            var ___p, ___p0 = ___p = (this === this.constructor.prototype ? this : Object.getPrototypeOf(this));
+            while (___p !== null && (___p.handle !== handle || ___p.hasOwnProperty('handle') === false)) {
+                ___p = Object.getPrototypeOf(___p);
+            }
+            ___p = (___p !== null ? Object.getPrototypeOf(___p).constructor : ___p0);
+            if (___p.prototype.handle.call(this, declare, functionNode, scope, result, node)) {
+                return true;
+            }
+            if (node.key === 'callback') {
+                result.add(functionNode.storeCallback());
+                return true;
+            }
+            return false;
+        };
+        return ___self;
+    })(FunctionParamList);
     BaseLiteral = (function(___parent) {
         var ___self = function BaseLiteral() {
             ___parent.apply(this, arguments);
@@ -4384,12 +4608,26 @@ module('targets/adria_node.adria', function(module, resource) {
         ___self.prototype.constructor = ___self;
         var ReturnStatement = ___self;
         ___self.prototype.toSourceNode = function toSourceNode() {
-            var result, type;
+            var result, type, hostFunction;
             result = this.csn();
             type = this.get('type');
-            result.add([ type.csn(type.value), ' ' ]);
-            result.add(this.get('value').toSourceNode());
-            result.add(';' + this.nl());
+            hostFunction = this.findProto(FunctionLiteral);
+            if (hostFunction instanceof AsyncLiteral && hostFunction.useCallback) {
+                result.add([
+                    hostFunction.storeCallback(),
+                    '(null, ',
+                    this.get('value').toSourceNode(),
+                    ');',
+                    this.nl()
+                ]);
+            } else {
+                result.add([
+                    type.value,
+                    ' ',
+                    this.get('value').toSourceNode(),
+                    ';' + this.nl()
+                ]);
+            }
             return result;
         };
         return ___self;
@@ -4934,6 +5172,7 @@ module('targets/adria_node.adria', function(module, resource) {
     module.exports.AsyncLiteral = AsyncLiteral;
     module.exports.AsyncStatement = AsyncStatement;
     module.exports.FunctionParamList = FunctionParamList;
+    module.exports.AsyncParamList = AsyncParamList;
     module.exports.BaseLiteral = BaseLiteral;
     module.exports.DoWhileStatement = DoWhileStatement;
     module.exports.WhileStatement = WhileStatement;
@@ -5461,7 +5700,9 @@ module('targets/adriadebug_transform.adria', function(module, resource) {
 });
 module('main.adria', function(module, resource) {
     var util, AdriaTransform, AdriaDebugTransform, target, piped, debug, handle, run;
-    ___require('prototype.adria');
+    ___require('../../astdlib/astd/prototype/string.adria').extend();
+    ___require('../../astdlib/astd/prototype/regexp.adria').extend();
+    ___require('../../astdlib/astd/prototype/object.adria').extend();
     util = ___require('util.adria');
     AdriaTransform = ___require('targets/adria_transform.adria');
     AdriaDebugTransform = ___require('targets/adriadebug_transform.adria');

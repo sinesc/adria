@@ -89,7 +89,7 @@ async_literal {
 
     entry -> "function" -> "#":async -> "(" -> ")" -> block:body -> return
     "#":async -> ident:name -> "("
-    "(" -> function_param_list:param_list -> ")"
+    "(" -> async_param_list:param_list -> ")"
 }
 
 generator_literal {
@@ -134,6 +134,14 @@ function_param_list {
     // creating a backlink from defaulted parameters to standard parameters
 
     function_param:item -> ","[one_way_bridge] -> function_param_default:item
+}
+
+async_param_list {
+
+    //!todo cheapo solution for testing
+    entry -> "#":callback -> function_param_list -> return
+    entry -> function_param_list -> "#":callback -> return
+    entry -> function_param_list -> return
 }
 
 /*

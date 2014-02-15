@@ -1,19 +1,19 @@
-var <:if (platform == 'node') { :>___<: } :>require;
-var resource;<:if (enableApplication) { :>
-var application;<: } :>
-var module;<: if (platform == 'node') { :>
-var window = global;<: } :><: if (enableAssert) { :>
-var assert;<: } :><: if (globals.length != 0) { :>
-var <= globals.join(', ') =>;<: } :>
-var Exception<: if (enableAssert) { :>, AssertionFailedException<: } :>;
+var {! if (platform == 'node'): !}___{! endif !}require;
+var resource;{! if (enableApplication): !}
+var application;{! endif !}
+var module;{! if (platform == 'node'): !}
+var window = global;{! endif !}{! if (enableAssert): !}
+var assert;{! endif !}{! if (globals.length != 0): !}
+var {% globals.join(', ') %};{! endif !}
+var Exception{! if (enableAssert): !}, AssertionFailedException{! endif !};
 (function() {
     var resources = { };
     var modules = { };
-    var getResource = function(name) {<: if (enableAssert) { :>
+    var getResource = function(name) {{! if (enableAssert): !}
         if (resources[name] === undefined) {
             throw Error('missing resource ' + name);
         }
-        <: } :>
+        {! endif !}
         return resources[name];
     };
     var Module = function(name, func) {
@@ -42,7 +42,7 @@ var Exception<: if (enableAssert) { :>, AssertionFailedException<: } :>;
         this.stack = stack.join('\n');
     };
     Exception.prototype = Object.create(Error.prototype);
-    Exception.prototype.constructor = Exception;<: if (enableApplication) { :>
+    Exception.prototype.constructor = Exception;{! if (enableApplication): !}
     application = function(Constructor /*, params... */) {
         function Application() {
             application = this;
@@ -52,19 +52,19 @@ var Exception<: if (enableAssert) { :>, AssertionFailedException<: } :>;
         var args = Array.prototype.slice.call(arguments);
         args[0] = null;
         return new (Function.prototype.bind.apply(Application, args));
-    };<: } :>
-    <: if (platform == 'node') { :>___<: } :>require = function(file) {
-        var module = modules[file];<: if (enableAssert) { :>
+    };{! endif !}
+    {! if (platform == 'node') { !}___{! } !}require = function(file) {
+        var module = modules[file];{! if (enableAssert): !}
         if (module === undefined) {
             throw Error('missing dependency ' + file);
-        }<: } :>
+        }{! endif !}
         if (typeof module.func === 'function') {
             var func = module.func;
             delete module.func;
             func(module, getResource);
         }
         return module.exports;
-    };<: if (enableAssert) { :>
+    };{! if (enableAssert): !}
     AssertionFailedException = function AssertionFailedException(message) {
         Exception.call(this, message);
     };
@@ -74,5 +74,5 @@ var Exception<: if (enableAssert) { :>, AssertionFailedException<: } :>;
         if (assertion !== true) {
             throw new AssertionFailedException(message);
         }
-    };<: } :>
+    };{! endif !}
 })();

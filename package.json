@@ -1,7 +1,7 @@
 {
   "name": "adria",
-  "version": "0.1.3",
-  "description": "A mostly Javascript compatible language that compiles to Javascript",
+  "version": "0.1.4",
+  "description": "Adria to Javascript compiler",
   "files": [
     "bin/adria.js",
     "build/",

@@ -469,18 +469,17 @@ export AsyncWrapOperation = proto (AdriaNode) {
         name            : null, //!todo seems to be a sourcenode!
         lookupParent    : false,
         thisId          : 0,
+        provideContext  : false,
 
         constructor: func(key, value) {
             this.defaultArgs = [ ];
             Scope->constructor(key, value);
+            this.thisId = thisId++;
         },
 
         storeContext: func() {
 
-            if (this.thisId === 0) {
-                this.thisId = thisId++;
-            }
-
+            this.provideContext = true;
             return '___ths' + this.thisId;
         },
 
@@ -535,7 +534,7 @@ export AsyncWrapOperation = proto (AdriaNode) {
 
             result.add(this.refsToSourceNode());
 
-            if (this.thisId > 0) {
+            if (this.provideContext) {
                 result.add('var '  + this.storeContext() + ' = this;' + this.nl());
             }
 
@@ -545,7 +544,13 @@ export AsyncWrapOperation = proto (AdriaNode) {
                 this.addParentLookup(result, this.name);
             }
 
-            result.add([ body, this.nl(-1) + '}' ]);
+            // handle async auto return (!todo all this child-proto stuff needs to get out of here)
+
+            if (this instanceof AsyncLiteral && this.useCallback) {
+                result.add([ body, this.nl() + this.storeCallback() + '(null, undefined);', this.nl(-1) + '}' ]);
+            } else {
+                result.add([ body, this.nl(-1) + '}' ]);
+            }
 
             return result;
         },
@@ -559,7 +564,13 @@ export GeneratorStatement = proto (GeneratorLiteral) { };
 
 export AsyncLiteral = proto (FunctionLiteral) {
 
-    callbackMarker: -1,
+    useCallback: false,
+
+    storeCallback: func() {
+
+        this.useCallback = true;
+        return '___cbh' + this.thisId;
+    },
 
     toSourceNode: func() {
 
@@ -584,13 +595,9 @@ export AsyncStatement = proto (AsyncLiteral) { };
 
 export FunctionParamList = proto (AdriaNode) {
 
-    toSourceNode: func(declare = true) {
+    handle: func(declare, functionNode, scope, result, node) {
 
-        var result = this.csn();
-        var functionNode = this.ancestor([ 'function', 'generator', 'async' ]);
-        var scope = this.findScope();
-
-        this.eachKey('item', func(node) {
+        if (node.key === 'item') {
 
             var name = node.get('name').toSourceNode();
             result.add(name);
@@ -609,10 +616,42 @@ export FunctionParamList = proto (AdriaNode) {
                 defaultArg.add([ name, ' = (', name, ' !== undefined ? ', name, ' : (', valueNode.toSourceNode(), '))' ]);
                 functionNode.defaultArgs.push(defaultArg);
             }
-        });
+
+            return true;
+        }
+
+        return false;
+    },
+
+    toSourceNode: func(declare = true) {
+
+        var result = this.csn();
+        var functionNode = this.ancestor([ 'function', 'generator', 'async' ]);
+        var scope = this.findScope();
+
+        this.each(this.handle.bind(this, declare, functionNode, scope, result));
 
         return result.join(', ');
     },
+};
+
+export AsyncParamList = proto (FunctionParamList) {
+
+    handle: func(declare, functionNode, scope, result, node) {
+
+        if (parent->handle(declare, functionNode, scope, result, node)) {
+            return true;
+        }
+
+        if (node.key === 'callback') {
+
+            result.add(functionNode.storeCallback());
+            return true;
+        }
+
+        return false;
+    },
+
 };
 
 export BaseLiteral = proto (AdriaNode) {
@@ -1342,10 +1381,16 @@ export ReturnStatement = proto (AdriaNode) {
 
         var result = this.csn();
         var type = this.get('type');
+        var hostFunction = this.findProto(FunctionLiteral);
 
-        result.add([ type.csn(type.value), ' ' ]);
-        result.add(this.get('value').toSourceNode());
-        result.add(';' + this.nl());
+        if (hostFunction instanceof AsyncLiteral && hostFunction.useCallback) {
+
+            result.add([ hostFunction.storeCallback(), '(null, ', this.get('value').toSourceNode(), ');', this.nl() ]);
+
+        } else {
+
+            result.add([ type.value, ' ', this.get('value').toSourceNode(), ';' + this.nl() ]);
+        }
 
         return result;
     },

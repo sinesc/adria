@@ -179,6 +179,13 @@ export home = func() {
     return process.env[process.platform == 'win32' ? 'USERPROFILE' : 'HOME'];
 };
 
+/**
+ * appends defaultExtension to fullname unless fullname already has a file extension
+ *
+ * @param fullname
+ * @param defaultExtension
+ * @return string
+ */
 export normalizeExtension = func(fullname, defaultExtension) {
 
     var slash = fullname.lastIndexOf('/');
