@@ -38,8 +38,8 @@ module AdriaDebugTransform = proto(AdriaTransform) {
 
         AdriaTransform->constructor(piped);
 
-        this.options['no-cache'] = true;
-        this.options['no-scan'] = true;
+        this.options['cache'] = false;
+        this.options['scan'] = false;
     },
 
     run: func() {
@@ -54,13 +54,13 @@ module AdriaDebugTransform = proto(AdriaTransform) {
         // process piped data and initial files
 
         if (this.piped !== undefined) {
-            this.buildModule('main' + options.fileExt, this.piped);
+            this.buildModule('main' + options['extension'], this.piped);
         }
 
-        var files = options.files;
+        var files = options['files'];
 
         for (var id in files) {
-            this.buildModule(util.normalizeExtension(files[id], options.fileExt));
+            this.buildModule(util.normalizeExtension(files[id], options['extension']));
         }
 
         // extract result for join
@@ -74,7 +74,7 @@ module AdriaDebugTransform = proto(AdriaTransform) {
         // merge and return
 
         if (options['outFile'] !== null) {
-            fs.writeFileSync(options.basePath + options.outFile, result.join('\n'));
+            fs.writeFileSync(options['basePath'] + options['outFile'], result.join('\n'));
         } else {
             process.stdout.write(result.join('\n'));
         }

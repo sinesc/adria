@@ -1442,7 +1442,7 @@ module('../../astdlib/astd/prototype/object.adria', function(module, resource) {
     module.exports.extend = extend;
 });
 module('util.adria', function(module, resource) {
-    var sysutil, crypto, DebugLog, debugLog, indent, enabled, log, dump, Enumeration, Enum, processOptions, home, normalizeExtension, md5;
+    var sysutil, crypto, DebugLog, debugLog, indent, enabled, log, dump, Enumeration, Enum, home, normalizeExtension, md5;
     sysutil = require('util');
     crypto = require('crypto');
     DebugLog = (function() {
@@ -1511,28 +1511,6 @@ module('util.adria', function(module, resource) {
     Enum = function Enum(options) {
         return new Enumeration(options);
     };
-    processOptions = function processOptions(context, handlers) {
-        var next;
-        next = '_default';
-        var i, argv, prefix, param;
-        for (i = 2; i < process.argv.length;i++) {
-            argv = process.argv[i];
-            prefix = argv.slice(0, 2);
-            param = argv.slice(2);
-            if (prefix == "--" && typeof handlers[param] === 'function') {
-                next = param;
-            } else if (prefix == "--") {
-                if (handlers['_switch'] !== undefined) {
-                    handlers['_switch'].call(context, param);
-                }
-            } else {
-                if (handlers[next] !== undefined) {
-                    handlers[next].call(context, argv);
-                }
-                next = '_default';
-            }
-        }
-    };
     home = function home() {
         return process.env[process.platform == 'win32' ? 'USERPROFILE' : 'HOME'];
     };
@@ -1551,10 +1529,79 @@ module('util.adria', function(module, resource) {
     module.exports.log = log;
     module.exports.dump = dump;
     module.exports.Enum = Enum;
-    module.exports.processOptions = processOptions;
     module.exports.home = home;
     module.exports.normalizeExtension = normalizeExtension;
     module.exports.md5 = md5;
+});
+module('args.adria', function(module, resource) {
+    var argparse, parsed, callbacks, parser, add, addSwitch, partial, consume, applyCallbacks;
+    argparse = require('argparse');
+    parsed = null;
+    callbacks = {  };
+    parser = new argparse.ArgumentParser({
+        version: '0.1.6',
+        addHelp: false,
+        epilog: 'Use --no-... to invert option switches, i.e. --no-strict'
+    });
+    add = function add(flags, options, callback) {
+        callback = (callback !== undefined ? callback : (null));
+        parser.addArgument(flags, options);
+        if (callback !== null) {
+            var name;
+            name = (options.dest !== undefined ? options.dest : null);
+            if (name === null) {
+                var id, flag;
+                for (id in flags) {
+                    flag = flags[id];
+                    if (flag.slice(0, 2) === '--') {
+                        name = flag.slice(2);
+                    }
+                }
+            }
+            callbacks[name] = callback;
+        }
+        parsed = null;
+    };
+    addSwitch = function addSwitch(name, help, defaultState) {
+        defaultState = (defaultState !== undefined ? defaultState : (false));
+        var defaultText, defaultValue;
+        defaultText = ' (' + (defaultState ? 'true' : 'false') + ')';
+        parser.addArgument([ '--' + name ], { help: help + defaultText, action: 'storeTrue', dest: name });
+        parser.addArgument([ '--no-' + name ], { help: argparse.Const.SUPPRESS, action: 'storeFalse', dest: name });
+        defaultValue = {  };
+        defaultValue[name] = defaultState;
+        parser.setDefaults(defaultValue);
+    };
+    partial = function partial() {
+        if (parsed === null) {
+            parsed = parser.parseKnownArgs()[0];
+            applyCallbacks();
+        }
+        return parsed;
+    };
+    consume = function consume() {
+        parser.addArgument([ '-h', '--help' ], {
+            action: 'help',
+            defaultValue: argparse.Const.SUPPRESS,
+            help: 'Show this help message and exit.'
+        });
+        parsed = parser.parseArgs();
+        applyCallbacks();
+        return parsed;
+    };
+    applyCallbacks = function applyCallbacks() {
+        var key, value;
+        for (key in parsed) {
+            value = parsed[key];
+            if (callbacks[key] !== undefined) {
+                parsed[key] = callbacks[key](value);
+            }
+        }
+    };
+    module.exports.add = add;
+    module.exports.addSwitch = addSwitch;
+    module.exports.partial = partial;
+    module.exports.consume = consume;
 });
 module('../../astdlib/astd/set.adria', function(module, resource) {
     var Set;
@@ -1900,63 +1947,31 @@ module('cache.adria', function(module, resource) {
     module.exports = Cache;
 });
 module('transform.adria', function(module, resource) {
-    var util, Cache, Transform;
+    var util, args, Cache, Transform;
     util = ___require('util.adria');
+    args = ___require('args.adria');
     Cache = ___require('cache.adria');
     Transform = (function() {
         var ___self = function Transform(piped) {
-            this.options = { basePath: '', paths: [  ], files: [  ], outFile: null };
             this.piped = piped;
             this.initOptions();
             this.processOptions();
-            if (this.options['no-cache'] !== true) {
+            if (this.options['cache']) {
                 this.cache = new Cache();
             }
-            if (this.options.debug) {
+            if (this.options['debug']) {
                 util.log.enable();
             }
         };
         var Transform = ___self;
-        ___self.prototype.optionsDefinition = null;
         ___self.prototype.options = null;
         ___self.prototype.piped = null;
         ___self.prototype.cache = null;
         ___self.prototype.initOptions = function initOptions() {
-            this.defineOptions({
-                '_default': function(file) {
-                    this['files'].push(file);
-                },
-                '_switch': function(param) {
-                    this[param] = true;
-                },
-                'base': function(path) {
-                    this['basePath'] = (path.hasPostfix('/') ? path : path + '/');
-                },
-                'path': function(path) {
-                    if (this['paths'] === undefined) {
-                        this['paths'] = [  ];
-                    }
-                    this['paths'].push((path.hasPostfix('/') ? path : path + '/'));
-                },
-                'out': function(file) {
-                    this['outFile'] = file;
-                },
-                'target': function(target) {
-                    this['target'] = target;
-                }
-            });
-        };
-        ___self.prototype.defineOptions = function defineOptions(optionsDefinition) {
-            if (this.optionsDefinition === null) {
-                this.optionsDefinition = {  };
-            }
-            var id;
-            for (id in optionsDefinition) {
-                this.optionsDefinition[id] = optionsDefinition[id];
-            }
+            args.addSwitch('cache', 'Cache generated code', true);
         };
         ___self.prototype.processOptions = function processOptions() {
-            util.processOptions(this.options, this.optionsDefinition);
+            this.options = args.consume();
         };
         ___self.prototype.run = function run() {
         };
@@ -3083,7 +3098,7 @@ module('language_parser/capture_node.adria', function(module, resource) {
         };
         ___self.prototype.setTemplate = function setTemplate(fileName) {
             this.tpl = new Template();
-            this.tpl.debug = this.parser().transform.options.debug;
+            this.tpl.debug = this.parser().transform.options['debug'];
             this.tplFile = fileName;
         };
         ___self.prototype.processTemplate = function processTemplate() {
@@ -3110,7 +3125,7 @@ module('language_parser.adria', function(module, resource) {
         var ___self = function LanguageParser(transform) {
             Parser.prototype.constructor.call(this, transform);
             this.transform = transform;
-            this.includeTrace = transform.options.debug;
+            this.includeTrace = transform.options['debug'];
             this.resultData = {  };
         };
         ___self.prototype = Object.create(___parent.prototype);
@@ -3240,7 +3255,7 @@ module('language_parser.adria', function(module, resource) {
             }
         };
         ___self.prototype.loadSource = function loadSource(filename) {
-            if (this.transform.options['no-cache'] !== true && this.cacheData === null) {
+            if (this.transform.options['cache'] && this.cacheData === null) {
                 this.loadSourceFromCache(filename);
             }
             if (this.cacheData === null) {
@@ -3261,7 +3276,7 @@ module('language_parser.adria', function(module, resource) {
             var result, InitialType;
             InitialType = this.mapType('', this.definition.initialBlock);
             result = InitialType.prototype[this.outputMethod].call(this.captureTree);
-            if (this.transform.options['no-cache'] !== true && this.cacheData === null && fs.existsSync(this.file)) {
+            if (this.transform.options['cache'] && this.cacheData === null && fs.existsSync(this.file)) {
                 this.transform.cache.insert(this.file, { base: this.captureTree.toJSON() });
             }
             return result;
@@ -3669,9 +3684,6 @@ module('targets/adria/module.adria', function(module, resource) {
             code = Scope.prototype.toSourceNode.call(this);
             file = parser.file;
             result = this.csn('module(\'' + parser.moduleName + '\', function(module, resource) {' + this.nl());
-            if (parser.transform.options['tweak-exports']) {
-                result.add('var exports = module.exports;' + this.nl());
-            }
             result.add(this.refsToSourceNode());
             result.add(code);
             if (this.moduleExport !== null) {
@@ -3707,21 +3719,22 @@ module('targets/adria/adria_file_node.adria', function(module, resource) {
         ___self.prototype.makeBaseRelative = function makeBaseRelative(filename, parser) {
             var absName;
             absName = path.dirname(parser.file) + '/' + filename;
-            return path.relative(parser.transform.options.basePath, absName);
+            return path.relative(parser.transform.options['basePath'], absName);
         };
         ___self.prototype.resolvePath = function resolvePath(fileName, parser) {
             var options, relname;
             options = parser.transform.options;
             if (this.isRelativePath(fileName)) {
                 relname = this.makeBaseRelative(fileName, parser);
-                if (fs.existsSync(options.basePath + relname)) {
+                if (fs.existsSync(options['basePath'] + relname)) {
                     return path.normalize(relname);
                 }
             } else {
-                var id;
-                for (id in options.paths) {
-                    relname = options.paths[id] + fileName;
-                    if (fs.existsSync(options.basePath + relname)) {
+                var id, includePath;
+                for (id in options['paths']) {
+                    includePath = options['paths'][id];
+                    relname = includePath + fileName;
+                    if (fs.existsSync(options['basePath'] + relname)) {
                         return path.normalize(relname);
                     }
                 }
@@ -3752,25 +3765,25 @@ module('targets/adria/require_literal.adria', function(module, resource) {
             moduleName = fileNode.toSourceNode().toString().slice(1, -1);
             result = this.csn();
             requireFunction = 'require';
-            resolvedName = util.normalizeExtension(moduleName, options.fileExt);
+            resolvedName = util.normalizeExtension(moduleName, options['extension']);
             if (parser.transform.builtins[resolvedName] !== undefined) {
                 parser.transform.usedBuiltins.add(resolvedName);
                 moduleName = resolvedName;
                 if (resolvedName === 'async.adria') {
                     parser.resultData.globals.add('___Async');
                 }
-                if (options.platform === 'node') {
+                if (options['platform'] === 'node') {
                     requireFunction = '___require';
                 }
             } else {
-                resolvedName = this.resolvePath(util.normalizeExtension(moduleName, options.fileExt), parser);
+                resolvedName = this.resolvePath(util.normalizeExtension(moduleName, options['extension']), parser);
                 if (resolvedName !== null) {
                     moduleName = resolvedName;
                     parser.resultData.requires.add(moduleName);
-                    if (options.platform === 'node') {
+                    if (options['platform'] === 'node') {
                         requireFunction = '___require';
                     }
-                } else if (options.platform !== 'node' || moduleName.hasPostfix(options.fileExt)) {
+                } else if (options['platform'] !== 'node' || moduleName.hasPostfix(options['extension'])) {
                     throw new ASTException('Could not find require "' + moduleName + '"', this);
                 }
             }
@@ -5160,7 +5173,7 @@ module('targets/adria/assert_statement.adria', function(module, resource) {
         ___self.prototype.toSourceNode = function toSourceNode() {
             var result;
             result = this.csn();
-            if (this.parser().transform.options.assert) {
+            if (this.parser().transform.options['assert']) {
                 var params, paramsSN, numParams;
                 params = this.get('call');
                 paramsSN = params.toSourceNode(false);
@@ -5694,7 +5707,7 @@ module('targets/adria_parser.adria', function(module, resource) {
         };
         ___self.prototype.loadSourceFromCache = function loadSourceFromCache(filename) {
             LanguageParser.prototype.loadSourceFromCache.call(this, filename);
-            if (this.cacheData !== null && this.transform.options['no-map'] !== true) {
+            if (this.cacheData !== null && this.transform.options['map']) {
                 this.sourceCode = fs.readFileSync(filename, 'UTF-8').replace('\r\n', '\n');
             }
         };
@@ -5703,10 +5716,11 @@ module('targets/adria_parser.adria', function(module, resource) {
     module.exports = AdriaParser;
 });
 module('targets/adria_transform.adria', function(module, resource) {
-    var fs, path, util, Set, SourceNode, Template, Transform, AdriaParser, AdriaTransform;
+    var fs, path, util, args, Set, SourceNode, Template, Transform, AdriaParser, AdriaTransform;
     fs = require('fs');
     path = require('path');
     util = ___require('util.adria');
+    args = ___require('args.adria');
     Set = ___require('../../astdlib/astd/set.adria');
     SourceNode = require('source-map').SourceNode;
     Template = ___require('template.adria');
@@ -5714,7 +5728,6 @@ module('targets/adria_transform.adria', function(module, resource) {
     AdriaParser = ___require('targets/adria_parser.adria');
     AdriaTransform = (function(___parent) {
         var ___self = function AdriaTransform(piped) {
-            var options;
             Transform.prototype.constructor.call(this, piped);
             this.globals = new Set();
             this.implicits = new Set();
@@ -5724,17 +5737,6 @@ module('targets/adria_transform.adria', function(module, resource) {
             this.usedBuiltins = new Set();
             this.modules = [  ];
             this.sourceCode = {  };
-            options = this.options;
-            options['no-link'] = (options['no-link'] === undefined ? false : options['no-link']);
-            options['no-map'] = (options['no-map'] === undefined ? false : options['no-map']);
-            options['no-application'] = (options['no-application'] === undefined ? false : options['no-application']);
-            options['no-closure'] = (options['no-closure'] === undefined ? false : options['no-closure']);
-            options['no-blanks'] = (options['no-blanks'] === undefined ? false : options['no-blanks']);
-            options['no-scan'] = (options['no-scan'] === undefined ? false : options['no-scan']);
-            options.fileExt = (options.fileExt === undefined ? '.adria' : options.fileExt);
-            options.platform = (options.platform === undefined ? 'web' : options.platform);
-            options['tweak-exports'] = (options['tweak-exports'] === undefined ? false : options['tweak-exports']);
-            options['tweak-nostrict'] = (options['tweak-nostrict'] === undefined ? false : options['tweak-nostrict']);
             this.defineImplicits();
         };
         ___self.prototype = Object.create(___parent.prototype);
@@ -5752,14 +5754,49 @@ module('targets/adria_transform.adria', function(module, resource) {
         ___self.prototype.builtins = { 'async.adria': resource('../templates/adria/async.tpl') };
         ___self.prototype.initOptions = function initOptions() {
             Transform.prototype.initOptions.call(this, this);
-            this.defineOptions({
-                'file-extension': function(extension) {
-                    this.fileExt = '.' + extension;
-                },
-                'platform': function(platform) {
-                    this.platform = platform;
-                }
+            args.add([ '-b', '--base' ], {
+                help: 'Base path, include paths are relative to this',
+                defaultValue: '',
+                dest: 'basePath',
+                metavar: '<path>',
+                required: false
             });
+            args.add([ '-p', '--path' ], {
+                help: 'Additional path to look for includes',
+                action: 'append',
+                dest: 'paths',
+                metavar: '<path>'
+            });
+            args.add([ '-o', '--out' ], {
+                help: 'Output file',
+                action: 'store',
+                dest: 'outFile',
+                metavar: '<file>'
+            });
+            args.add([ '--extension' ], {
+                help: 'Adria file extension (adria)',
+                defaultValue: 'adria',
+                metavar: '<ext>',
+                required: false
+            }, function(value) {
+                return '.' + value;
+            });
+            args.add([ '-t', '--target' ], {
+                help: 'Platform to generate code for (node)',
+                action: 'store',
+                choices: [ 'node', 'web' ],
+                dest: 'platform',
+                defaultValue: 'node'
+            });
+            args.add([ 'files' ], { help: 'File(s) to compile', action: 'append' });
+            args.addSwitch('application', 'Generate application global', true);
+            args.addSwitch('map', 'Generate source map', false);
+            args.addSwitch('link', 'Link sourcemap to output', true);
+            args.addSwitch('blanks', 'Allow blank lines [to be removed]', true);
+            args.addSwitch('strict', 'Compile strict Javascript', true);
+            args.addSwitch('closure', 'Contain code in closure', true);
+            args.addSwitch('assert', 'Add assert() support', false);
+            args.addSwitch('scan', 'Perform basic logic checks', true);
         };
         ___self.prototype.defineImplicits = function defineImplicits() {
             this.implicits.add([
@@ -5818,9 +5855,9 @@ module('targets/adria_transform.adria', function(module, resource) {
                 'application',
                 'Exception'
             ]);
-            if (this.options.platform === 'node') {
+            if (this.options['platform'] === 'node') {
                 this.implicits.add([ 'process', 'Buffer' ]);
-            } else if (this.options.platform === 'web') {
+            } else if (this.options['platform'] === 'web') {
                 this.implicits.add([
                     'screen',
                     'document',
@@ -5831,7 +5868,7 @@ module('targets/adria_transform.adria', function(module, resource) {
                     'Worker'
                 ]);
             }
-            if (this.options.assert) {
+            if (this.options['assert']) {
                 this.implicits.add('AssertionFailedException');
             }
         };
@@ -5840,7 +5877,7 @@ module('targets/adria_transform.adria', function(module, resource) {
             parser = this.protoParser.clone();
             parser.moduleName = moduleName;
             if (data === undefined) {
-                parser.loadSource(this.options.basePath + moduleName);
+                parser.loadSource(this.options['basePath'] + moduleName);
             } else {
                 parser.setSource(moduleName, data);
             }
@@ -5869,16 +5906,16 @@ module('targets/adria_transform.adria', function(module, resource) {
             options = this.options;
             node = new SourceNode(null, null);
             tpl = new Template();
-            tpl.debug = this.options.debug;
+            tpl.debug = this.options['debug'];
             tpl.assign('globals', this.globals.toArray());
             tpl.assign('builtins', this.usedBuiltins.toArray());
-            tpl.assign('enableAssert', options.assert);
-            tpl.assign('enableApplication', options['no-application'] !== true);
-            tpl.assign('platform', options.platform);
-            if (options['no-closure'] !== true) {
+            tpl.assign('enableAssert', options['assert']);
+            tpl.assign('enableApplication', options['application']);
+            tpl.assign('platform', options['platform']);
+            if (options['closure']) {
                 node.add('(function() {\n');
             }
-            if (options['tweak-nostrict'] !== true) {
+            if (options['strict']) {
                 node.add('"use strict";\n');
             }
             fw = tpl.fetch(resource('../templates/adria/framework.tpl'));
@@ -5886,7 +5923,7 @@ module('targets/adria_transform.adria', function(module, resource) {
             tmpNode.setSourceContent('adria-framework.js', fw);
             var fileName, contents, wrapped;
             for (fileName in this.resources.data) {
-                contents = fs.readFileSync(options.basePath + fileName, 'UTF-8');
+                contents = fs.readFileSync(options['basePath'] + fileName, 'UTF-8');
                 wrapped = 'resource(\'' + fileName + '\', \'' + contents.jsify("'") + '\');\n';
                 tmpNode = node.add(new SourceNode(null, null, fileName, wrapped));
                 tmpNode.setSourceContent(fileName, contents);
@@ -5908,14 +5945,14 @@ module('targets/adria_transform.adria', function(module, resource) {
             var id, name;
             for (id in usedBuiltins) {
                 name = usedBuiltins[id];
-                node.add('\n' + (options.platform === 'node' ? '___' : '') + 'require(\'' + name + '\');');
+                node.add('\n' + (options['platform'] === 'node' ? '___' : '') + 'require(\'' + name + '\');');
             }
             var id, file;
-            for (id in options.files) {
-                file = options.files[id];
-                node.add('\n' + (options.platform === 'node' ? '___' : '') + 'require(\'' + util.normalizeExtension(file, this.options.fileExt) + '\');');
+            for (id in options['files']) {
+                file = options['files'][id];
+                node.add('\n' + (options['platform'] === 'node' ? '___' : '') + 'require(\'' + util.normalizeExtension(file, this.options['extension']) + '\');');
             }
-            if (options['no-closure'] !== true) {
+            if (options['closure']) {
                 node.add('\n})();');
             }
             return node;
@@ -5932,32 +5969,32 @@ module('targets/adria_transform.adria', function(module, resource) {
             this.protoParser = new AdriaParser(this);
             this.protoParser.trainSelf();
             if (this.piped !== undefined) {
-                this.buildModule('main' + this.options.fileExt, this.piped);
+                this.buildModule('main' + this.options['extension'], this.piped);
             }
-            files = this.options.files;
+            files = this.options['files'];
             var id;
             for (id in files) {
-                this.buildModule(util.normalizeExtension(files[id], this.options.fileExt));
+                this.buildModule(util.normalizeExtension(files[id], this.options['extension']));
             }
-            if (this.options['no-scan'] !== true) {
+            if (this.options['scan']) {
                 this.scan();
             }
             node = this.generateOutputTree();
             options = this.options;
-            if (options.outFile !== null) {
+            if (options['outFile'] !== null) {
                 var jsFile, mapFile;
-                jsFile = options.basePath + options.outFile;
+                jsFile = options['basePath'] + options['outFile'];
                 mapFile = jsFile.stripPostfix('.js') + '.map';
-                if (options['no-map'] !== true) {
+                if (options['map']) {
                     var result, mapLink;
-                    result = node.toStringWithSourceMap({ file: options.outFile });
-                    mapLink = '\n//@ sourceMappingURL=' + path.relative(options.basePath, mapFile);
-                    fs.writeFileSync(jsFile, result.code + (options['no-link'] ? '' : mapLink));
+                    result = node.toStringWithSourceMap({ file: options['outFile'] });
+                    mapLink = '\n//@ sourceMappingURL=' + path.relative(options['basePath'], mapFile);
+                    fs.writeFileSync(jsFile, result.code + (options['link'] ? mapLink : ''));
                     fs.writeFileSync(mapFile, result.map);
                 } else {
                     var result;
                     result = node.toString();
-                    fs.writeFileSync(jsFile, options['no-blanks'] ? this.postProcess(result) : result);
+                    fs.writeFileSync(jsFile, options['blanks'] ? result : this.postProcess(result));
                 }
             } else {
                 process.stdout.write(node.toString());
@@ -6013,8 +6050,8 @@ module('targets/adriadebug_transform.adria', function(module, resource) {
     AdriaDebugTransform = (function(___parent) {
         var ___self = function AdriaDebugTransform(piped) {
             AdriaTransform.prototype.constructor.call(this, piped);
-            this.options['no-cache'] = true;
-            this.options['no-scan'] = true;
+            this.options['cache'] = false;
+            this.options['scan'] = false;
         };
         ___self.prototype = Object.create(___parent.prototype);
         ___self.prototype.constructor = ___self;
@@ -6025,12 +6062,12 @@ module('targets/adriadebug_transform.adria', function(module, resource) {
             this.protoParser = new AdriaDebugParser(this);
             this.protoParser.trainSelf();
             if (this.piped !== undefined) {
-                this.buildModule('main' + options.fileExt, this.piped);
+                this.buildModule('main' + options['extension'], this.piped);
             }
-            files = options.files;
+            files = options['files'];
             var id;
             for (id in files) {
-                this.buildModule(util.normalizeExtension(files[id], options.fileExt));
+                this.buildModule(util.normalizeExtension(files[id], options['extension']));
             }
             result = [  ];
             var id, mod;
@@ -6039,7 +6076,7 @@ module('targets/adriadebug_transform.adria', function(module, resource) {
                 result.push(mod.result);
             }
             if (options['outFile'] !== null) {
-                fs.writeFileSync(options.basePath + options.outFile, result.join('\n'));
+                fs.writeFileSync(options['basePath'] + options['outFile'], result.join('\n'));
             } else {
                 process.stdout.write(result.join('\n'));
             }
@@ -6049,41 +6086,36 @@ module('targets/adriadebug_transform.adria', function(module, resource) {
     module.exports = AdriaDebugTransform;
 });
 module('main.adria', function(module, resource) {
-    var util, AdriaTransform, AdriaDebugTransform, target, piped, debug, handle, run;
+    var util, args, AdriaTransform, AdriaDebugTransform, options, handle, run;
     ___require('../../astdlib/astd/prototype/string.adria').extend();
     ___require('../../astdlib/astd/prototype/regexp.adria').extend();
     ___require('../../astdlib/astd/prototype/object.adria').extend();
     util = ___require('util.adria');
+    args = ___require('args.adria');
     AdriaTransform = ___require('targets/adria_transform.adria');
     AdriaDebugTransform = ___require('targets/adriadebug_transform.adria');
-    target = 'adria';
-    piped = false;
-    debug = false;
-    util.processOptions(null, {
-        'target': function(type) {
-            target = type;
-        },
-        '_switch': function(param) {
-            if (param === 'pipe') {
-                piped = true;
-            } else if (param === 'debug') {
-                debug = true;
-            }
-        }
+    args.add([ '-m', '--mode' ], {
+        help: 'Translation mode (adria)',
+        defaultValue: 'adria',
+        choices: [ 'adria', 'adriadebug' ],
+        required: false
     });
+    args.add([ '--stdin' ], { help: 'Read from stdin (false)', action: 'storeTrue' });
+    args.add([ '-d', '--debug' ], { help: 'Enable debug mode (false)', action: 'storeTrue' });
+    options = args.partial();
     handle = function handle(pipeData) {
         var transform;
-        if (target === 'adria') {
+        if (options['mode'] === 'adria') {
             transform = new AdriaTransform(pipeData);
-        } else if (target === 'adriadebug') {
+        } else if (options['mode'] === 'adriadebug') {
             transform = new AdriaDebugTransform(pipeData);
         } else {
-            throw new Error('Unsupported target "' + target + '".');
+            throw new Error('Unsupported mode "' + options['mode'] + '".');
         }
         transform.run();
     };
     run = function run(pipeData) {
-        if (debug) {
+        if (options['debug']) {
             debugger;
             handle(pipeData);
         } else {
@@ -6096,7 +6128,7 @@ module('main.adria', function(module, resource) {
             }
         }
     };
-    if (piped) {
+    if (options['stdin']) {
         var pipeData;
         pipeData = '';
         process.stdin.on('data', function(data) {

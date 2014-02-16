@@ -64,12 +64,6 @@ module Module = proto (Scope) {
 
         var result = this.csn('module(\'' + parser.moduleName + '\', function(module, resource) {' + this.nl());
 
-        // tweak: commonJS module.exports shortcut
-
-        if (parser.transform.options['tweak-exports']) {
-            result.add('var exports = module.exports;' + this.nl());
-        }
-
         result.add(this.refsToSourceNode());
         result.add(code);
 

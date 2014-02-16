@@ -2,7 +2,7 @@
 set -e
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 ASTD_PATH="../../astdlib/"
-BASE_PARAMS="--no-application --no-cache --no-blanks --platform node --no-map"
+BASE_PARAMS="--no-application --no-cache --no-blanks -t node --no-map"
 BUILD_PARAMS="$@ $BASE_PARAMS --base ../src/ --path $ASTD_PATH --out ../bin/ngadria.js main.adria"
 TEST_PARAMS="$@ $BASE_PARAMS --base ../tests/ --assert --out test.js test_all.adria";
 

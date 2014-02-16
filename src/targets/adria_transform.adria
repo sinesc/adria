@@ -24,6 +24,7 @@
 var fs = require('fs');
 var path = require('path');
 var util = require('../util');
+var args = require('../args');
 var Set = require('astd/set');
 var SourceNode = require('source-map').SourceNode;
 var Template = require('../template');
@@ -68,22 +69,6 @@ module AdriaTransform = proto (Transform) {
         this.modules        = [ ];
         this.sourceCode     = { };
 
-        // defaults
-
-        var options = this.options;
-
-        options['no-link'] = (options['no-link'] === undefined ? false : options['no-link']);
-        options['no-map'] = (options['no-map'] === undefined ? false : options['no-map']);
-        options['no-application'] = (options['no-application'] === undefined ? false : options['no-application']);
-        options['no-closure'] = (options['no-closure'] === undefined ? false : options['no-closure']);
-        options['no-blanks'] = (options['no-blanks'] === undefined ? false : options['no-blanks']);
-        options['no-scan'] = (options['no-scan'] === undefined ? false : options['no-scan']);
-        options.fileExt = (options.fileExt === undefined ? '.adria' : options.fileExt);
-        options.platform = (options.platform === undefined ? 'web' : options.platform);
-
-        options['tweak-exports'] = (options['tweak-exports'] === undefined ? false : options['tweak-exports']);
-        options['tweak-nostrict'] = (options['tweak-nostrict'] === undefined ? false : options['tweak-nostrict']);
-
         // implicitly known references
 
         this.defineImplicits();
@@ -93,14 +78,45 @@ module AdriaTransform = proto (Transform) {
 
         Transform->initOptions(this);
 
-        this.defineOptions({
-            'file-extension': func(extension) {
-                this.fileExt = '.' + extension;
-            },
-            'platform': func(platform) {
-                this.platform = platform;
-            }
-        });
+        args.add(
+            [ '-b', '--base' ],
+            { help: 'Base path, include paths are relative to this', defaultValue: '', dest: 'basePath', metavar: '<path>', required: false }
+        );
+
+        args.add(
+            [ '-p', '--path' ],
+            { help: 'Additional path to look for includes', action: 'append', dest: 'paths', metavar: '<path>' }
+        );
+
+        args.add(
+            [ '-o', '--out' ],
+            { help: 'Output file', action: 'store', dest: 'outFile', metavar: '<file>' }
+        );
+
+        args.add(
+            [ '--extension' ],
+            { help: 'Adria file extension (adria)', defaultValue: 'adria', metavar: '<ext>', required: false },
+            function(value) { return '.' + value; }
+        );
+
+        args.add(
+            [ '-t', '--target' ],
+            { help: 'Platform to generate code for (node)', action: 'store', choices: [ 'node', 'web' ], dest: 'platform', defaultValue: 'node' }
+        );
+
+        args.add(
+            [ 'files' ],
+            { help: 'File(s) to compile', action: 'append' }
+        );
+
+        args.addSwitch('application', 'Generate application global', true);
+        args.addSwitch('map', 'Generate source map', false);
+        args.addSwitch('link', 'Link sourcemap to output', true);
+        args.addSwitch('blanks', 'Allow blank lines [to be removed]', true);
+        args.addSwitch('strict', 'Compile strict Javascript', true);
+        args.addSwitch('closure', 'Contain code in closure', true);
+        args.addSwitch('assert', 'Add assert() support', false);
+        args.addSwitch('scan', 'Perform basic logic checks', true);
     },
 
     /**
@@ -122,13 +138,13 @@ module AdriaTransform = proto (Transform) {
             'application', 'Exception',
         ]);
 
-        if (this.options.platform === 'node') {
+        if (this.options['platform'] === 'node') {
             this.implicits.add([ 'process', 'Buffer' ]);
-        } else if (this.options.platform === 'web') {
+        } else if (this.options['platform'] === 'web') {
             this.implicits.add([ 'screen', 'document', 'location', 'performance', 'alert', 'XMLHttpRequest', 'Worker' ]);
         }
 
-        if (this.options.assert) {
+        if (this.options['assert']) {
             this.implicits.add('AssertionFailedException');
         }
     },
@@ -148,7 +164,7 @@ module AdriaTransform = proto (Transform) {
         parser.moduleName = moduleName;
 
         if (data === undefined) {
-            parser.loadSource(this.options.basePath + moduleName);
+            parser.loadSource(this.options['basePath'] + moduleName);
         } else {
             parser.setSource(moduleName, data);
         }
@@ -190,24 +206,24 @@ module AdriaTransform = proto (Transform) {
         var node = new SourceNode(null, null);
         var tpl = new Template();
 
-        tpl.debug = this.options.debug;
+        tpl.debug = this.options['debug'];
         tpl.assign('globals', this.globals.toArray());
         tpl.assign('builtins', this.usedBuiltins.toArray());
-        tpl.assign('enableAssert', options.assert);
-        tpl.assign('enableApplication', options['no-application'] !== true);
-        tpl.assign('platform', options.platform);
+        tpl.assign('enableAssert', options['assert']);
+        tpl.assign('enableApplication', options['application']);
+        tpl.assign('platform', options['platform']);
 
         // wrap with application and merge
 
         var fw, tmpNode;
 
-        if (options['no-closure'] !== true) {
+        if (options['closure']) {
             node.add('(function() {\n');
         }
 
-        // nostrict tweak
+        // apply strict mode
 
-        if (options['tweak-nostrict'] !== true) {
+        if (options['strict']) {
             node.add('"use strict";\n');
         }
 
@@ -218,7 +234,7 @@ module AdriaTransform = proto (Transform) {
         // merge resources
 
         for (var fileName in this.resources.data) {
-            var contents = fs.readFileSync(options.basePath + fileName, 'UTF-8');
+            var contents = fs.readFileSync(options['basePath'] + fileName, 'UTF-8');
             var wrapped = 'resource(\'' + fileName + '\', \'' + contents.jsify("'") + '\');\n';
             tmpNode = node.add(new SourceNode(null, null, fileName, wrapped));
             tmpNode.setSourceContent(fileName, contents);
@@ -244,16 +260,16 @@ module AdriaTransform = proto (Transform) {
         // start builtins
 
         for (var id, name in usedBuiltins) {
-            node.add('\n' + (options.platform === 'node' ? '___' : '') + 'require(\'' + name + '\');');
+            node.add('\n' + (options['platform'] === 'node' ? '___' : '') + 'require(\'' + name + '\');');
         }
 
         // start entry module
 
-        for (var id, file in options.files) {
-            node.add('\n' + (options.platform === 'node' ? '___' : '') + 'require(\'' + util.normalizeExtension(file, this.options.fileExt) + '\');');
+        for (var id, file in options['files']) {
+            node.add('\n' + (options['platform'] === 'node' ? '___' : '') + 'require(\'' + util.normalizeExtension(file, this.options['extension']) + '\');');
         }
 
-        if (options['no-closure'] !== true) {
+        if (options['closure']) {
             node.add('\n})();');
         }
 
@@ -280,18 +296,18 @@ module AdriaTransform = proto (Transform) {
         // process piped data and initial files
 
         if (this.piped !== undefined) {
-            this.buildModule('main' + this.options.fileExt, this.piped);
+            this.buildModule('main' + this.options['extension'], this.piped);
         }
 
-        var files = this.options.files;
+        var files = this.options['files'];
 
         for (var id in files) {
-            this.buildModule(util.normalizeExtension(files[id], this.options.fileExt));
+            this.buildModule(util.normalizeExtension(files[id], this.options['extension']));
         }
 
         // scan modules for undefined variables
 
-        if (this.options['no-scan'] !== true) {
+        if (this.options['scan']) {
             this.scan();
         }
 
@@ -300,23 +316,23 @@ module AdriaTransform = proto (Transform) {
         var node = this.generateOutputTree();
         var options = this.options;
 
-        if (options.outFile !== null) {
+        if (options['outFile'] !== null) {
 
-            var jsFile = options.basePath + options.outFile;
+            var jsFile = options['basePath'] + options['outFile'];
             var mapFile = jsFile.stripPostfix('.js') + '.map';
 
-            if (options['no-map'] !== true) {
+            if (options['map']) {
 
-                var result = node.toStringWithSourceMap({ file: options.outFile });
-                var mapLink = '\n//@ sourceMappingURL=' + path.relative(options.basePath, mapFile);
+                var result = node.toStringWithSourceMap({ file: options['outFile'] });
+                var mapLink = '\n//@ sourceMappingURL=' + path.relative(options['basePath'], mapFile);
 
-                fs.writeFileSync(jsFile, result.code + (options['no-link'] ? '' : mapLink));
+                fs.writeFileSync(jsFile, result.code + (options['link'] ? mapLink : ''));
                 fs.writeFileSync(mapFile, result.map);
 
             } else {
 
                 var result = node.toString();
-                fs.writeFileSync(jsFile, options['no-blanks'] ? this.postProcess(result) : result);
+                fs.writeFileSync(jsFile, options['blanks'] ? result : this.postProcess(result));
             }
 
         } else {

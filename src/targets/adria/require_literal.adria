@@ -17,7 +17,7 @@ module RequireLiteral = proto (AdriaFileNode) {
 
         // check builtins
 
-        resolvedName = util.normalizeExtension(moduleName, options.fileExt);
+        resolvedName = util.normalizeExtension(moduleName, options['extension']);
 
         if (parser.transform.builtins[resolvedName] !== undefined) {
 
@@ -30,7 +30,7 @@ module RequireLiteral = proto (AdriaFileNode) {
                 parser.resultData.globals.add('___Async'); //!todo add a useBuiltin function to handle cases like this
             }
 
-            if (options.platform === 'node') {
+            if (options['platform'] === 'node') {
                 requireFunction = '___require';
             }
 
@@ -38,18 +38,18 @@ module RequireLiteral = proto (AdriaFileNode) {
 
             // check if the require is an Adria module and needs to be included
 
-            resolvedName = this.resolvePath(util.normalizeExtension(moduleName, options.fileExt), parser);
+            resolvedName = this.resolvePath(util.normalizeExtension(moduleName, options['extension']), parser);
 
             if (resolvedName !== null) {
 
                 moduleName = resolvedName;
                 parser.resultData.requires.add(moduleName);
 
-                if (options.platform === 'node') {
+                if (options['platform'] === 'node') {
                     requireFunction = '___require';
                 }
 
-            } else if (options.platform !== 'node' || moduleName.hasPostfix(options.fileExt)) {
+            } else if (options['platform'] !== 'node' || moduleName.hasPostfix(options['extension'])) {
 
                 throw new ASTException('Could not find require "' + moduleName + '"', this);
             }

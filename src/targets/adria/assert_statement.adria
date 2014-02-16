@@ -7,7 +7,7 @@ module AssertStatement = proto (AdriaNode) {
 
         var result = this.csn();
 
-        if (this.parser().transform.options.assert) {
+        if (this.parser().transform.options['assert']) {
 
             var params = this.get('call');
             var paramsSN = params.toSourceNode(false);

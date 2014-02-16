@@ -608,7 +608,7 @@ module CaptureNode = proto {
     setTemplate: func(fileName) {
 
         this.tpl = new Template();
-        this.tpl.debug = this.parser().transform.options.debug;
+        this.tpl.debug = this.parser().transform.options['debug'];
         this.tplFile = fileName;
     },
 
@@ -632,7 +632,7 @@ module CaptureNode = proto {
      */
     assign: func(uri, value) {
 
-        this.tpl.assign(uri, value);  //!todo assign to uri like target
+        this.tpl.assign(uri, value);
     },
 };
 

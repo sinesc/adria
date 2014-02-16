@@ -80,7 +80,7 @@ module LanguageParser = proto(Parser) {
         Parser->constructor(transform);
 
         this.transform = transform;
-        this.includeTrace = transform.options.debug;
+        this.includeTrace = transform.options['debug'];
         this.resultData = { };
     },
 
@@ -311,7 +311,7 @@ module LanguageParser = proto(Parser) {
 
         // try to load from cache
 
-        if (this.transform.options['no-cache'] !== true && this.cacheData === null) {
+        if (this.transform.options['cache'] && this.cacheData === null) {
             this.loadSourceFromCache(filename);
         }
 
@@ -360,7 +360,7 @@ module LanguageParser = proto(Parser) {
 
         // write new data to cache (don't write it again if it just came from the cache)
 
-        if (this.transform.options['no-cache'] !== true && this.cacheData === null && fs.existsSync(this.file)) {
+        if (this.transform.options['cache'] && this.cacheData === null && fs.existsSync(this.file)) {
 
             this.transform.cache.insert(this.file, {
                 base        : this.captureTree.toJSON(),

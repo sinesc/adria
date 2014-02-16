@@ -18,7 +18,7 @@ module AdriaFileNode = proto (AdriaNode) {
     makeBaseRelative: func(filename, parser) {
 
         var absName = path.dirname(parser.file) + '/' + filename;
-        return path.relative(parser.transform.options.basePath, absName);
+        return path.relative(parser.transform.options['basePath'], absName);
     },
 
     resolvePath: func(fileName, parser) {
@@ -32,7 +32,7 @@ module AdriaFileNode = proto (AdriaNode) {
 
             relname = this.makeBaseRelative(fileName, parser);
 
-            if (fs.existsSync(options.basePath + relname)) {
+            if (fs.existsSync(options['basePath'] + relname)) {
                 return path.normalize(relname);
             }
 
@@ -40,11 +40,11 @@ module AdriaFileNode = proto (AdriaNode) {
 
             // try paths
 
-            for (var id in options.paths) {
+            for (var id, includePath in options['paths']) {
 
-                relname = options.paths[id] + fileName;
+                relname = includePath + fileName;
 
-                if (fs.existsSync(options.basePath + relname)) {
+                if (fs.existsSync(options['basePath'] + relname)) {
                     return path.normalize(relname);
                 }
             }

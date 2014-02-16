@@ -22,6 +22,7 @@
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 var util = require('./util');
+var args = require('./args');
 var Cache = require('./cache');
 
 /**
@@ -31,11 +32,6 @@ var Cache = require('./cache');
  * @param String piped piped data, if any
  */
 module Transform = proto {
-
-    /**
-     * command line options handlers
-     */
-    optionsDefinition: null,
 
     /**
      * set command line options
@@ -59,17 +55,16 @@ module Transform = proto {
      */
     constructor: func(piped) {
 
-        this.options    = { basePath: '', paths: [ ], files: [ ], outFile: null };
-        this.piped      = piped;
+        this.piped = piped;
 
         this.initOptions();
         this.processOptions();
 
-        if (this.options['no-cache'] !== true) {
+        if (this.options['cache']) {
             this.cache = new Cache();
         }
 
-        if (this.options.debug) {
+        if (this.options['debug']) {
             util.log.enable();
         }
     },
@@ -79,52 +74,15 @@ module Transform = proto {
      */
     initOptions: func() {
 
-        this.defineOptions({
-            '_default': func(file) {
-                this['files'].push(file);
-            },
-            '_switch': func(param) {
-                this[param] = true;
-            },
-            'base': func(path) {
-                this['basePath'] = (path.hasPostfix('/') ? path : path + '/');
-            },
-            'path': func(path) {
-                if (this['paths'] === undefined) {
-                    this['paths'] = [];
-                }
-                this['paths'].push((path.hasPostfix('/') ? path : path + '/'));
-            },
-            'out': func(file) {
-                this['outFile'] = file;
-            },
-            'target': func(target) {
-                this['target'] = target;
-            }
-        });
-    },
-
-    /**
-     * adds a set of options to the command line options handler
-     *
-     * @param optionsDefinition object of handler functions
-     */
-    defineOptions: func(optionsDefinition) {
-
-        if (this.optionsDefinition === null) {
-            this.optionsDefinition = { };
-        }
-
-        for (var id in optionsDefinition) {
-            this.optionsDefinition[id] = optionsDefinition[id];
-        }
+        args.addSwitch('cache', 'Cache generated code', true);
     },
 
     /**
      * processes options definition into options
      */
     processOptions: func() {
-        util.processOptions(this.options, this.optionsDefinition);
+
+        this.options = args.consume();
     },
 
     /**

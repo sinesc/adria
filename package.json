@@ -1,6 +1,6 @@
 {
   "name": "adria",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "description": "Adria to Javascript compiler",
   "files": [
     "bin/adria.js",
@@ -29,7 +29,8 @@
     "url": "git@github.com:sinesc/adria.git"
   },
   "dependencies": {
-    "source-map": ">=0.1.27"
+    "source-map": ">=0.1.27",
+    "argparse": ">=0.1.15"
   },
   "engines": {
     "node": ">=0.11.4"

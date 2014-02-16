@@ -24,29 +24,30 @@
 require('astd/prototype/string').extend();
 require('astd/prototype/regexp').extend();
 require('astd/prototype/object').extend();
-var util = require('./util');
 
+var util = require('./util');
+var args = require('./args');
 var AdriaTransform = require('./targets/adria_transform');
 var AdriaDebugTransform = require('./targets/adriadebug_transform');
 
 // process base command line
 
-var target  = 'adria';
-var piped = false;
-var debug = false;
+args.add(
+    [ '-m', '--mode' ],
+    { help: 'Translation mode (adria)', defaultValue: 'adria', choices: [ 'adria', 'adriadebug' ], required: false }
+);
 
-util.processOptions(null, {
-    'target': func(type) {
-        target = type;
-    },
-    '_switch': func(param) {
-        if (param === 'pipe') {
-            piped = true;
-        } else if (param === 'debug') {
-            debug = true;
-        }
-    }
-});
+args.add(
+    [ '--stdin' ],
+    { help: 'Read from stdin (false)', action: 'storeTrue' }
+);
+
+args.add(
+    [ '-d', '--debug' ],
+    { help: 'Enable debug mode (false)', action: 'storeTrue' }
+);
+
+var options = args.partial();
 
 // transformation performer
 
@@ -54,12 +55,12 @@ var handle = func(pipeData) {
 
     var transform;
 
-    if (target === 'adria') {
+    if (options['mode'] === 'adria') {
         transform = new AdriaTransform(pipeData);
-    } else if (target === 'adriadebug') {
+    } else if (options['mode'] === 'adriadebug') {
         transform = new AdriaDebugTransform(pipeData);
     } else {
-        throw new Error('Unsupported target "' + target+ '".');
+        throw new Error('Unsupported mode "' + options['mode']+ '".');
     }
 
     transform.run();
@@ -67,7 +68,7 @@ var handle = func(pipeData) {
 
 var run = func(pipeData) {
 
-    if (debug) {
+    if (options['debug']) {
 
         // put a break here. "break on any exception" can be enabled after this statement.
         // enabling "break on any exception" earlier will introduce you to node exception hell
@@ -88,7 +89,7 @@ var run = func(pipeData) {
 
 // process stdin or run directly
 
-if (piped) {
+if (options['stdin']) {
 
     var pipeData = '';
 

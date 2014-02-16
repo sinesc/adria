@@ -125,52 +125,6 @@ export Enum = func(options) {
 };
 
 /**
- * simple command line processor
- *
- * handlers['_default'] expected to handle values without parameter prefix
- * handlers['_switch'] expected to handle values without parameter value
- *
- * @param context execution context for given handlers
- * @param handlers object of handler functions
- */
-export processOptions = func(context, handlers) {
-
-    var next = '_default';
-
-    for (var i = 2; i < process.argv.length; i++) {
-
-        var argv = process.argv[i];
-        var prefix = argv.slice(0, 2);
-        var param = argv.slice(2);
-
-        if (prefix == "--" && typeof handlers[param] === 'function') {
-
-            // option with value
-
-            next = param;
-
-        } else if (prefix == "--") {
-
-            // switch
-
-            if (handlers['_switch'] !== undefined) {
-                handlers['_switch'].call(context, param);
-            }
-
-        } else {
-
-            // value from previous option
-
-            if (handlers[next] !== undefined) {
-                handlers[next].call(context, argv);
-            }
-
-            next = '_default';
-        }
-    }
-};
-
-/**
  * returns user home directory
  *
  * @return string

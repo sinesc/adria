@@ -17,26 +17,28 @@ Commandline options
 
 Command                 | Description
 ------------------------|------------------------------------------------------------
-`--target <target>`     | sets the transcompilation target. currently supported:
-                        | `adria`         compile from adria to javascript
+`--mode <mode>`         | sets the transcompilation mode. currently supported:
+                        | `adria`         compile from adria to javascript, default
                         | `adriadebug`    compile from adria to an XML-like representation of the AST
-`--pipe`                | read from stdin instead of or in addtition to a file
-`--base <path>`         | sets project root path (set by shell script to cwd)
-`--path <path>`         | additional include path to look for files. paths are relative to base, for multiple paths, use `--path` each time
-`--out <filename>`      | output filename, relative to base
+`--stdin`               | read from stdin instead of or in addtition to a file (false)
+`--cache`               | enable compiler cache (true)
+`--debug`               | enable debug output (false)
+`--help`                | commandline help output
 
 ### Targets adria and adriadebug
 
 Command                     | Description
 ----------------------------|------------------------------------------------------------
-`--assert`                  | enables runtime assertions via the `assert` statement. unless enabled, assertions will not be included in the generated source
-`--platform <web/node>`     | `node`: required when generated code is to be run in a nodeJS environment
+`--base <path>`             | sets project root path
+`--path <path>`             | additional include path to look for files. paths are relative to base, for multiple paths, use `--path` each time
+`--out <filename>`          | output filename, relative to base
+`--assert`                  | enables runtime assertions via the `assert` statement. unless enabled, assertions will not be included in the generated source (false)
+`--target <web/node>`       | `node`: required when generated code is to be run in a nodeJS environment, default
                             | `web`: required when generated code is to be run in a webbrowser environment
-`--no-closure`              | don't wrap entire output in a closure
-`--no-application`          | don't include `application`
-`--no-scan`                 | don't check for undefined variables
-`--no-map`                  | don't write sourcemap
-`--no-link`                 | don't link sourcemap to generated Javascript
-`--tweak-exports`           | add exports variable to module scope (CommonJS compatibility)
-`--tweak-nostrict`          | don't generate strict-mode code
-`--file-extension <string>` | default file extension to use when none is given (excluding dot)
+`--closure`                 | wrap entire output in a closure (true)
+`--application`             | include `application` (true)
+`--scan`                    | check for undefined variables (true)
+`--map`                     | write sourcemap (true)
+`--link`                    | link sourcemap to generated Javascript (true)
+`--strict`                  | generate strict-mode code (true)
+`--extension <string>`      | default file extension to use when none is given (adria)
