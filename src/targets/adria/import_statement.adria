@@ -1,0 +1,16 @@
+
+var AdriaNode = require('./adria_node');
+
+module ImportStatement = proto (AdriaNode) {
+
+    toSourceNode: func() {
+
+        var scope = this.findScope();
+
+        this.eachKey('item', func(node) {
+            scope.addImplicit(node.value);
+        });
+
+        return this.csn();
+    },
+};

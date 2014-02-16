@@ -1,0 +1,113 @@
+
+var AdriaNode = require('./adria_node');
+
+module ProtoLiteral = proto (AdriaNode) {
+
+    constructorFunc: null,
+    constructorArgs: null,
+    constructorBody: null,
+    constructorDefaults: null,
+    lookupParent: false,
+    name: '',
+
+    constructor: func(key, value) {
+
+        this.constructorArgs = [ ];
+        this.constructorDefaults = [ ];
+        AdriaNode->constructor(key, value);
+    },
+
+    toSourceNode: func() {
+
+        // get own and parent name
+
+        var nameSN = this.findName();
+
+        if (nameSN !== null) {
+            this.name = nameSN.toString();
+        }
+
+        var parentNode = this.get('parent');
+        var haveParent = parentNode.isNode();
+
+        // generate output
+
+        var assignTo = '';
+
+        if (this.value === 'proto_statement') {
+
+            // statement requires assignment of wrapper
+
+            this.parent.findScope().addLocal(this.name);
+            assignTo = this.name + ' = ';
+        }
+
+        var result = this.csn(assignTo + '(function(' + (haveParent ? '___parent' : '') + ') {' + this.nl(1));
+        var body = this.get('body').toSourceNode();
+
+        // user- or default-constructor
+
+        if (this.constructorBody !== null) {
+
+            result.add('var ___self = function ' + this.name + '(');
+            result.add(this.constructorArgs);
+            result.add(') {' + this.nl(1));
+
+            for (var id in this.constructorDefaults) {
+                result.add(this.constructorDefaults[id]);
+                result.add(';' + this.nl());
+            }
+
+            result.add(this.constructorFunc.refsToSourceNode());
+
+            // dynamic parent lookup
+
+            if (this.lookupParent) {
+                this.addParentLookup(result, 'constructor', '___self');
+            }
+
+            result.add(this.constructorBody);
+            result.add(this.nl(-1) + '};' + this.nl() + this.nl());
+
+        } else {
+
+            result.add('var ___self = function ' + this.name + '() {');
+
+            if (haveParent) {
+                result.add(this.nl(1) + '___parent.apply(this, arguments);' + this.nl(-1));
+            }
+
+            result.add('}' + this.nl() + this.nl());
+        }
+
+        // chain to parent
+
+        if (haveParent) {
+            result.add('___self.prototype = Object.create(___parent.prototype);' + this.nl());
+            result.add('___self.prototype.constructor = ___self;' + this.nl());
+        }
+
+        // make name available inside proto block
+
+        if (this.name !== '') {
+            result.add('var ' + this.name + ' = ___self;' + this.nl());
+        }
+
+        // body elements
+
+        result.add([this.nl(), body]);
+
+        // close and return
+
+        result.add(this.nl() + 'return ___self;' + this.nl(-1));
+        result.add('})(');
+        result.add(parentNode.toSourceNode());
+        result.add(')');
+
+        if (this.value === 'proto_statement') {
+            result.add(';');
+        }
+
+        return result;
+    },
+};

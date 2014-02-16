@@ -1,0 +1,24 @@
+
+var AdriaNode = require('./adria_node');
+var ProtoLiteral = require('./proto_literal');
+
+module NewProtoLiteral = proto (ProtoLiteral) {
+
+    toSourceNode: func() {
+
+        var result = this.csn();
+        result.add('new (');
+        result.add(parent->toSourceNode());
+        result.add(')(');
+
+        var paramList = this.get('param_list');
+
+        if (paramList.isNode()) {
+            result.add(paramList.toSourceNode());
+        }
+
+        result.add(')');
+
+        return result;
+    }
+};

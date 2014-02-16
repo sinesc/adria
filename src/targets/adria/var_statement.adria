@@ -1,0 +1,26 @@
+
+var AdriaNode = require('./adria_node');
+
+module VarStatement = proto (AdriaNode) {
+
+    toSourceNode: func() {
+
+        var valueNode, nameNode;
+        var scope = this.findScope();
+        var result = this.csn();
+        var nl = this.nl();
+
+        this.eachKey('item', func(node) {
+            nameNode = node.get('name');
+            valueNode = node.get('value');
+
+            scope.addLocal(nameNode.value);
+
+            if (valueNode.isNode()) {
+                result.add([ nameNode.toSourceNode(), ' = ', valueNode.toSourceNode(), ';' + nl ]);
+            }
+        });
+
+        return result;
+    },
+};

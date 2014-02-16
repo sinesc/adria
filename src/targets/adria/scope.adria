@@ -1,0 +1,111 @@
+
+var Map = require('astd/map');
+var AdriaNode = require('./adria_node');
+var ASTException = require('../../language_parser/ast_exception');
+
+// keep unique scope ids
+
+var scopeLocalId = 1;
+
+module Scope = proto (AdriaNode) {
+
+    locals      : null,
+    implicits   : null,
+
+    constructor: func(key, value) {
+        this.locals = new Map();
+        this.implicits = new Map();
+        AdriaNode->constructor(key, value);
+    },
+
+    addLocal: func(name) {
+
+        if (this.getOwnRef(name)) {
+            throw new ASTException('Reference "' + name + '" already defined in local scope', this);
+        }
+
+        var localName = createLocalName.call(this, name);
+        this.locals.set(name, localName);
+        return localName;
+    },
+
+    addImplicit: func(name, ignore = false) {
+
+        // implicits may not be defined in any parent scope
+
+        if (ignore == false && (this.getOwnRef(name) || findRefScope.call(this, name) !== null)) {
+            throw new ASTException('Reference "' + name + '" already defined in local scope', this);
+        }
+
+        this.implicits.set(name, name);
+        return name;
+    },
+
+    getOwnRef: func(name) {
+
+        assert(this.locals instanceof Map);
+        assert(this.implicits instanceof Map);
+
+        if (this.locals.has(name)) {
+            return this.locals.get(name);
+        } else if (this.implicits.has(name)) {
+            return this.implicits.get(name);
+        }
+
+        return null;
+    },
+
+    findRef: func(name) {
+
+        var scope, refName;
+
+        if ((refName = this.getOwnRef(name)) !== null) {
+            return refName;
+        } else if ((scope = findRefScope.call(this, name)) !== null) {
+            if ((refName = scope.getOwnRef(name)) !== null) {
+                return refName;
+            } else {
+                assert(true, 'scope claimed to have local but did not');
+            }
+        }
+
+        return null;
+    },
+
+    refsToSourceNode: func() {
+
+        if (this.locals.empty) {
+            return this.csn();
+        } else {
+            return this.csn([ 'var ', this.locals.values().join(', '), ';' + this.nl() ]);
+        }
+    },
+};
+
+// register with AdriaNode
+
+AdriaNode::Scope = Scope;
+
+var findRefScope = func(name) {
+
+    var scope = this;
+
+    do {
+        if (scope.getOwnRef(name) !== null) {
+            return scope;
+        }
+    } while ((scope = scope.findScope(true)) !== null);
+
+    return scope;
+};
+
+var createLocalName = func(name) {
+
+    var scope = findRefScope.call(this, name);
+
+    if (scope !== null) {
+        return '___' + name + '_scp' + scopeLocalId++;
+    }
+
+    return name;
+};

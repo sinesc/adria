@@ -1,0 +1,49 @@
+
+var AdriaNode = require('./adria_node');
+var Ident = require('./ident');
+
+module ProtoBodyItem = proto (AdriaNode) {
+
+    toSourceNode: func()  {
+
+        var protoNode = this.ancestor(null, [ 'new_proto_literal', 'proto_literal', 'proto_statement' ]);
+        //!var constructorName = protoNode.name;
+        var keyNode = this.get('key');
+
+        // set constructor attributes in ProtoLiteral, do the rest ourselves
+
+        if (keyNode.value === 'constructor') {
+
+            var functionNode = this.path('value.function');
+            this.nl(1);
+            protoNode.constructorFunc = functionNode;
+            protoNode.constructorArgs = functionNode.get('param_list').toSourceNode();
+            protoNode.constructorDefaults = functionNode.defaultArgs;
+            protoNode.constructorBody = functionNode.get('body').toSourceNode();
+            protoNode.lookupParent = functionNode.lookupParent;
+            this.nl(-1);
+            return this.csn();
+
+        } else {
+
+            var valueNode = this.get('value');
+            var result;
+
+            if  (valueNode.value === 'property_literal') {
+
+                var name = (keyNode instanceof Ident === false ? keyNode.value : '"' + keyNode.value + '"');    //!todo quotes suck
+
+                return this.csn([ valueNode.assignmentToSourceNode(name, '___self.prototype'), ';' + this.nl() ]);
+
+            } else {
+
+                var name = (keyNode instanceof Ident === false ? '[' + keyNode.value + ']' : '.' + keyNode.value);
+
+                result = this.csn('___self.prototype' + name + ' = ');
+                result.add(valueNode.toSourceNode());
+                result.add(';' + this.nl());
+                return result;
+            }
+        }
+    }
+};

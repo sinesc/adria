@@ -1,0 +1,20 @@
+
+var AdriaNode = require('./adria_node');
+var Module = require('./module');
+
+module ExportStatement = proto (AdriaNode) {
+
+    toSourceNode: func() {
+
+        var name = this.get('name').value;
+        var moduleNode = this.findProto(Module);
+        moduleNode.addExport(name);
+
+        var result = this.csn();
+        result.add(name);
+        result.add(' = ');
+        result.add(this.get('value').toSourceNode());
+        result.add(';' + this.nl());
+        return result;
+    },
+};

@@ -1,0 +1,21 @@
+
+var FunctionParamList = require('./function_param_list');
+
+module AsyncParamList = proto (FunctionParamList) {
+
+    handle: func(declare, functionNode, scope, result, node) {
+
+        if (parent->handle(declare, functionNode, scope, result, node)) {
+            return true;
+        }
+
+        if (node.key === 'callback') {
+
+            result.add(functionNode.storeCallback());
+            return true;
+        }
+
+        return false;
+    },
+
+};

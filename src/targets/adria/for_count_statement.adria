@@ -1,0 +1,53 @@
+
+var Scope = require('./scope');
+
+module ForCountStatement = proto (Scope) {
+
+    toSourceNode: func() {
+
+        var initNode = this.get('init');
+        var init;
+
+        if (initNode.value === 'var_statement') {
+
+            var varDefs = this.csn();
+            var ownScope = this;
+
+            initNode.eachKey('item', func(node) {
+
+                var valueNode = node.get('value');
+                var nameNode = node.get('name');
+
+                ownScope.addLocal(nameNode.value);
+
+                if (valueNode.isNode()) {
+                    var varDef = this.csn([ nameNode.toSourceNode(), ' = ', valueNode.toSourceNode() ]);
+                    varDefs.add(varDef);
+                } else {
+                    varDefs.add(nameNode.toSourceNode);
+                }
+            });
+
+            init = this.csn();
+            init.add([ varDefs.join(', ') ]);
+
+        } else {
+
+            init = initNode.toSourceNode();
+        }
+
+        var test = this.get('test').toSourceNode();
+        var condOp = this.get('cond_op').toSourceNode();
+
+        this.nl(1);
+        var body = this.get('body').toSourceNode();
+        this.nl(-1);
+
+        var result = this.csn();
+        result.add(this.refsToSourceNode());
+        result.add([ 'for (', init, '; ', test, ';', condOp, ') {' + this.nl(1) ]);
+        result.add([ body, this.nl(-1) + '}' ]);
+
+        return result;
+    },
+};

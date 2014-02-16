@@ -1,0 +1,16 @@
+
+var AdriaNode = require('./adria_node');
+
+module ConstLiteral = proto (AdriaNode) {
+
+    toSourceNode: func() {
+
+        var stringNode = this.get('string');
+
+        if (stringNode.isNode()) {
+            return this.csn(stringNode.value);
+        } else {
+            return this.csn(this.get('numeric').value);
+        }
+    },
+};

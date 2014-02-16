@@ -1,0 +1,29 @@
+
+var AdriaNode = require('./adria_node');
+
+module InvokeOperation = proto (AdriaNode) {
+
+    toSourceNode: func(includeBraces = true) {
+
+        var result = this.csn();
+
+        if (includeBraces) {
+            result.add('(');
+        }
+
+        this.each(func(node, first) {
+
+            if (first === false) {
+                result.add(', ');
+            }
+
+            result.add(node.toSourceNode());
+        });
+
+        if (includeBraces) {
+            result.add(')');
+        }
+
+        return result;
+    },
+};

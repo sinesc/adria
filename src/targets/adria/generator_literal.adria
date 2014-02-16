@@ -1,0 +1,9 @@
+
+var FunctionLiteral = require('./function_literal');
+
+module GeneratorLiteral = proto (FunctionLiteral) {
+
+    begin: func() {
+        return this.csn('function*');
+    },
+};

@@ -1,0 +1,36 @@
+
+var AdriaNode = require('./adria_node');
+
+module ArrayLiteral = proto (AdriaNode) {
+
+    toSourceNode: func() {
+
+        var items = this.csn();
+
+        // indent now, so that children will be indented. correct for this by not indenting during return
+
+        this.nl(1);
+
+        this.each(func(child) {
+            items.add(child.toSourceNode());
+        });
+
+        var result = this.csn();
+
+        if (items.toString().length >= 60) {
+
+            result.add('[' + this.nl());
+            result.add(items.join(',' + this.nl()));
+            result.add(this.nl() + this.nl(-1) + ']');
+
+        } else {
+
+            this.nl(-1);
+            result.add('[ ');
+            result.add(items.join(', '));
+            result.add(' ]');
+        }
+
+        return result;
+    },
+};

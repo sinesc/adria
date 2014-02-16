@@ -1,0 +1,118 @@
+/*
+ * Adria transcompiler
+ *
+ * Copyright (C) 2014 Dennis Möhlmann <mail@dennismoehlmann.de>
+ * Licensed under the MIT license.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of
+ * this software and associated documentation files (the "Software"), to deal in
+ * the Software without restriction, including without limitation the rights to
+ * use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of
+ * the Software, and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+ * FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+ * COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
+ * IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+ * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ */
+
+//!todo
+// - an intermediate step before output generation is required (wrap sourcenodes "somehow"). while doing that, fix source mapping being completely crappy
+// - need to parse property name strings instead of copying verbatim: unescape the js string, check if valid for .property syntax, otherwise use ['property'] syntax
+// - various nodes do too much stuff that their children should handle, i.e. ProtoBodyItem
+// - sort this
+
+export AdriaNode = require('./adria/adria_node');
+
+var AdriaValueType = require('./adria/adria_value_type');
+export Ident = require('./adria/ident');
+export Name = Ident; //!todo derive from ValueType
+export String = proto (AdriaValueType) { };
+export Numeric = proto (AdriaValueType) { };
+
+export Scope = require('./adria/scope');
+export Module = require('./adria/module');
+export RequireLiteral = require('./adria/require_literal');
+export ResourceLiteral = require('./adria/resource_literal');
+
+export FunctionLiteral = require('./adria/function_literal');
+export GeneratorLiteral = require('./adria/generator_literal');
+export AsyncLiteral = require('./adria/async_literal');
+export FunctionStatement = proto (FunctionLiteral) {
+    registerWithParent: true,
+};
+export GeneratorStatement = proto (GeneratorLiteral) {
+    registerWithParent: true,
+};
+export AsyncStatement = proto (AsyncLiteral) {
+    registerWithParent: true,
+};
+
+export FunctionParamList = require('./adria/function_param_list');
+export AsyncParamList = require('./adria/async_param_list');
+
+export Expression = require('./adria/expression');
+
+export ObjectLiteral = require('./adria/object_literal');
+export PropertyLiteral = require('./adria/property_literal');
+
+export ProtoLiteral = require('./adria/proto_literal');
+export ProtoStatement = proto (ProtoLiteral) { };
+export ProtoBodyItem = require('./adria/proto_body_item');
+
+var TryStatement = require('./adria/try_statement');
+export Try = TryStatement.Try;
+export Catch = TryStatement.Catch;
+export CatchAll = TryStatement.CatchAll;
+export CatchSpecific = TryStatement.CatchSpecific;
+export Finally = TryStatement.Finally;
+
+export ForCountStatement = require('./adria/for_count_statement');
+export ImportStatement = require('./adria/import_statement');
+
+export AccessOperationProtocall = require('./adria/access_operation_protocall');
+
+export ConstLiteral = require('./adria/const_literal');
+export InvokeOperation = require('./adria/invoke_operation');
+export AsyncWrapOperation = require('./adria/async_wrap_operation');
+export BaseLiteral = require('./adria/base_literal');
+
+export DoWhileStatement = require('./adria/do_while_statement');
+export WhileStatement = require('./adria/while_statement');
+export SwitchStatement = require('./adria/switch_statement');
+export ForInStatement = require('./adria/for_in_statement');
+
+var IfBlock = require('./adria/if_statement'); //!todo bad naming
+export IfStatement = IfBlock.IfStatement;
+export IfConditional = IfBlock.IfConditional;
+export IfUnconditional = IfBlock.IfUnconditional;
+
+export ArrayLiteral = require('./adria/array_literal');
+export NewProtoLiteral = require('./adria/new_proto_literal');
+
+export ReturnStatement = require('./adria/return_statement');
+
+export YieldLiteral = require('./adria/yield_literal');
+export AwaitLiteral = require('./adria/await_literal');
+
+export ThrowStatement = require('./adria/throw_statement');
+export AssertStatement = require('./adria/assert_statement');
+
+export Statement = require('./adria/statement');
+
+export ModuleStatement = require('./adria/module_statement');
+export ExportStatement = require('./adria/export_statement');
+
+export GlobalStatement = require('./adria/global_statement');
+export VarStatement = require('./adria/var_statement');
+
+export StorageLiteral = require('./adria/storage_literal');
+export ParentLiteral = require('./adria/parent_literal');
+
+export FlowStatement = require('./adria/flow_statement');

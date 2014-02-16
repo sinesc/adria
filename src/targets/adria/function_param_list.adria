@@ -1,0 +1,43 @@
+
+var AdriaNode = require('./adria_node');
+
+module FunctionParamList = proto (AdriaNode) {
+
+    handle: func(declare, functionNode, scope, result, node) {
+
+        if (node.key === 'item') {
+
+            var name = node.get('name').toSourceNode();
+            result.add(name);
+
+            if (declare) {
+                scope.addImplicit(name.toString());
+            }
+
+            // check for default args, push those to FunctionLiteral's defaultArgs property
+
+            var valueNode = node.get('value');
+
+            if (valueNode.isNode()) {
+
+                var defaultArg = this.csn([ name, ' = (', name, ' !== undefined ? ', name, ' : (', valueNode.toSourceNode(), '))' ]);
+                functionNode.defaultArgs.push(defaultArg);
+            }
+
+            return true;
+        }
+
+        return false;
+    },
+
+    toSourceNode: func(declare = true) {
+
+        var result = this.csn();
+        var functionNode = this.ancestor([ 'function', 'generator', 'async' ]);
+        var scope = this.findScope();
+
+        this.each(this.handle.bind(this, declare, functionNode, scope, result));
+
+        return result.join(', ');
+    },
+};

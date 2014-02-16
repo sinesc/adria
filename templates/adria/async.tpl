@@ -59,23 +59,22 @@ module('async.adria', function(module, resource) {
 
         {* the yielded function for which we will wait on its callback before returning that result at the caller yield *}
 
-        var arg;
+        var current;
 
         {* todo REFACTOR! *}
 
-        while ((arg = (this.error === undefined ? this.generator.next(this.result) : this.generator.throw(this.error))).done === false) {
+        while ((current = (this.error === undefined ? this.generator.next(this.result) : this.generator.throw(this.error))).done === false) {
 
             this.sync = 0;
             this.error = undefined;
-            arg = arg.value;
 
             try {
 
-                if (typeof arg === 'function') {
-                    {! if (enableAssert): !}assert(arg.prototype === undefined, 'Yielded function is not wrapped (forgot \'#\' ?)');{! endif !}
-                    arg(this.callback.bind(this, this.step));
+                if (typeof current.value === 'function') {
+                    {! if (enableAssert): !}assert(current.value.prototype === undefined, 'Yielded function is not wrapped (forgot \'#\' ?)');{! endif !}
+                    current.value(this.callback.bind(this, this.step));
                 } else {
-                    this.waitAll(arg);
+                    this.waitAll(current.value);
                 }
 
             } catch (e) {
@@ -98,7 +97,7 @@ module('async.adria', function(module, resource) {
             }
         }
 
-        this.done = this.generator.done;
+        this.done = current.done;
     };
 
     {**

@@ -1,0 +1,10 @@
+
+var AdriaNode = require('./adria_node');
+
+module ParentLiteral = proto (AdriaNode) {
+
+    toSourceNode: func() {
+        this.ancestor('function').lookupParent = true;
+        return this.csn('___p');
+    }
+};

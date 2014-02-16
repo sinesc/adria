@@ -1,0 +1,94 @@
+
+var Map = require('astd/map');
+var Scope = require('./scope');
+var ASTException = require('../../language_parser/ast_exception');
+
+module Module = proto (Scope) {
+
+    moduleExport: null,
+    exports: null,
+
+    constructor: func(key, value) {
+        this.exports = new Map();
+        Scope->constructor(key, value);
+    },
+
+    setModuleExport: func(name) {
+
+        if (this.getOwnRef(name)) {
+            throw new ASTException('Reference "' + name + '" already defined in local scope', this);
+        }
+
+        var localName = this.addLocal(name);
+        this.moduleExport = localName;
+        return name;
+    },
+
+    addExport: func(name) {
+
+        if (this.getOwnRef(name)) {
+            throw new ASTException('Reference "' + name + '" already defined in local scope', this);
+        }
+
+        var localName = this.addLocal(name);
+        this.exports.set(name, localName);
+        return name;
+    },
+
+    getOwnRef: func(name) {
+
+        var refName;
+
+        if ((refName = Scope->getOwnRef(name)) !== null) {
+            return refName;
+        }
+
+        assert(this.exports instanceof Map);
+
+        if (this.exports.has(name)) {
+            return this.exports.get(name);
+        } else if (this.moduleExport === name) {
+            return this.moduleExport;
+        }
+
+        return null;
+    },
+
+    toSourceNode: func() {
+
+        this.nl(1);
+
+        var parser = this.parser();
+        var code = Scope->toSourceNode();
+        var file = parser.file;
+
+        var result = this.csn('module(\'' + parser.moduleName + '\', function(module, resource) {' + this.nl());
+
+        // tweak: commonJS module.exports shortcut
+
+        if (parser.transform.options['tweak-exports']) {
+            result.add('var exports = module.exports;' + this.nl());
+        }
+
+        result.add(this.refsToSourceNode());
+        result.add(code);
+
+        // module export
+
+        if (this.moduleExport !== null) {
+            result.add('module.exports = ' + this.moduleExport + ';' + this.nl());
+        }
+
+        // individual exports
+
+        var exports = this.exports.keys();
+
+        for (var id in exports) {
+            result.add('module.exports.' + exports[id] + ' = ' + this.exports.get(exports[id]) + ';' + this.nl());
+        }
+
+        result.add(this.nl(-1) + '});' + this.nl());
+
+        return result;
+    },
+};

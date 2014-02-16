@@ -1,0 +1,28 @@
+
+var AdriaFileNode = require('./adria_file_node');
+var ASTException = require('../../language_parser/ast_exception');
+
+module ResourceLiteral = proto (AdriaFileNode) {
+
+    toSourceNode: func() {
+
+        var parser = this.parser();
+        var options = parser.transform.options;
+        var fileNode = this.get('file');
+        var fileName = fileNode.toSourceNode().toString().slice(1, -1);
+
+        var resolvedName = this.resolvePath(fileName, parser);
+
+        if (resolvedName !== null) {
+            parser.resultData.resources.add(resolvedName);
+        } else {
+            throw new ASTException('Could not find resource "' + fileName + '"', this);
+        }
+
+        var result = this.csn();
+        result.add('resource(');
+        result.add(fileNode.csn("'" + resolvedName + "'"));
+        result.add(')');
+        return result;
+    },
+};

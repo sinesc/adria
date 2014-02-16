@@ -15,7 +15,7 @@ import_statement {
     entry -> "import" -> dec_list -> return
 }
 
-var_def {
+var_statement {
     entry -> "var" -> dec_def_list -> return
 }
 
@@ -23,13 +23,13 @@ const_def {
     entry -> "const" -> dec_def_list -> return
 }
 
-global_def {
+global_statement {
     entry -> "global" -> dec_def_list -> return
 }
 
 function_statement {
     entry -> "func" -> ident:name
-    
+
     entry -> "function" -> ident:name -> "(" -> ")" -> block:body -> return
     "(" -> function_param_list:param_list -> ")"
 }
@@ -43,14 +43,14 @@ proto_statement {
 
 generator_statement {
     entry -> "func" -> "*":generator
-    
+
     entry -> "function" -> "*":generator -> ident:name -> "(" -> ")" -> block:body -> return
     "(" -> function_param_list:param_list -> ")"
 }
 
 async_statement {
-    entry -> "func" -> "#":async    
-    
+    entry -> "func" -> "#":async
+
     entry -> "function" -> "#":async -> ident:name -> "(" -> ")" -> block:body -> return
     "(" -> function_param_list:param_list -> ")"
 }
@@ -79,7 +79,7 @@ deconstruct {
 
 statement {
 
-    entry -> var_def:var_def -> t -> return
+    entry -> var_statement:var -> t -> return
 
     entry -> if_statement:if -> return
     entry -> for_in_statement:for_in -> return
@@ -91,7 +91,7 @@ statement {
     entry -> expression:expression -> t -> return
 
     entry -> const_def:const_def -> t -> return
-    entry -> global_def:global_def -> t -> return
+    entry -> global_statement:global -> t -> return
     entry -> deconstruct:deconstruct -> t -> return
     entry -> throw_statement:throw -> t -> return
     entry -> do_while_statement:do_while -> t -> return

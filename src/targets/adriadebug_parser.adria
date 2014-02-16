@@ -22,7 +22,7 @@
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 var AdriaParser = require('./adria_parser');
-var AdriaNode = require('./adria_node');
+var AdriaNode = require('./adria/adria_node');
 
 /**
  * Extend AdriaNode with XML-yielding toString function

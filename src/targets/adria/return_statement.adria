@@ -1,0 +1,25 @@
+
+var AdriaNode = require('./adria_node');
+var AsyncLiteral = require('./async_literal');
+var FunctionLiteral = require('./function_literal');
+
+module ReturnStatement = proto (AdriaNode) {
+
+    toSourceNode: func() {
+
+        var result = this.csn();
+        var type = this.get('type');
+        var hostFunction = this.findProto(FunctionLiteral);
+
+        if (hostFunction instanceof AsyncLiteral && hostFunction.useCallback) {
+
+            result.add([ hostFunction.storeCallback() + '(null, ', this.get('value').toSourceNode(), ');' + this.nl() + 'return;' + this.nl() ]);
+
+        } else {
+
+            result.add([ type.value, ' ', this.get('value').toSourceNode(), ';' + this.nl() ]);
+        }
+
+        return result;
+    },
+};

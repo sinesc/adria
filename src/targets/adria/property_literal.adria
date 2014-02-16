@@ -1,0 +1,80 @@
+
+var ObjectLiteral = require('./object_literal');
+
+var storageId = 1;
+
+module PropertyLiteral = proto (ObjectLiteral) {
+
+    useStorage          : false,
+    storageName         : null,
+    defaultValueNode    : 'undefined', //!todo should be sourcenode, but returning sourcenodes also needs to be refactored. eventually should be AdriaNode
+
+    assignmentToSourceNode: func(name, target) {
+
+        var propertyBody = ObjectLiteral->toSourceNode();
+        var result = this.csn();
+
+        if (this.useStorage) {
+            result.add('(Object.defineProperty(' + target + ', ' + this.storageName + ', {' + this.nl(1));
+            result.add([ 'value: ', this.defaultValueNode, ',' + this.nl() ]);
+            result.add('writable: true' + this.nl(-1));
+            result.add('}),' + this.nl());
+        }
+
+        result.add([ 'Object.defineProperty(', target, ', ', name, ', ' ]);
+        result.add(propertyBody);
+        result.add(this.useStorage ? '))' : ')');
+        return result;
+    },
+
+    assembleItemList: func() {
+
+        // fetch storage and default settings in advance
+
+        this.each(func(child) {
+
+            var childKey = child.get('key');
+            var childValue = child.get('value');
+
+            if (childKey.value === 'default') {
+                this.defaultValueNode = childValue.toSourceNode();
+                this.useStorage = true;
+            } else if (childKey.value === 'storage') {
+                this.storageName = childValue.value;
+                this.useStorage = true;
+            }
+        });
+
+        // find name for property storage field
+
+        if (this.storageName === null) {
+
+            var nameSN = this.findName();
+
+            if (nameSN === null) {
+                this.storageName = '\'___psf' + (storageId++) + '\'';
+            } else {
+                this.storageName = '\'_' + nameSN.toString() + '\'';
+            }
+        }
+
+        // process property fields
+
+        var items = this.csn();
+
+        this.each(func(child) {
+
+            var childKey = child.get('key');
+
+            if (childKey.value !== 'default' && childKey.value !== 'storage') {
+                var item = this.csn();
+                item.add(childKey.csn(childKey.value));
+                item.add(': ');
+                item.add(child.get('value').toSourceNode());
+                items.add(item);
+            }
+        });
+
+        return items;
+    },
+};

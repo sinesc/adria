@@ -23,10 +23,9 @@
  */
 var Async = require('async');
 var test = require('./test');
+var TestException = test.TestException;
 
 // prepare some functions
-
-var TestException = proto(Exception) { };
 
 var sleep = func(ms, callback) {
     setTimeout(func() {
@@ -62,178 +61,6 @@ var asyncAutoCatch = func#(#) {
 
 
 // tests
-
-test('wrap, then await', func#(done) {
-
-    var wrap = sleep(10, #);
-    var result = await wrap;
-    assert(result === 10);
-
-    done();
-});
-
-test('await wrap', func#(done) {
-
-    var result = await sleep(11, #);
-    assert(result === 11);
-
-    done();
-});
-
-test('wrap throwing', func#(done) {
-
-    var wrap, thrown = false;
-
-    try {
-        wrap = await sleepThrow(10, #);
-    } catch (e) {
-        thrown = true;
-        assert(e instanceof TestException);
-    }
-
-    assert(thrown === true);
-
-    done();
-});
-
-test('wrap, then await', func#(done) {
-
-    var wrap = sleep(10, #);
-    var result = await wrap;
-    assert(result === 10);
-
-    done();
-});
-
-test('await wrap', func#(done) {
-
-    var result = await sleep(11, #);
-    assert(result === 11);
-
-    done();
-});
-
-test('wrap throwing, await it', func#(done) {
-
-    var wrap, result, thrown;
-
-    try {
-         wrap = sleepThrow(10, #);
-    } catch (e) {
-        assert(false);
-    }
-
-    try {
-        result = await wrap;
-    } catch (e) {
-        thrown = e;
-    }
-
-    assert(thrown instanceof TestException && thrown.message === 'expected error');
-
-    done();
-});
-
-test('wrap error, await it', func#(done) {
-
-    var wrap, result, thrown;
-
-    try {
-         wrap = sleepError(10, #);
-    } catch (e) {
-        assert('never reached');
-    }
-
-    try {
-        result = await wrap;
-    } catch (e) {
-        thrown = e;
-    }
-
-    assert(thrown instanceof TestException && thrown.message === 'expected error');
-
-    done();
-});
-
-test('wrap and await multiple, array', func#(done) {
-
-    var result = await [
-        sleep(15, #),
-        sleep(5, #),
-        sleep(10, #),
-    ];
-
-    assert(result instanceof Array && result[0] === 15 && result[1] === 5 && result[2] === 10);
-
-    done();
-});
-
-test('wrap and await multiple, object', func#(done) {
-
-    var result = await {
-        a: sleep(15, #),
-        b: sleep(5, #),
-        c: sleep(10, #),
-    };
-
-    assert(result instanceof Object && result.a === 15 && result.b === 5 && result.c === 10);
-
-    done();
-});
-
-test('wrap and await multiple, single invalid argument', func#(done) {
-
-    var result = undefined, thrown = undefined;
-
-    try {
-        result = await [
-            sleep(15, #),
-            sleep(5, func() { }),       // not a wrap op
-        ];
-    } catch (e) {
-        thrown = e;
-    }
-
-    assert(result === undefined && thrown instanceof Async.AsyncException);
-
-    done();
-});
-
-test('wrap and await multiple, single error', func#(done) {
-
-    var result = undefined, thrown = undefined;
-
-    try {
-        result = await [
-            sleepError(10, #),
-            sleep(15, #),
-        ];
-    } catch (e) {
-        thrown = e;
-    }
-
-    assert(result === undefined && thrown instanceof TestException && thrown.message === 'expected error');
-
-    done();
-});
-
-test('wrap and await multiple, all error', func#(done) {
-
-    var result = undefined, thrown = undefined;
-
-    try {
-        result = await [
-            sleepError(10, #),
-            sleepError(10, #),
-        ];
-    } catch (e) {
-        thrown = e;
-    }
-
-    assert(result === undefined && thrown instanceof TestException && thrown.message === 'expected error');
-
-    done();
-});
 
 test('async return', func#(done) {
 
@@ -277,6 +104,150 @@ test('async auto catch', func#(done) {
 
     clearTimeout(failover);
     done();
+});
+
+// autocallback was tested above, using feature below
+
+test('wrap, then await', func#(#) {
+
+    var wrap = sleep(10, #);
+    var result = await wrap;
+    assert(result === 10);
+});
+
+test('await wrap', func#(#) {
+
+    var result = await sleep(11, #);
+    assert(result === 11);
+});
+
+test('wrap throwing', func#(#) {
+
+    var wrap, thrown = false;
+
+    try {
+        wrap = await sleepThrow(10, #);
+    } catch (e) {
+        thrown = true;
+        assert(e instanceof TestException);
+    }
+
+    assert(thrown === true);
+});
+
+test('wrap, then await', func#(#) {
+
+    var wrap = sleep(10, #);
+    var result = await wrap;
+    assert(result === 10);
+});
+
+test('wrap throwing, await it', func#(#) {
+
+    var wrap, result, thrown;
+
+    try {
+         wrap = sleepThrow(10, #);
+    } catch (e) {
+        assert(false);
+    }
+
+    try {
+        result = await wrap;
+    } catch (e) {
+        thrown = e;
+    }
+
+    assert(thrown instanceof TestException && thrown.message === 'expected error');
+});
+
+test('wrap error, await it', func#(#) {
+
+    var wrap, result, thrown;
+
+    try {
+         wrap = sleepError(10, #);
+    } catch (e) {
+        assert('never reached');
+    }
+
+    try {
+        result = await wrap;
+    } catch (e) {
+        thrown = e;
+    }
+
+    assert(thrown instanceof TestException && thrown.message === 'expected error');
+});
+
+test('wrap and await multiple, array', func#(#) {
+
+    var result = await [
+        sleep(15, #),
+        sleep(5, #),
+        sleep(10, #),
+    ];
+
+    assert(result instanceof Array && result[0] === 15 && result[1] === 5 && result[2] === 10);
+});
+
+test('wrap and await multiple, object', func#(#) {
+
+    var result = await {
+        a: sleep(15, #),
+        b: sleep(5, #),
+        c: sleep(10, #),
+    };
+
+    assert(result instanceof Object && result.a === 15 && result.b === 5 && result.c === 10);
+});
+
+test('wrap and await multiple, single invalid argument', func#(#) {
+
+    var result = undefined, thrown = undefined;
+
+    try {
+        result = await [
+            sleep(15, #),
+            sleep(5, func() { }),       // not a wrap op
+        ];
+    } catch (e) {
+        thrown = e;
+    }
+
+    assert(result === undefined && thrown instanceof Async.AsyncException);
+});
+
+test('wrap and await multiple, single error', func#(#) {
+
+    var result = undefined, thrown = undefined;
+
+    try {
+        result = await [
+            sleepError(10, #),
+            sleep(15, #),
+        ];
+    } catch (e) {
+        thrown = e;
+    }
+
+    assert(result === undefined && thrown instanceof TestException && thrown.message === 'expected error');
+});
+
+test('wrap and await multiple, all error', func#(#) {
+
+    var result = undefined, thrown = undefined;
+
+    try {
+        result = await [
+            sleepError(10, #),
+            sleepError(10, #),
+        ];
+    } catch (e) {
+        thrown = e;
+    }
+
+    assert(result === undefined && thrown instanceof TestException && thrown.message === 'expected error');
 });
 
 if (test.noSummary !== true) {

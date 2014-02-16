@@ -1,0 +1,17 @@
+
+var Scope = require('./scope');
+
+module DoWhileStatement = proto (Scope) {
+
+    toSourceNode: func() {
+
+        var result = this.csn();
+        result.add('do {' + this.nl(1));
+
+        var body = this.get('body').toSourceNode();
+        result.add([ this.refsToSourceNode(), body ]);
+        result.add([ this.nl(-1) + '} while (', this.get('condition').toSourceNode(), ');' ]);
+
+        return result;
+    },
+};

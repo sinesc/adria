@@ -1,0 +1,12 @@
+
+var YieldLiteral = require('./yield_literal');
+var ASTException = require('../../language_parser/ast_exception');
+
+module AwaitLiteral = proto (YieldLiteral) {
+
+    checkEnvironment: func() {
+        if (this.ancestor([ 'function', 'generator', 'async' ]).key !== 'async') {
+            throw new ASTException('Encountered "await" outside of async function', this);
+        }
+    },
+};

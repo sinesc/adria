@@ -1,0 +1,36 @@
+
+var AdriaNode = require('./adria_node');
+
+module BaseLiteral = proto (AdriaNode) {
+
+    scan: func(state) {
+
+        AdriaNode->scan(state);
+
+        this.eachKey('ident', func(child) {
+            this.checkDefined(child.value);
+        });
+    },
+
+    toSourceNode: func() {
+
+        var result = '';
+
+        this.each(func(child) {
+            switch (child.key) {
+                //!case 'ident':
+                case 'numeric':
+                case 'string':
+                case 'regexp':
+                case 'brace':
+                    result += this.csn(child.value);
+                    break;
+
+                default:
+                    result += child.toSourceNode();
+            }
+        });
+
+        return result;
+    },
+};

@@ -1,0 +1,111 @@
+
+var Scope = require('./scope');
+
+var thisId = 1;
+
+module FunctionLiteral = proto (Scope) {
+
+    thisId              : 0,
+    defaultArgs         : null,
+    name                : null, //!todo seems to be a sourcenode!
+    lookupParent        : false,
+    provideContext      : false,
+    registerWithParent  : false,
+
+    constructor: func(key, value) {
+        this.defaultArgs = [ ];
+        Scope->constructor(key, value);
+        this.thisId = thisId++;
+    },
+
+    storeContext: func() {
+
+        this.provideContext = true;
+        return '___ths' + this.thisId;
+    },
+
+    begin: func() {
+        return this.csn('function');
+    },
+
+    addLocalName: func(result, nameSN) {
+
+        this.addImplicit(nameSN.toString(), true);
+        result.add([ ' ', this.name ]);
+    },
+
+    preBody: func(result) {
+
+        // nothing to do here
+    },
+
+    postBody: function(result, body) {
+
+        result.add(body);
+    },
+
+    toSourceNode: func() {
+
+        // indent child content, compensate by not indenting at opening {
+
+        this.nl(1);
+
+        // construct result string
+
+        var result = this.begin();
+
+        // name anonymous functions within their scope,
+
+        var nameSN = this.findName();
+
+        if (nameSN !== null && nameSN.toString().match(/^([\'\"]).*\1$/) === null) {
+            this.name = nameSN;
+            this.addLocalName(result, this.name);
+        } else {
+            this.name = null;
+        }
+
+        // check if name needs to be registered with parent scope
+
+        if (this.registerWithParent) {
+            this.parent.findScope().addImplicit(this.name.toString());
+        }
+
+        // handle parameters
+
+        result.add([ '(', this.get('param_list').toSourceNode(), ') {' + this.nl() ]);
+
+        // prepare body part
+
+        this.preBody(result);
+
+        // set default parameters
+
+        for (var id in this.defaultArgs) {
+            result.add([ this.defaultArgs[id], ';' + this.nl() ]);
+        }
+
+        var body = this.get('body').toSourceNode();
+
+        // local variables and stored this-context
+
+        result.add(this.refsToSourceNode());
+
+        if (this.provideContext) {
+            result.add('var '  + this.storeContext() + ' = this;' + this.nl());
+        }
+
+        // prepare parent lookup, if parent keyword is used in body
+
+        if (this.lookupParent) {
+            this.addParentLookup(result, this.name);
+        }
+
+        // finalize body
+
+        this.postBody(result, body);
+        result.add(this.nl(-1) + '}');
+
+        return result;
+    },
+};

@@ -1,0 +1,55 @@
+
+var path = require('path');
+var fs = require('fs');
+var AdriaNode = require('./adria_node');
+
+module AdriaFileNode = proto (AdriaNode) {
+
+    /**
+     * relative nodejs paths have to be prefixed with ./ or ../
+     *
+     * @param filename
+     * @param boolean true if path is a relative nodejs path
+     */
+    isRelativePath: func(filename) {
+        return filename.slice(0, 2) === './' || filename.slice(0, 3) === '../';
+    },
+
+    makeBaseRelative: func(filename, parser) {
+
+        var absName = path.dirname(parser.file) + '/' + filename;
+        return path.relative(parser.transform.options.basePath, absName);
+    },
+
+    resolvePath: func(fileName, parser) {
+
+        var options = parser.transform.options;
+        var relname;
+
+        if (this.isRelativePath(fileName)) {
+
+            // check project base
+
+            relname = this.makeBaseRelative(fileName, parser);
+
+            if (fs.existsSync(options.basePath + relname)) {
+                return path.normalize(relname);
+            }
+
+        } else {
+
+            // try paths
+
+            for (var id in options.paths) {
+
+                relname = options.paths[id] + fileName;
+
+                if (fs.existsSync(options.basePath + relname)) {
+                    return path.normalize(relname);
+                }
+            }
+        }
+
+        return null;
+    },
+};

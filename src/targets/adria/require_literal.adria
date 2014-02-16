@@ -1,0 +1,63 @@
+
+var util = require('../../util');
+var AdriaFileNode = require('./adria_file_node');
+var ASTException = require('../../language_parser/ast_exception');
+
+module RequireLiteral = proto (AdriaFileNode) {
+
+    toSourceNode: func() {
+
+        var parser = this.parser();
+        var options = parser.transform.options;
+        var fileNode = this.get('file');
+        var moduleName = fileNode.toSourceNode().toString().slice(1, -1);
+        var result = this.csn();
+        var requireFunction = 'require';
+        var resolvedName;
+
+        // check builtins
+
+        resolvedName = util.normalizeExtension(moduleName, options.fileExt);
+
+        if (parser.transform.builtins[resolvedName] !== undefined) {
+
+            // module is builtin, set flag for inclusion by transform
+
+            parser.transform.usedBuiltins.add(resolvedName);
+            moduleName = resolvedName;
+
+            if (resolvedName === 'async.adria') {
+                parser.resultData.globals.add('___Async'); //!todo add a useBuiltin function to handle cases like this
+            }
+
+            if (options.platform === 'node') {
+                requireFunction = '___require';
+            }
+
+        } else {
+
+            // check if the require is an Adria module and needs to be included
+
+            resolvedName = this.resolvePath(util.normalizeExtension(moduleName, options.fileExt), parser);
+
+            if (resolvedName !== null) {
+
+                moduleName = resolvedName;
+                parser.resultData.requires.add(moduleName);
+
+                if (options.platform === 'node') {
+                    requireFunction = '___require';
+                }
+
+            } else if (options.platform !== 'node' || moduleName.hasPostfix(options.fileExt)) {
+
+                throw new ASTException('Could not find require "' + moduleName + '"', this);
+            }
+        }
+
+        result.add(requireFunction + '(');
+        result.add(fileNode.csn("'" + moduleName + "'"));
+        result.add(')');
+        return result;
+    },
+};

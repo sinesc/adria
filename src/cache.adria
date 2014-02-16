@@ -27,6 +27,7 @@ var util = require('./util');
 
 module Cache = proto {
 
+    version: 1, //!todo possibly get this from package.json
     baseDir: util.home() + '/.adria/cache/',
 
     constructor: func() {
@@ -69,7 +70,7 @@ module Cache = proto {
     cacheName: func(file) {
 
         var absPath = path.resolve(process.cwd(), file);
-        return this.baseDir + util.md5(absPath);
+        return this.baseDir + util.md5(absPath) + '.' + this.version;
     },
 
     /**

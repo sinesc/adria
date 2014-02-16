@@ -1,0 +1,24 @@
+
+var AdriaNode = require('./adria_node');
+
+module Statement = proto (AdriaNode) {
+
+    toSourceNode: func() {
+
+        var type = this.children[0].key;
+        var result = this.csn();
+
+        result.add(AdriaNode->toSourceNode());
+
+        switch (type) {
+            case 'expression':
+                result.add(';' + this.nl());
+                break;
+
+            default:
+                result.add(this.nl());
+        }
+
+        return result;
+    },
+};

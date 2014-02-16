@@ -1,0 +1,34 @@
+
+var AdriaNode = require('./adria_node');
+
+module AssertStatement = proto (AdriaNode) {
+
+    toSourceNode: func() {
+
+        var result = this.csn();
+
+        if (this.parser().transform.options.assert) {
+
+            var params = this.get('call');
+            var paramsSN = params.toSourceNode(false);
+
+            result.add([ 'assert(', paramsSN ]);
+
+            // if only one parameter, add textual version of assertion as secondary parameter
+
+            var numParams = 0;
+
+            params.each(func(node, first) {
+                numParams++;
+            });
+
+            if (numParams < 2) {
+                result.add([ ", '" + paramsSN.toString().jsify("'") + "'" ]);
+            }
+
+            result.add(');' + this.nl());
+        }
+
+        return result;
+    }
+};

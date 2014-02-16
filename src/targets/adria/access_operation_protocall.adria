@@ -1,0 +1,21 @@
+
+var AdriaNode = require('./adria_node');
+
+module AccessOperationProtocall = proto (AdriaNode) {
+
+    toSourceNode: func() {
+
+        var params = this.get('call');
+        var result = this.csn();
+
+        result.add([ '.prototype.', this.csn(this.get('item').value), '.call(this' ]);
+
+        params.each(func(param) {
+            result.add([ ', ', param.toSourceNode() ]);
+        });
+
+        result.add(')');
+
+        return result;
+    },
+};

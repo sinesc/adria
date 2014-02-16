@@ -1,0 +1,10 @@
+
+var AdriaValueType = require('./adria_value_type');
+
+module Ident = proto (AdriaValueType) {
+
+    toSourceNode: func() {
+        var name = this.findScope().findRef(this.value);
+        return this.csn(name !== null ? name : this.value);
+    }
+};

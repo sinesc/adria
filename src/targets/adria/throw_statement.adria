@@ -1,0 +1,14 @@
+
+var AdriaNode = require('./adria_node');
+
+module ThrowStatement = proto (AdriaNode) {
+
+    toSourceNode: func() {
+
+        var result = this.csn('throw ');
+        result.add(this.get('exception').toSourceNode());
+        result.add(';' + this.nl());
+
+        return result;
+    },
+};

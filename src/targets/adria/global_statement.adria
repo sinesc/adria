@@ -1,0 +1,28 @@
+
+var AdriaNode = require('./adria_node');
+
+module GlobalStatement = proto (AdriaNode) {
+
+    toSourceNode: func() {
+
+        var valueNode, nameNode;
+        var globals = this.parser().resultData.globals;
+        var result = this.csn();
+        var nl = this.nl();
+
+        this.eachKey('item', func(node) {
+            nameNode = node.get('name');
+            valueNode = node.get('value');
+
+            globals.add(nameNode.value);
+
+            if (valueNode.isNode()) {
+                result.add(nameNode.value + ' = ');
+                result.add(valueNode.toSourceNode());
+                result.add(';' + nl);
+            }
+        });
+
+        return result;
+    },
+};

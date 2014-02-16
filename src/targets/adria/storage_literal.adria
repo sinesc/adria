@@ -1,0 +1,24 @@
+
+var AdriaNode = require('./adria_node');
+var FunctionLiteral = require('./function_literal');
+var PropertyLiteral = require('./property_literal');
+var ASTException = require('../../language_parser/ast_exception');
+
+module StorageLiteral = proto (AdriaNode) {
+
+    toSourceNode: func() {
+
+        var propertyItem = this.ancestor(null, 'property_accessor_item');
+        var propertySelf = propertyItem.parent;
+        var propertyFunction = propertyItem.get('value').get('function');
+
+        if (propertySelf instanceof PropertyLiteral && propertyFunction instanceof FunctionLiteral) {
+
+            propertySelf.useStorage = true;
+            var contextName = propertyFunction.storeContext();
+            return this.csn(contextName + '[' + propertySelf.storageName + ']');
+        }
+
+        throw new ASTException('Invalid use of "storage" literal', this);
+    }
+};

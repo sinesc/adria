@@ -1,0 +1,53 @@
+
+var GeneratorLiteral = require('./generator_literal');
+
+module AsyncLiteral = proto (GeneratorLiteral) {
+
+    useCallback: false,
+
+    storeCallback: func() {
+
+        this.useCallback = true;
+        return '___cbh' + this.thisId;
+    },
+
+    addLocalName: func(result, nameSN) {
+
+        // don't name async functions as any recursion attempts need to refer to the outer function
+    },
+    
+    preBody: func(result) {
+
+        if (this.useCallback) {
+            result.add('try {' + this.nl(1));
+        }
+    },   
+
+    postBody: func(result, body) {
+    
+        if (this.useCallback) {
+            result.add([ body, this.nl() + this.storeCallback() + '(null, undefined);', this.nl(-1) + '}' ]);
+            result.add([ ' catch (___exc) {' + this.nl(1) + this.storeCallback() + '(___exc, undefined);', this.nl(-1) + '}' ]);    
+        } else {
+            parent->postBody(result, body);
+        }
+    },
+
+    toSourceNode: func() {
+
+        // include Async module
+
+        var parser = this.parser();
+        parser.resultData.globals.add('___Async');
+        parser.transform.usedBuiltins.add('async.adria');
+
+        var result = this.csn();
+        result.add('(function() {' + this.nl(1));
+        result.add([ 'var ___self = ', parent->toSourceNode(), ';', this.nl() ]);
+        result.add([ 'return function(', this.get('param_list').toSourceNode(false), ') {' + this.nl(1) ]);
+        result.add('return new ___Async(___self.apply(this, arguments));' + this.nl(-1));
+        result.add('};'+ this.nl(-1));
+        result.add('})()');
+        return result;
+    },
+};

@@ -44,25 +44,68 @@ if (thrown.stack.split(':', 1)[0] !== 'AssertionFailedException') {
     process.exit(1);
 }
 
-
 // set up module
 
-var testId, start, last, oks, fails, exceptions;
+var testId      = 0;
+var testName    = '';
+var start       = Date.now();
+var last        = start;
+var oks         = 0;
+var fails       = 0;
+var exceptions  = [ ];
+var asyncTimer  = null;
+var inAsync     = false;
+var queue       = [ ];
 
-var inAsync = false;
-var queue = [ ];
+/**
+ * queues a test case
+ *
+ * @param string name test case name
+ * @param int timout optional timeout in ms for async tests
+ * @param function testFunction the function containing the test case, receives callback for async use as first parameter
+ */
+module test = func(name, timeout, testFunction) {
 
-module test = func(name, testFunction) {
+    // handle optional parameter async timeout
 
-    queue.push({ name: name, test: testFunction });
+    if (typeof timeout === 'function') {
+        testFunction = timeout;
+        timeout = 1000;
+    }
+
+    queue.push({ name: name, test: testFunction, timeout: timeout });
 
     if (inAsync) {
         return;
     } else {
-        nextItem();
+        consume();
     }
 };
 
+/**
+ * an exception that includes test id and name in the stacktrace
+ */
+export TestException = proto (Exception) {
+
+    testId: -1,
+    testName: '',
+
+    constructor: func(message) {
+
+        Exception->constructor(message);
+
+        this.testId = testId;
+        this.testName = testName;
+
+        var stack = this.stack.split('\n');
+        stack.splice(1, 0, '    in test ' + testId + ': ' + testName);
+        this.stack = stack.join('\n');
+    }
+};
+
+/**
+ * queues display of test results
+ */
 export summary = func() {
 
     queue.push({ summary: true });
@@ -70,27 +113,52 @@ export summary = func() {
     if (inAsync) {
         return;
     } else {
-        nextItem();
+        consume();
     }
 };
 
-var asyncCallback = func(exception = null) {
+/**
+ * log a timestamped message to the console
+ *
+ * @param string message
+ * @param boolean append newline, default true
+ */
+export log = func(message, nl = true) {
 
-    inAsync = false;
+    var now         = Date.now();
+    var diffStart   = now - start;
+    var diffLast    = now - last;
 
-    if (exception !== null) {
-        exceptions.push(exception);
-        fails++;
-        print('(FAILED)');
-    } else {
-        oks++;
-        print('(ok)');
-    }
+    last = now;
 
-    nextItem();
+    process.stdout.write(('+' + diffLast + '/' + diffStart) + 'ms: ' + message + (nl ? '\n' : ''));
 };
 
-var nextItem = func() {
+/**
+ * log a message to the console
+ *
+ * @param string message
+ * @param boolean append newline, default true
+ */
+export print = func(message, nl = true) {
+
+    process.stdout.write(message + (nl ? '\n' : ''));
+};
+
+/**
+ * abort test and mark as failure
+ *
+ * @param string message
+ */
+export fail = func(message) {
+
+    throw new TestException(message);
+};
+
+/**
+ * consumes the next items in the queue until an asynchronous test is encountered and started
+ */
+var consume = func() {
 
     while (queue.length > 0) {
 
@@ -106,7 +174,43 @@ var nextItem = func() {
     }
 };
 
-var showSummary = func(item) {
+/**
+ * callback passed to async functions, registers the result and advances to next test
+ *
+ * @param Exception exception if not null, test is marked as failed and the exception is reported in the summary
+ */
+var asyncCallback = func(exception = null) {
+
+    // callback was invoked before the the testfunction returned, ignore it, the function will be sync
+
+    if (inAsync === false) {
+        return;
+    }
+
+    // clear failover timeout, reset async status
+
+    clearTimeout(asyncTimer);
+    inAsync = false;
+    asyncTimer = null;
+
+    if (exception !== null) {
+        exceptions.push(exception);
+        fails++;
+        print('(FAILED)');
+    } else {
+        oks++;
+        print('(ok)');
+    }
+
+    // progress to next test
+
+    consume();
+};
+
+/**
+ * displays test summary
+ */
+var showSummary = func() {
 
     log((oks + fails) + ' tests done, ' + oks + ' ok, ' + fails + (fails > 0 ? ' FAILURES' : ' failures'));
 
@@ -115,21 +219,36 @@ var showSummary = func(item) {
     }
 };
 
+/**
+ * runs given test from queue
+ *
+ * @param Object item queue-item of the test
+ * @return boolean true if in test is asynchronous
+ */
 var runTest = func(item) {
 
     var success = true;
     var asyncObject = null;
 
-    log('test ' + testId++ + ': ' + item.name + ' ', false);
+    testId++;
+
+    // log to console and update global testId/testName
+
+    log('test ' + testId + ': ' + item.name + ' ', false);
+    testName = item.name;
 
     try {
 
         if ((asyncObject = item.test(asyncCallback)) instanceof Async) {
 
-            // async test, exit here and wait for callback
+            // async test, exit here and wait for callback (or timeout failover)
 
             if (asyncObject.done !== true) {
+
+                var exception = new TestException('Timeout after ' + item.timeout + 'ms');
+                asyncTimer = setTimeout(asyncCallback.bind(this, exception), item.timeout);
                 inAsync = true;
+
                 return true;
             }
         }
@@ -141,48 +260,14 @@ var runTest = func(item) {
         success = false;
         exceptions.push(e);
         fails++;
-        print('FAIL');
+        print('(FAIL)');
     }
 
     if (success) {
+
         oks++;
-        print('ok');
+        print('(ok)');
     }
 
     return false;
 };
-
-export log = func(message, nl = true) {
-
-    var now         = Date.now();
-    var diffStart   = now - start;
-    var diffLast    = now - last;
-
-    last = now;
-
-    process.stdout.write(('+' + diffLast + '/' + diffStart) + 'ms: ' + message + (nl ? '\n' : ''));
-};
-
-export print = func(message, nl = true) {
-
-    process.stdout.write(message + (nl ? '\n' : ''));
-};
-
-export fail = func(message) {
-
-    throw new Error(message);
-};
-
-export reset = func() {
-
-    testId      = 1;
-    start       = Date.now();
-    last        = start;
-    oks         = 0;
-    fails       = 0;
-    exceptions  = [ ];
-};
-
-// start timer
-
-reset();

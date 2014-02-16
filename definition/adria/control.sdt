@@ -62,7 +62,7 @@ while_statement {
  */
 
 for_count_init {
-    entry -> var_def:init -> return
+    entry -> var_statement:init -> return
     entry -> expression:init -> return
 }
 

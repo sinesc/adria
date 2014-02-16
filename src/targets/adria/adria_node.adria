@@ -1,0 +1,141 @@
+
+var ASTException = require('../../language_parser/ast_exception');
+var LanguageParser = require('../../language_parser');
+var CaptureNode = LanguageParser.CaptureNode;
+
+module AdriaNode = proto (CaptureNode) {
+
+    /**
+     * constructor-type to findScope will search for
+     */
+    Scope: null,
+
+    /**
+     * find this node's scope
+     *
+     * @param boolean fromParent default false, if true start looking at parent instead of this
+     * @return scope node/null
+     */
+    findScope: func(fromParent = false) {
+        return this.findProto(AdriaNode::Scope, fromParent, null);
+    },
+
+    /**
+     * returns true if the name is defined in current scope or above
+     *
+     * @param string name
+     */
+    checkDefined: func(name) {
+
+        var parser = this.parser();
+
+        if (parser.transform.implicits.has(name) || parser.transform.globals.has(name)) {
+            return;
+        }
+
+        if (this.findScope().findRef(name) !== null) {
+            return;
+        }
+
+        throw new ASTException('Undefined reference "' + name + '"', this);
+    },
+
+    /**
+     * adds dynamic parent lookup code to given source-node
+     *
+     * @param result SourceNode
+     * @param lookupName name of function to look up
+     * @param ownName name of function containing the lookup
+     */
+    addParentLookup: func(result, lookupName, ownName = lookupName) {
+
+        // check if in a prototype, don't skip it if we are
+
+        result.add('var ___p, ___p0 = ___p = (this === this.constructor.prototype ? this : Object.getPrototypeOf(this));' + this.nl());
+
+        // find self in proto-chain
+
+        result.add('while (___p !== null && (___p.' + lookupName + ' !== ' + ownName + ' || ___p.hasOwnProperty(\'' + lookupName + '\') === false)) {' + this.nl(1));
+        result.add('___p = Object.getPrototypeOf(___p);' + this.nl(-1));
+        result.add('}' + this.nl());
+
+        // get parent prototype
+
+        result.add('___p = (___p !== null ? Object.getPrototypeOf(___p).constructor : ___p0);' + this.nl());
+    },
+
+    /**
+     * find name on left side of assignment or proto body item
+     *
+     * @return SourceNode for name or null
+     */
+    findName: func() {
+
+        var result = null;
+        var nameNode = this.get('name');
+
+        if (nameNode.isNode() === false) {
+
+            nameNode = this.ancestor(null, ['module_statement', 'export_statement', 'expression', 'dec_def', 'proto_body_item']);
+
+            if (nameNode.isNode()) {
+
+                // fetch from declaration, protoliteral item's left side or expression
+
+                if (nameNode.value === 'dec_def' || nameNode.value === 'module_statement' || nameNode.value === 'export_statement') {
+
+                    result = nameNode.get('name').toSourceNode();
+
+                } else if (nameNode.value === 'proto_body_item') {
+
+                    result = nameNode.get('key').toSourceNode();
+
+                } else if (nameNode.value === 'expression') {
+
+                    result = nameNode.findAssignee();
+                }
+            }
+
+        } else {
+            result = nameNode.toSourceNode();
+        }
+
+        return result;
+    },
+
+    /**
+     * fetches the rightmost name on the left side of an assignment
+     * i.e. name of (a || b).node.name
+     *
+     * @return SourceNode for name or null
+     */
+    findAssignee: func() {
+
+        var children = this.children;
+        var found = -1;
+        var result = null;
+
+        for (var id = 0; id < children.length; id++) {
+            if (children[id].key === 'assignment_op') {
+                found = id - 1;
+                break;
+            }
+        }
+
+        if (found !== -1) {
+
+            var child = children[found];
+
+            if (child.value === 'access_operation_member' || child.value === 'access_operation_proto') {
+                result = child.csn(child.get('item').value);
+            }
+
+            if (child.key === 'ident') {
+                result = child.csn(child.toSourceNode());
+            }
+        }
+
+        return result;
+    },
+
+};

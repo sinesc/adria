@@ -1,0 +1,34 @@
+
+var AdriaNode = require('./adria_node');
+
+module SwitchStatement = proto (AdriaNode) {
+
+    toSourceNode: func() {
+
+        var result = this.csn();
+        result.add([ 'switch (', this.get('value').toSourceNode(), ') {', this.nl(1) ]);
+
+        // cases
+
+        this.eachKey('case', func(caseNode) {
+
+            result.add(['case ', caseNode.get('match').toSourceNode(), ':' + this.nl(1) ]);
+            result.add(caseNode.get('body').toSourceNode());
+            result.add(this.nl(-1));
+        });
+
+        // default case
+
+        var defaultNode = this.get('default');
+
+        if (defaultNode.isNode()) {
+            result.add('default:' + this.nl(1));
+            result.add(defaultNode.get('body').toSourceNode());
+            result.add(this.nl(-1));
+        }
+
+        result.add(this.nl(-1) + '}');
+
+        return result;
+    },
+};

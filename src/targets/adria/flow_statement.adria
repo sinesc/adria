@@ -1,0 +1,13 @@
+
+var AdriaNode = require('./adria_node');
+
+/**
+ * handles break and continue
+ */
+module FlowStatement = proto (AdriaNode) {
+
+    toSourceNode: func() {
+
+        return this.csn([ this.get('type').value, ' ', this.get('value').toSourceNode(), ';' + this.nl() ]);
+    },
+};

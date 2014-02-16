@@ -1,0 +1,37 @@
+
+var AdriaNode = require('./adria_node');
+
+/**
+ * handles an async-wrap-operation. note: wrapping happens in Expression, this
+ * is just the operation where "(..., #)" is the operator.
+ */
+module AsyncWrapOperation = proto (AdriaNode) {
+
+    params: null,
+
+    toSourceNode: func() {
+
+        var id = 0;
+        var result = this.csn();
+        this.params = [];
+        result.add('(');
+
+        this.each(func(node, first) {
+
+            if (first === false) {
+                result.add(', ');
+            }
+
+            if (node.value === '#') {
+                result.add('___callback');
+            } else {
+                result.add('___' + id++);
+                this.params.push(node.toSourceNode().toString());
+            }
+        });
+
+        result.add(')');
+
+        return result;
+    },
+};

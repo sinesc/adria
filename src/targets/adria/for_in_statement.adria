@@ -1,0 +1,40 @@
+
+var Scope = require('./scope');
+
+module ForInStatement = proto (Scope) {
+
+    toSourceNode: func() {
+
+        var keyNode = this.get('key');
+        var valueNode = this.get('value');
+
+        if (this.get('var').isNode()) {
+
+            //var scope = this.findScope();
+            this.addLocal(keyNode.value);
+
+            if (valueNode.isNode()) {
+                this.addLocal(valueNode.value);
+            }
+        }
+
+        var source = this.get('source').toSourceNode();
+        var key = keyNode.toSourceNode();
+
+        this.nl(1);
+        var body = this.get('body').toSourceNode();
+        this.nl(-1);
+
+        var result = this.csn();
+        result.add(this.refsToSourceNode());
+        result.add(['for (', key, ' in ', source, ') {' + this.nl(1) ]);
+
+        if (valueNode.isNode()) {
+            result.add([ valueNode.toSourceNode(), ' = ', source, '[', key, '];', this.nl() ]);
+        }
+
+        result.add([ body, this.nl(-1), '}' ]);
+
+        return result;
+    },
+};
