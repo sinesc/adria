@@ -260,7 +260,7 @@ var runTest = func(item) {
         success = false;
         exceptions.push(e);
         fails++;
-        print('(FAIL)');
+        print('(FAILED)');
     }
 
     if (success) {
