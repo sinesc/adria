@@ -65,7 +65,7 @@ module Transform = proto {
         }
 
         if (this.options['debug']) {
-            util.log.enable();
+            log.enable();
         }
     },
 

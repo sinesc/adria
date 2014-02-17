@@ -1,15 +1,15 @@
 {
   "name": "adria",
-  "version": "0.1.6",
+  "version": "0.1.7",
   "description": "Adria to Javascript compiler",
   "files": [
     "bin/adria.js",
-    "build/",
     "definition/",
     "doc/",
     "src/",
     "templates/",
-    "tests",
+    "tests/",
+    "build",
     "LICENSE",
     "README.md"
   ],

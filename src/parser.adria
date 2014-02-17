@@ -167,9 +167,9 @@ module Parser = proto {
 
         // create tokens from input string
 
-        util.log('Parser', 'tokenizing', 2);
+        log('Parser', 'tokenizing', 2);
         var tokens = this.tokenizer.process(source, this.file);
-        util.log('Parser', 'done', -2);
+        log('Parser', 'done', -2);
 
         if (tokens.length === 0) {
             throw new Error(path.normalize(this.file) + ': File is empty.');
@@ -196,7 +196,7 @@ module Parser = proto {
 
         // process tokens
 
-        util.log('Parser', 'processing ' + len + ' tokens according to currrent language definition');
+        log('Parser', 'processing ' + len + ' tokens according to currrent language definition');
 
         do {
 

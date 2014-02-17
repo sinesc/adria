@@ -25,82 +25,6 @@ var sysutil = require('util');
 var crypto = require('crypto');
 
 /**
- * timed debug log
- */
-proto DebugLog {
-
-    constructor: func() {
-
-        this.start  = Date.now();
-        this.last   = this.start;
-        console.log('=============================: Log started');
-    },
-
-    print: func(source, message, indent) {
-
-        var now         = Date.now();
-        var diffStart   = now - this.start;
-        var diffLast    = now - this.last;
-
-        this.last = now;
-
-        console.log(('+' + diffLast + '/' + diffStart).padLeft(10) + 'ms: ' + source.padLeft(15) + ': ' + ' '.repeat(indent) + message);
-    },
-}
-
-var debugLog = null;
-var indent = 0;
-var enabled = false;
-
-export log = func(source, message, offset) {
-
-    if (enabled !== true) {
-        return;
-    }
-
-    if (debugLog === null) {
-        debugLog = new DebugLog(source === true);
-    }
-
-    if (offset < 0) {
-        indent += offset;
-    }
-
-    if (message !== undefined) {
-        debugLog.print(source, message, indent);
-    }
-
-    if (offset > 0) {
-        indent += offset;
-    }
-};
-
-log.enable = func() {
-    enabled = true;
-};
-
-log.disable = func() {
-    enabled = false;
-};
-
-
-/**
- * output an object with given recursion depth
- *
- * @param obj the object to output
- * @param depth recursion depth
- * @param showHidden also show hidden properties
- */
-export dump = func(obj, depth, showHidden) {
-
-    depth = (depth === undefined ? 2 : depth);
-    showHidden = (showHidden === undefined ? false : showHidden);
-
-    console.log(sysutil.inspect(obj, showHidden, depth));
-};
-
-
-/**
  * enum type
  */
 var Enumeration = func(options) {
@@ -122,6 +46,22 @@ var Enumeration = func(options) {
 
 export Enum = func(options) {
     return new Enumeration(options);
+};
+
+
+/**
+ * output an object with given recursion depth
+ *
+ * @param obj the object to output
+ * @param depth recursion depth
+ * @param showHidden also show hidden properties
+ */
+export dump = func(obj, depth, showHidden) {
+
+    depth = (depth === undefined ? 2 : depth);
+    showHidden = (showHidden === undefined ? false : showHidden);
+
+    console.log(sysutil.inspect(obj, showHidden, depth));
 };
 
 /**
@@ -151,7 +91,7 @@ export normalizeExtension = func(fullname, defaultExtension) {
 /**
  * returns hexadecimal md5 hash for given input
  *
- * @param inpunt string
+ * @param string input
  * @return string
  */
 export md5 = func(input) {

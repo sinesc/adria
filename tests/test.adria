@@ -21,7 +21,6 @@
  * IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-
 var Async = require('async');
 
 // ensure the test was compiled with assertions enabled
@@ -130,10 +129,11 @@ export log = func(message, nl = true) {
     var now         = Date.now();
     var diffStart   = now - start;
     var diffLast    = now - last;
+    var timing      = '          ' + ('+' + diffLast + '/' + diffStart);
 
     last = now;
 
-    process.stdout.write(('+' + diffLast + '/' + diffStart) + 'ms: ' + message + (nl ? '\n' : ''));
+    process.stdout.write(timing.slice(-10) + 'ms: ' + message + (nl ? '\n' : ''));
 };
 
 /**

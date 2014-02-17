@@ -25,10 +25,11 @@ require('astd/prototype/string').extend();
 require('astd/prototype/regexp').extend();
 require('astd/prototype/object').extend();
 
-var util = require('./util');
-var args = require('./args');
+global log = require('./log'); 
 
 // process base command line
+
+var args = require('./args');
 
 args.add(
     [ '-m', '--mode' ],

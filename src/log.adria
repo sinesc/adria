@@ -1,0 +1,100 @@
+/*
+ * Adria transcompiler
+ *
+ * Copyright (C) 2014 Dennis Möhlmann <mail@dennismoehlmann.de>
+ * Licensed under the MIT license.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of
+ * this software and associated documentation files (the "Software"), to deal in
+ * the Software without restriction, including without limitation the rights to
+ * use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of
+ * the Software, and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+ * FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+ * COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
+ * IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+ * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ *
+ * @module log
+ * @description timed debug-log singleton
+ */
+var instance = null;
+var enabled = false;
+
+/**
+ * log message to console if logging is enabled
+ *
+ * @param string source
+ * @param string message
+ * @param int indent offset
+ */
+module log = func(source, message, offset = 0) {
+
+    if (enabled !== true) {
+        return;
+    }
+
+    if (instance === null) {
+        instance = new Log();
+    }
+
+    instance.print(source, message, offset);
+};
+
+/**
+ * enables logging
+ */
+export enable = func() {
+    enabled = true;
+};
+
+/**
+ * disables logging
+ */
+export disable = func() {
+    enabled = false;
+};
+
+/**
+ * log instance constructor
+ */
+export Log = proto {
+
+    indent  : 0,
+    start   : 0,
+    last    : 0,
+
+    constructor: func() {
+
+        this.start  = Date.now();
+        this.last   = this.start;
+        console.log('=============================: Log started');
+    },
+
+    print: func(source, message, offset = 0) {
+
+        var now         = Date.now();
+        var diffStart   = now - this.start;
+        var diffLast    = now - this.last;
+
+        this.last = now;
+
+        if (offset < 0) {
+            this.indent += offset;
+        }
+
+        if (message !== undefined) {
+            console.log(('+' + diffLast + '/' + diffStart).padLeft(10, ' ') + 'ms: ' + source.padLeft(15) + ': ' + ' '.repeat(this.indent) + message);
+        }
+
+        if (offset > 0) {
+            this.indent += offset;
+        }
+    },
+};

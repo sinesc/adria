@@ -1,0 +1,26 @@
+#!/bin/bash
+set -e
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+ASTD_PATH="../../astdlib/"
+BASE_PARAMS="--no-application --no-cache --no-blanks -t node --no-map --path $ASTD_PATH -D version=0.1.7"
+BUILD_PARAMS="$@ $BASE_PARAMS --base src/ --shellwrap --header ../LICENSE --out ../bin/ngadria.js main.adria"
+TEST_PARAMS="$@ $BASE_PARAMS --base tests/ --assert --out test.js test_all.adria";
+
+echo "changing working directory to $DIR"
+cd $DIR
+chmod +x ./bin/adria.js
+
+echo "adria compiling ngadria..."
+./bin/adria.js $BUILD_PARAMS
+
+echo "ngadria compiling ngadria..."
+./bin/ngadria.js $BUILD_PARAMS
+md5sum ./bin/ngadria.js
+
+echo "ok. again..."
+./bin/ngadria.js $BUILD_PARAMS
+md5sum ./bin/ngadria.js
+
+echo "unit testing...";
+./bin/ngadria.js $TEST_PARAMS
+node --harmony ./tests/test.js

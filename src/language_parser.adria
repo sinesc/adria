@@ -132,7 +132,7 @@ module LanguageParser = proto(Parser) {
      */
     setDefinition: func(data, filename) {
 
-        util.log('LanguageParser', 'setting definition file ' + filename);
+        log('LanguageParser', 'setting definition file ' + filename);
 
         // feed file contents to secondary parser
 
@@ -140,10 +140,10 @@ module LanguageParser = proto(Parser) {
             this.trainer = new DefinitionParser();
         }
 
-        util.log('LanguageParser', 'processing definition', 2);
+        log('LanguageParser', 'processing definition', 2);
         this.trainer.file = filename;
         this.trainer.parse(data);
-        util.log('LanguageParser', 'done', -2);
+        log('LanguageParser', 'done', -2);
     },
 
     /**
@@ -153,7 +153,7 @@ module LanguageParser = proto(Parser) {
      */
     loadDefinition: func(filename) {
 
-        util.log('LanguageParser', 'loading definition file ' + filename);
+        log('LanguageParser', 'loading definition file ' + filename);
 
         var fileContents = fs.readFileSync(filename, 'UTF-8');
 
@@ -288,9 +288,9 @@ module LanguageParser = proto(Parser) {
 
         // parse file contents
 
-        util.log('LanguageParser', 'processing source ' + filename, 2);
+        log('LanguageParser', 'processing source ' + filename, 2);
         var captures = this.parse(this.sourceCode);
-        util.log('LanguageParser', 'done', -2);
+        log('LanguageParser', 'done', -2);
 
         this.captureTree = CaptureNode::fromResults(captures, this.mapType.bind(this));
         this.captureTree.parent = this;

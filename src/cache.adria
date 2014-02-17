@@ -96,7 +96,7 @@ module Cache = proto {
 
                 for (var id, variant in variants) {
                     if (variant === 'base') {
-                        util.log('Cache', 'reading from ' + cacheFile, 0);
+                        log('Cache', 'reading from ' + cacheFile, 0);
                         resultData['base'] = JSON.parse(fs.readFileSync(cacheFile, 'UTF-8'));
                     } else {
                         resultData[variant] = JSON.parse(fs.readFileSync(cacheFile + '.' + variant, 'UTF-8'));
@@ -107,12 +107,12 @@ module Cache = proto {
 
             } else {
 
-                util.log('Cache', 'cache dirty for ' + file, 0);
+                log('Cache', 'cache dirty for ' + file, 0);
             }
 
         } else {
 
-            util.log('Cache', 'cache miss for ' + file, 0);
+            log('Cache', 'cache miss for ' + file, 0);
         }
 
         return null;
@@ -137,7 +137,7 @@ module Cache = proto {
         for (var ext, variant in variants) {
 
             if (ext === 'base') {
-                util.log('Cache', 'writing to ' + cacheFile, 0);
+                log('Cache', 'writing to ' + cacheFile, 0);
                 fs.writeFileSync(cacheFile, JSON.stringify(variant));
                 fs.utimesSync(cacheFile, inputStat.atime, inputStat.mtime);
             } else {

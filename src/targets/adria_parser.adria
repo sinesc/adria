@@ -116,7 +116,7 @@ module AdriaParser = proto(LanguageParser) {
             Tokenizer.prefab.regex('STRING', /^(["'])(?:(?=(\\?))\2[\s\S])*?\1/),
         ], [ 'KEYWORD' ]);
 
-        util.log('AdriaParser', 'trainer processing adria .sdt-files', 2);
+        log('AdriaParser', 'trainer processing adria .sdt-files', 2);
         this.setDefinition(resource('../../definition/adria/control.sdt'), 'control');
         this.setDefinition(resource('../../definition/adria/expression.sdt'), 'expression');
         this.setDefinition(resource('../../definition/adria/literal.sdt'), 'literal');
@@ -124,9 +124,9 @@ module AdriaParser = proto(LanguageParser) {
         this.setDefinition(resource('../../definition/adria/root.sdt'), 'root');
         this.setDefinition(resource('../../definition/adria/statement.sdt'), 'statement');
 
-        util.log('AdriaParser', 'being trained', -2);
+        log('AdriaParser', 'being trained', -2);
         LanguageParser->trainSelf();
-        util.log('AdriaParser', 'done');
+        log('AdriaParser', 'done');
     },
 
     /**
