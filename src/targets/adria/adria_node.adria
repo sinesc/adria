@@ -1,6 +1,6 @@
 
-var ASTException = require('../../language_parser/ast_exception');
 var LanguageParser = require('../../language_parser');
+var ASTException = LanguageParser.ASTException;
 var CaptureNode = LanguageParser.CaptureNode;
 
 module AdriaNode = proto (CaptureNode) {
@@ -136,6 +136,15 @@ module AdriaNode = proto (CaptureNode) {
         }
 
         return result;
+    },
+
+    /**
+     * toString implementation
+     *
+     * @return node string representation
+     */
+    toString: func() {
+        return this.toSourceNode().toString();
     },
 
 };

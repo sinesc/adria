@@ -27,7 +27,7 @@ var util = require('./util');
 
 module Cache = proto {
 
-    version: 1, //!todo possibly get this from package.json
+    version: "{{version}}",
     baseDir: util.home() + '/.adria/cache/',
 
     constructor: func() {
@@ -67,22 +67,23 @@ module Cache = proto {
      *
      * @param file
      */
-    cacheName: func(file) {
+    cacheName: func(file, modifier = null) {
 
         var absPath = path.resolve(process.cwd(), file);
-        return this.baseDir + util.md5(absPath) + '.' + this.version;
+        return this.baseDir + util.md5(absPath + ' -- ' + modifier + ' -- ' + this.version);
     },
 
     /**
      * fetches data for given file from cache
      *
-     * @param file
-     * @param variants array of variants to fetch as well
-     * @result object of cache result variants
+     * @param string file
+     * @param array variants variants to fetch as well
+     * @param string modifier optional cache modifier to identify different versions of the same file (i.e. different compilation flags)
+     * @result Object cache result variants
      */
-    fetch: func(file, variants) {
+    fetch: func(file, variants, modifier = null) {
 
-        var cacheFile = this.cacheName(file);
+        var cacheFile = this.cacheName(file, modifier);
 
         if (fs.existsSync(cacheFile) && fs.existsSync(file)) {
 
@@ -106,8 +107,12 @@ module Cache = proto {
 
             } else {
 
-                util.log('Cache', 'cache miss for ' + file, 0);
+                util.log('Cache', 'cache dirty for ' + file, 0);
             }
+
+        } else {
+
+            util.log('Cache', 'cache miss for ' + file, 0);
         }
 
         return null;
@@ -116,15 +121,16 @@ module Cache = proto {
     /**
      * writes data for given file to cache
      *
-     * @param file
-     * @param variants object of cached variants
+     * @param string file
+     * @param array variants object of cached variants
+     * @param string modifier optional cache modifier to identify different versions of the same file (i.e. different compilation flags)
      */
-    insert: func(file, variants) {
+    insert: func(file, variants, modifier = null) {
 
         assert(fs.existsSync(file));
 
         var inputStat = fs.statSync(file);
-        var cacheFile = this.cacheName(file);
+        var cacheFile = this.cacheName(file, modifier);
 
         // write output text and set filedate to input file
 

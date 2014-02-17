@@ -54,7 +54,7 @@ module Path = proto {
 
 };
 
-var PathElement = proto {
+var PathElement = proto (null) {
 
     name        : '',
     capture     : '',

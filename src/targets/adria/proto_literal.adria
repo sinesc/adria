@@ -29,6 +29,7 @@ module ProtoLiteral = proto (AdriaNode) {
 
         var parentNode = this.get('parent');
         var haveParent = parentNode.isNode();
+        var blankParent = (haveParent ? parentNode.toString() === 'null' : false);
 
         // generate output
 
@@ -42,7 +43,7 @@ module ProtoLiteral = proto (AdriaNode) {
             assignTo = this.name + ' = ';
         }
 
-        var result = this.csn(assignTo + '(function(' + (haveParent ? '___parent' : '') + ') {' + this.nl(1));
+        var result = this.csn(assignTo + '(function(' + (haveParent && blankParent === false ? '___parent' : '') + ') {' + this.nl(1));
         var body = this.get('body').toSourceNode();
 
         // user- or default-constructor
@@ -73,7 +74,7 @@ module ProtoLiteral = proto (AdriaNode) {
 
             result.add('var ___self = function ' + this.name + '() {');
 
-            if (haveParent) {
+            if (haveParent && blankParent === false) {
                 result.add(this.nl(1) + '___parent.apply(this, arguments);' + this.nl(-1));
             }
 
@@ -83,7 +84,7 @@ module ProtoLiteral = proto (AdriaNode) {
         // chain to parent
 
         if (haveParent) {
-            result.add('___self.prototype = Object.create(___parent.prototype);' + this.nl());
+            result.add('___self.prototype = Object.create(' + (blankParent ? 'null' : '___parent.prototype') + ');' + this.nl());
             result.add('___self.prototype.constructor = ___self;' + this.nl());
         }
 
@@ -101,7 +102,11 @@ module ProtoLiteral = proto (AdriaNode) {
 
         result.add(this.nl() + 'return ___self;' + this.nl(-1));
         result.add('})(');
-        result.add(parentNode.toSourceNode());
+
+        if (haveParent && blankParent === false) {
+            result.add(parentNode.toSourceNode());
+        }
+
         result.add(')');
 
         if (this.value === 'proto_statement') {

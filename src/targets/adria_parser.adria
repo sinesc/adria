@@ -65,6 +65,17 @@ module AdriaParser = proto(LanguageParser) {
         return parser;
     },
 
+    preprocessRaw: func(data) {
+
+        data = parent->preprocessRaw(data);
+
+        var defines = this.transform.options.defines;
+
+        return data.replace(/\{\{([a-zA-Z][a-zA-Z_0-9]*)\}\}/g, func(matches, key) {
+            return (defines[key] === undefined ? '' : defines[key]);
+        });
+    },
+
     /**
      * initialize a tokenizer, load definition files into a trainer and call parent's trainself, which
      * will use the trainer to genererate the definition for this parser
@@ -142,7 +153,7 @@ module AdriaParser = proto(LanguageParser) {
      */
     createNode: func(name, capture, label, condition) {
 
-        var node = LanguageParser.prototype.createNode.call(this, name, capture, label, condition);
+        var node = LanguageParser->createNode(name, capture, label, condition);
 
         if (name === 'ident') {
 
@@ -175,9 +186,9 @@ module AdriaParser = proto(LanguageParser) {
      *
      * @see LanguageParser::loadSourceFromCache
      */
-    loadSourceFromCache: func(filename) {
+    loadSourceFromCache: func(filename, cacheModifier = null) {
 
-        LanguageParser.prototype.loadSourceFromCache.call(this, filename);
+        LanguageParser->loadSourceFromCache(filename, cacheModifier);
 
         if (this.cacheData !== null && this.transform.options['map']) {
             this.sourceCode = fs.readFileSync(filename, 'UTF-8').replace('\r\n', '\n');

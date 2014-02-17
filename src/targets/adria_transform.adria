@@ -42,15 +42,16 @@ module AdriaTransform = proto (Transform) {
     /**
      * populated by globals node, names of application-wide globals
      */
-    globals     : null,
-    implicits   : null,
-    requires    : null,
-    modules     : null,
-    resources   : null,
-    usedBuiltins: null,
-    requiresDone: null,
-    sourceCode  : null,
-    protoParser : null,
+    cacheModifier   : null,
+    globals         : null,
+    implicits       : null,
+    requires        : null,
+    modules         : null,
+    resources       : null,
+    usedBuiltins    : null,
+    requiresDone    : null,
+    sourceCode      : null,
+    protoParser     : null,
 
     builtins: {
         'async.adria': resource('../../templates/adria/async.tpl'),
@@ -96,7 +97,7 @@ module AdriaTransform = proto (Transform) {
         args.add(
             [ '--extension' ],
             { help: 'Adria file extension (adria)', defaultValue: 'adria', metavar: '<ext>', required: false },
-            function(value) { return '.' + value; }
+            func(value) { return '.' + value; }
         );
 
         args.add(
@@ -105,8 +106,21 @@ module AdriaTransform = proto (Transform) {
         );
 
         args.add(
+            [ '-D', '--define' ],
+            { help: 'Define preprocessor value, i.e. version="1.2"', metavar: '<key>=<value>', action: 'append', dest: 'defines' },
+            func(data) {
+                var result = { };
+                for (var id, value in data) {
+                    var pair = value.split('=');
+                    result[pair[0]] = (pair[1] === undefined ? true : pair[1]);
+                }
+                return result;
+            }
+        );
+
+        args.add(
             [ 'files' ],
-            { help: 'File(s) to compile', action: 'append' }
+            { help: 'File(s) to compile', nargs: '+' }
         );
 
         args.addSwitch('application', 'Generate application global', true);
@@ -117,6 +131,12 @@ module AdriaTransform = proto (Transform) {
         args.addSwitch('closure', 'Contain code in closure', true);
         args.addSwitch('assert', 'Add assert() support', false);
         args.addSwitch('scan', 'Perform basic logic checks', true);
+    },
+
+    processOptions: func() {
+
+        parent->processOptions();
+        this.cacheModifier = util.md5(JSON.stringify(this.options));
     },
 
     /**
@@ -164,9 +184,9 @@ module AdriaTransform = proto (Transform) {
         parser.moduleName = moduleName;
 
         if (data === undefined) {
-            parser.loadSource(this.options['basePath'] + moduleName);
+            parser.loadSource(this.options['basePath'] + moduleName, this.cacheModifier);
         } else {
-            parser.setSource(moduleName, data);
+            parser.setSource(moduleName, data, this.cacheModifier);
         }
 
         // generate result
@@ -194,7 +214,7 @@ module AdriaTransform = proto (Transform) {
 
         // push module after all dependencies have been resolved
 
-        this.modules.push({ filename: parser.file, sourceCode: parser.sourceCode, result: result, parser: parser }); //!todo filename/sourceCode can now be taken from parser
+        this.modules.push({ result: result, parser: parser });
     },
 
     /**
@@ -253,8 +273,8 @@ module AdriaTransform = proto (Transform) {
         // merge modules
 
         for (var id, currentModule in this.modules) {
-            tmpNode = node.add(new SourceNode(null, null, currentModule.filename, currentModule.result));
-            tmpNode.setSourceContent(currentModule.filename, currentModule.sourceCode);
+            tmpNode = node.add(new SourceNode(null, null, currentModule.parser.file, currentModule.result));
+            tmpNode.setSourceContent(currentModule.parser.file, currentModule.parser.sourceCode);
         }
 
         // start builtins

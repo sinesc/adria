@@ -25,7 +25,9 @@ var fs = require('fs');
 var util = require('./util');
 var Parser = require('./parser');
 var DefinitionParser = require('./definition_parser');
-var CaptureNode = require('./language_parser/capture_node');
+
+export CaptureNode = require('./language_parser/capture_node');
+export ASTException = require('./language_parser/ast_exception');
 
 /**
  * Parser subclass with the capability to use a secondary DefinitionParser to train itself from .sdt-files. Defines
@@ -59,6 +61,11 @@ module LanguageParser = proto(Parser) {
      * @var Object cache file metadata
      */
     cacheData: null,
+
+    /**
+     * @var string uniquely identifies different versions of same file (i.e. different compilation options)
+     */
+    cacheModifier: null,
 
     /**
      * @var Object the parent transform object
@@ -97,6 +104,7 @@ module LanguageParser = proto(Parser) {
         parser.captureTree = this.captureTree;
         parser.resultData = this.resultData;
         parser.cacheData = this.cacheData;
+        parser.cacheModifier = this.cacheModifier;
         parser.transform = this.transform;
         parser.outputMethod = this.outputMethod;
         parser.includeTrace = this.includeTrace;
@@ -267,14 +275,16 @@ module LanguageParser = proto(Parser) {
      *
      * @param string filename name (for display)
      * @param string data contents
+     * @param string optional cache modifier to identify different versions of the same file (i.e. different compilation flags)
      */
-    setSource: func(filename, data) {
+    setSource: func(filename, data, cacheModifier = null) {
 
         // load source file
 
+        this.cacheModifier = cacheModifier;
         this.captureTree = null;
         this.file = filename;
-        this.sourceCode = data.replace('\r\n', '\n');
+        this.sourceCode = this.preprocessRaw(data);
 
         // parse file contents
 
@@ -287,13 +297,26 @@ module LanguageParser = proto(Parser) {
     },
 
     /**
+     * called by setSource() with raw source code
+     *
+     * @param string data unprocessed source code
+     * @return string
+     */
+    preprocessRaw: func(data) {
+
+        return data.replace('\r\n', '\n');
+    },
+
+    /**
      * try to load sourcefile from cache
      *
      * @param filename
+     * @param string optional cache modifier to identify different versions of the same file (i.e. different compilation flags)
      */
-    loadSourceFromCache: func(filename) {
+    loadSourceFromCache: func(filename, cacheModifier = null) {
 
-        this.cacheData = this.transform.cache.fetch(filename, [ 'base'/*, 'resultData'*/ ]);
+        this.cacheModifier = cacheModifier;
+        this.cacheData = this.transform.cache.fetch(filename, [ 'base'/*, 'resultData'*/ ], cacheModifier);
 
         if (this.cacheData !== null) {
             this.file = filename;
@@ -306,19 +329,20 @@ module LanguageParser = proto(Parser) {
      * load source file and process it to a CaptureNode tree
      *
      * @param string filename name
+     * @param string optional cache modifier to identify different versions of the same file (i.e. different compilation flags)
      */
-    loadSource: func(filename) {
+    loadSource: func(filename, cacheModifier = null) {
 
         // try to load from cache
 
         if (this.transform.options['cache'] && this.cacheData === null) {
-            this.loadSourceFromCache(filename);
+            this.loadSourceFromCache(filename, cacheModifier);
         }
 
         // check if now available from cache, if not, parse
 
         if (this.cacheData === null) {
-            this.setSource(filename, fs.readFileSync(filename, 'UTF-8'));
+            this.setSource(filename, fs.readFileSync(filename, 'UTF-8'), cacheModifier);
         }
     },
 
@@ -362,15 +386,16 @@ module LanguageParser = proto(Parser) {
 
         if (this.transform.options['cache'] && this.cacheData === null && fs.existsSync(this.file)) {
 
-            this.transform.cache.insert(this.file, {
-                base        : this.captureTree.toJSON(),
-                //resultData  : this.serializeData(this.resultData)
-            });
+            this.transform.cache.insert(
+                this.file,
+                {
+                    base        : this.captureTree.toJSON(),
+                    //resultData  : this.serializeData(this.resultData)
+                },
+                this.cacheModifier
+            );
         }
 
         return result;
     },
 };
-
-CaptureNode.LanguageParser = LanguageParser; //!ugly, find better way to avoid circular require
-LanguageParser.CaptureNode = CaptureNode;

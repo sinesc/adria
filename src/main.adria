@@ -27,8 +27,6 @@ require('astd/prototype/object').extend();
 
 var util = require('./util');
 var args = require('./args');
-var AdriaTransform = require('./targets/adria_transform');
-var AdriaDebugTransform = require('./targets/adriadebug_transform');
 
 // process base command line
 
@@ -47,7 +45,7 @@ args.add(
     { help: 'Enable debug mode (false)', action: 'storeTrue' }
 );
 
-var options = args.partial();
+var options = args.parseKnown();
 
 // transformation performer
 
@@ -56,10 +54,17 @@ var handle = func(pipeData) {
     var transform;
 
     if (options['mode'] === 'adria') {
+    
+        var AdriaTransform = require('./targets/adria_transform');
         transform = new AdriaTransform(pipeData);
+        
     } else if (options['mode'] === 'adriadebug') {
+    
+        var AdriaDebugTransform = require('./targets/adriadebug_transform');
         transform = new AdriaDebugTransform(pipeData);
+        
     } else {
+    
         throw new Error('Unsupported mode "' + options['mode']+ '".');
     }
 

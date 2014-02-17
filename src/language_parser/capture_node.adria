@@ -286,7 +286,7 @@ module CaptureNode = proto {
             return dummy;
         }
     },
-    
+
     /**
      * finds given constructor in ancestors
      *
@@ -314,8 +314,9 @@ module CaptureNode = proto {
     parser: func() {
 
         var current = this;
+        var LanguageParser = require('../language_parser');
 
-        while (current.parent !== null && (current.parent instanceof CaptureNode.LanguageParser === false)) {
+        while (current.parent !== null && (current.parent instanceof LanguageParser === false)) {
             current = current.parent;
         }
 

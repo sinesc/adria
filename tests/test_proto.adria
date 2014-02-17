@@ -1,7 +1,7 @@
 /*
  * Adria transcompiler
  *
- * Copyright (C) 2014 Dennis MÃ¶hlmann <mail@dennismoehlmann.de>
+ * Copyright (C) 2014 Dennis Möhlmann <mail@dennismoehlmann.de>
  * Licensed under the MIT license.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -22,13 +22,33 @@
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 var test = require('./test');
-test.noSummary = true;
 
-require('./test_assert');
-require('./test_exception');
-require('./test_proto');
-require('./test_property');
-require('./test_scope');
-require('./test_async');
+test('null proto', func() {
 
-test.summary();
+    var P = null;
+
+    try {
+        P = proto (null) { };
+    } catch (e) {
+        test.fail(e.message);
+    }
+
+    var p = new P();
+
+    assert((p instanceof P) && (p instanceof Object === false));
+});
+
+test('object proto', func() {
+
+    var P = null;
+
+    try {
+        P = proto { };
+    } catch (e) {
+        test.fail(e.message);
+    }
+
+    var p = new P();
+
+    assert((p instanceof P) && (p instanceof Object));
+});

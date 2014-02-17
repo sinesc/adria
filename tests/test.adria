@@ -44,6 +44,8 @@ if (thrown.stack.split(':', 1)[0] !== 'AssertionFailedException') {
     process.exit(1);
 }
 
+console.log('Adria unit tests, version {{version}}');
+
 // set up module
 
 var testId      = 0;

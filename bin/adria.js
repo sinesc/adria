@@ -1534,7 +1534,7 @@ module('util.adria', function(module, resource) {
     module.exports.md5 = md5;
 });
 module('args.adria', function(module, resource) {
-    var argparse, parsed, callbacks, parser, add, addSwitch, partial, consume, applyCallbacks;
+    var argparse, parsed, callbacks, parser, add, addSwitch, parseKnown, parseAll, applyCallbacks;
     argparse = require('argparse');
     parsed = null;
     callbacks = {  };
@@ -1572,14 +1572,14 @@ module('args.adria', function(module, resource) {
         defaultValue[name] = defaultState;
         parser.setDefaults(defaultValue);
     };
-    partial = function partial() {
+    parseKnown = function parseKnown() {
         if (parsed === null) {
             parsed = parser.parseKnownArgs()[0];
             applyCallbacks();
         }
         return parsed;
     };
-    consume = function consume() {
+    parseAll = function parseAll() {
         parser.addArgument([ '-h', '--help' ], {
             action: 'help',
             defaultValue: argparse.Const.SUPPRESS,
@@ -1600,8 +1600,8 @@ module('args.adria', function(module, resource) {
     };
     module.exports.add = add;
     module.exports.addSwitch = addSwitch;
-    module.exports.partial = partial;
-    module.exports.consume = consume;
+    module.exports.parseKnown = parseKnown;
+    module.exports.parseAll = parseAll;
 });
 module('../../astdlib/astd/set.adria', function(module, resource) {
     var Set;
@@ -1871,7 +1871,7 @@ module('cache.adria', function(module, resource) {
             this.checkBaseDir();
         };
         var Cache = ___self;
-        ___self.prototype.version = 1;
+        ___self.prototype.version = "0.1.6";
         ___self.prototype.baseDir = util.home() + '/.adria/cache/';
         ___self.prototype.checkBaseDir = function checkBaseDir() {
             var parts, ___path_scp1;
@@ -1894,14 +1894,16 @@ module('cache.adria', function(module, resource) {
                 ___path_scp1 += '/';
             }
         };
-        ___self.prototype.cacheName = function cacheName(file) {
+        ___self.prototype.cacheName = function cacheName(file, modifier) {
+            modifier = (modifier !== undefined ? modifier : (null));
             var absPath;
             absPath = path.resolve(process.cwd(), file);
-            return this.baseDir + util.md5(absPath) + '.' + this.version;
+            return this.baseDir + util.md5(absPath + ' -- ' + modifier + ' -- ' + this.version);
         };
-        ___self.prototype.fetch = function fetch(file, variants) {
+        ___self.prototype.fetch = function fetch(file, variants, modifier) {
+            modifier = (modifier !== undefined ? modifier : (null));
             var cacheFile;
-            cacheFile = this.cacheName(file);
+            cacheFile = this.cacheName(file, modifier);
             if (fs.existsSync(cacheFile) && fs.existsSync(file)) {
                 var inputStat, cacheStat;
                 inputStat = fs.statSync(file);
@@ -1921,15 +1923,18 @@ module('cache.adria', function(module, resource) {
                     }
                     return resultData;
                 } else {
-                    util.log('Cache', 'cache miss for ' + file, 0);
+                    util.log('Cache', 'cache dirty for ' + file, 0);
                 }
+            } else {
+                util.log('Cache', 'cache miss for ' + file, 0);
             }
             return null;
         };
-        ___self.prototype.insert = function insert(file, variants) {
+        ___self.prototype.insert = function insert(file, variants, modifier) {
+            modifier = (modifier !== undefined ? modifier : (null));
             var inputStat, cacheFile;
             inputStat = fs.statSync(file);
-            cacheFile = this.cacheName(file);
+            cacheFile = this.cacheName(file, modifier);
             var ext, variant;
             for (ext in variants) {
                 variant = variants[ext];
@@ -1971,7 +1976,7 @@ module('transform.adria', function(module, resource) {
             args.addSwitch('cache', 'Cache generated code', true);
         };
         ___self.prototype.processOptions = function processOptions() {
-            this.options = args.consume();
+            this.options = args.parseAll();
         };
         ___self.prototype.run = function run() {
         };
@@ -2593,6 +2598,8 @@ module('definition_parser/path.adria', function(module, resource) {
             this.label = label;
             this.condition = condition;
         };
+        ___self.prototype = Object.create(null);
+        ___self.prototype.constructor = ___self;
         var PathElement = ___self;
         ___self.prototype.name = '';
         ___self.prototype.capture = '';
@@ -2934,9 +2941,10 @@ module('language_parser/capture_node.adria', function(module, resource) {
             return current instanceof Constructor ? current : dummy;
         };
         ___self.prototype.parser = function parser() {
-            var current;
+            var current, LanguageParser;
             current = this;
-            while (current.parent !== null && (current.parent instanceof CaptureNode.LanguageParser === false)) {
+            LanguageParser = ___require('language_parser.adria');
+            while (current.parent !== null && (current.parent instanceof LanguageParser === false)) {
                 current = current.parent;
             }
             return current.parent;
@@ -3114,13 +3122,34 @@ module('language_parser/capture_node.adria', function(module, resource) {
     CaptureNode.prototype.dummy.col = -1;
     module.exports = CaptureNode;
 });
+module('language_parser/ast_exception.adria', function(module, resource) {
+    var CaptureNode, ASTException;
+    CaptureNode = ___require('language_parser/capture_node.adria');
+    ASTException = (function(___parent) {
+        var ___self = function ASTException(message, node) {
+            this.row = node.row;
+            this.col = node.col;
+            this.file = node.file;
+            Exception.prototype.constructor.call(this, message + ' in ' + node.parser().file + ' line ' + node.row + ', column ' + node.col);
+        };
+        ___self.prototype = Object.create(___parent.prototype);
+        ___self.prototype.constructor = ___self;
+        var ASTException = ___self;
+        ___self.prototype.row = 0;
+        ___self.prototype.col = 0;
+        ___self.prototype.file = '';
+        return ___self;
+    })(Exception);
+    module.exports = ASTException;
+});
 module('language_parser.adria', function(module, resource) {
-    var fs, util, Parser, DefinitionParser, CaptureNode, LanguageParser;
+    var fs, util, Parser, DefinitionParser, CaptureNode, ASTException, LanguageParser;
     fs = require('fs');
     util = ___require('util.adria');
     Parser = ___require('parser.adria');
     DefinitionParser = ___require('definition_parser.adria');
     CaptureNode = ___require('language_parser/capture_node.adria');
+    ASTException = ___require('language_parser/ast_exception.adria');
     LanguageParser = (function(___parent) {
         var ___self = function LanguageParser(transform) {
             Parser.prototype.constructor.call(this, transform);
@@ -3136,6 +3165,7 @@ module('language_parser.adria', function(module, resource) {
         ___self.prototype.captureTree = null;
         ___self.prototype.resultData = null;
         ___self.prototype.cacheData = null;
+        ___self.prototype.cacheModifier = null;
         ___self.prototype.transform = null;
         ___self.prototype.outputMethod = 'toSourceNode';
         ___self.prototype.clone = function clone() {
@@ -3151,6 +3181,7 @@ module('language_parser.adria', function(module, resource) {
             parser.captureTree = this.captureTree;
             parser.resultData = this.resultData;
             parser.cacheData = this.cacheData;
+            parser.cacheModifier = this.cacheModifier;
             parser.transform = this.transform;
             parser.outputMethod = this.outputMethod;
             parser.includeTrace = this.includeTrace;
@@ -3236,30 +3267,38 @@ module('language_parser.adria', function(module, resource) {
                 this.definition.createBlock(blockName, pair[0]);
             }
         };
-        ___self.prototype.setSource = function setSource(filename, data) {
+        ___self.prototype.setSource = function setSource(filename, data, cacheModifier) {
+            cacheModifier = (cacheModifier !== undefined ? cacheModifier : (null));
             var captures;
+            this.cacheModifier = cacheModifier;
             this.captureTree = null;
             this.file = filename;
-            this.sourceCode = data.replace('\r\n', '\n');
+            this.sourceCode = this.preprocessRaw(data);
             util.log('LanguageParser', 'processing source ' + filename, 2);
             captures = this.parse(this.sourceCode);
             util.log('LanguageParser', 'done', -2);
             this.captureTree = CaptureNode.prototype.fromResults(captures, this.mapType.bind(this));
             this.captureTree.parent = this;
         };
-        ___self.prototype.loadSourceFromCache = function loadSourceFromCache(filename) {
-            this.cacheData = this.transform.cache.fetch(filename, [ 'base' ]);
+        ___self.prototype.preprocessRaw = function preprocessRaw(data) {
+            return data.replace('\r\n', '\n');
+        };
+        ___self.prototype.loadSourceFromCache = function loadSourceFromCache(filename, cacheModifier) {
+            cacheModifier = (cacheModifier !== undefined ? cacheModifier : (null));
+            this.cacheModifier = cacheModifier;
+            this.cacheData = this.transform.cache.fetch(filename, [ 'base' ], cacheModifier);
             if (this.cacheData !== null) {
                 this.file = filename;
                 this.captureTree = CaptureNode.prototype.fromJSON(this.cacheData['base'], this, this.mapType.bind(this));
             }
         };
-        ___self.prototype.loadSource = function loadSource(filename) {
+        ___self.prototype.loadSource = function loadSource(filename, cacheModifier) {
+            cacheModifier = (cacheModifier !== undefined ? cacheModifier : (null));
             if (this.transform.options['cache'] && this.cacheData === null) {
-                this.loadSourceFromCache(filename);
+                this.loadSourceFromCache(filename, cacheModifier);
             }
             if (this.cacheData === null) {
-                this.setSource(filename, fs.readFileSync(filename, 'UTF-8'));
+                this.setSource(filename, fs.readFileSync(filename, 'UTF-8'), cacheModifier);
             }
         };
         ___self.prototype.scan = function scan(state) {
@@ -3277,40 +3316,20 @@ module('language_parser.adria', function(module, resource) {
             InitialType = this.mapType('', this.definition.initialBlock);
             result = InitialType.prototype[this.outputMethod].call(this.captureTree);
             if (this.transform.options['cache'] && this.cacheData === null && fs.existsSync(this.file)) {
-                this.transform.cache.insert(this.file, { base: this.captureTree.toJSON() });
+                this.transform.cache.insert(this.file, { base: this.captureTree.toJSON() }, this.cacheModifier);
             }
             return result;
         };
         return ___self;
     })(Parser);
-    CaptureNode.LanguageParser = LanguageParser;
-    LanguageParser.CaptureNode = CaptureNode;
     module.exports = LanguageParser;
-});
-module('language_parser/ast_exception.adria', function(module, resource) {
-    var CaptureNode, ASTException;
-    CaptureNode = ___require('language_parser/capture_node.adria');
-    ASTException = (function(___parent) {
-        var ___self = function ASTException(message, node) {
-            this.row = node.row;
-            this.col = node.col;
-            this.file = node.file;
-            Exception.prototype.constructor.call(this, message + ' in ' + node.parser().file + ' line ' + node.row + ', column ' + node.col);
-        };
-        ___self.prototype = Object.create(___parent.prototype);
-        ___self.prototype.constructor = ___self;
-        var ASTException = ___self;
-        ___self.prototype.row = 0;
-        ___self.prototype.col = 0;
-        ___self.prototype.file = '';
-        return ___self;
-    })(Exception);
-    module.exports = ASTException;
+    module.exports.CaptureNode = CaptureNode;
+    module.exports.ASTException = ASTException;
 });
 module('targets/adria/adria_node.adria', function(module, resource) {
-    var ASTException, LanguageParser, CaptureNode, AdriaNode;
-    ASTException = ___require('language_parser/ast_exception.adria');
+    var LanguageParser, ASTException, CaptureNode, AdriaNode;
     LanguageParser = ___require('language_parser.adria');
+    ASTException = LanguageParser.ASTException;
     CaptureNode = LanguageParser.CaptureNode;
     AdriaNode = (function(___parent) {
         var ___self = function AdriaNode() {
@@ -3392,6 +3411,9 @@ module('targets/adria/adria_node.adria', function(module, resource) {
                 }
             }
             return result;
+        };
+        ___self.prototype.toString = function toString() {
+            return this.toSourceNode().toString();
         };
         return ___self;
     })(CaptureNode);
@@ -4339,19 +4361,20 @@ module('targets/adria/proto_literal.adria', function(module, resource) {
         ___self.prototype.lookupParent = false;
         ___self.prototype.name = '';
         ___self.prototype.toSourceNode = function toSourceNode() {
-            var nameSN, parentNode, haveParent, assignTo, result, body;
+            var nameSN, parentNode, haveParent, blankParent, assignTo, result, body;
             nameSN = this.findName();
             if (nameSN !== null) {
                 this.name = nameSN.toString();
             }
             parentNode = this.get('parent');
             haveParent = parentNode.isNode();
+            blankParent = (haveParent ? parentNode.toString() === 'null' : false);
             assignTo = '';
             if (this.value === 'proto_statement') {
                 this.parent.findScope().addLocal(this.name);
                 assignTo = this.name + ' = ';
             }
-            result = this.csn(assignTo + '(function(' + (haveParent ? '___parent' : '') + ') {' + this.nl(1));
+            result = this.csn(assignTo + '(function(' + (haveParent && blankParent === false ? '___parent' : '') + ') {' + this.nl(1));
             body = this.get('body').toSourceNode();
             if (this.constructorBody !== null) {
                 result.add('var ___self = function ' + this.name + '(');
@@ -4370,13 +4393,13 @@ module('targets/adria/proto_literal.adria', function(module, resource) {
                 result.add(this.nl(-1) + '};' + this.nl() + this.nl());
             } else {
                 result.add('var ___self = function ' + this.name + '() {');
-                if (haveParent) {
+                if (haveParent && blankParent === false) {
                     result.add(this.nl(1) + '___parent.apply(this, arguments);' + this.nl(-1));
                 }
                 result.add('}' + this.nl() + this.nl());
             }
             if (haveParent) {
-                result.add('___self.prototype = Object.create(___parent.prototype);' + this.nl());
+                result.add('___self.prototype = Object.create(' + (blankParent ? 'null' : '___parent.prototype') + ');' + this.nl());
                 result.add('___self.prototype.constructor = ___self;' + this.nl());
             }
             if (this.name !== '') {
@@ -4385,7 +4408,9 @@ module('targets/adria/proto_literal.adria', function(module, resource) {
             result.add([ this.nl(), body ]);
             result.add(this.nl() + 'return ___self;' + this.nl(-1));
             result.add('})(');
-            result.add(parentNode.toSourceNode());
+            if (haveParent && blankParent === false) {
+                result.add(parentNode.toSourceNode());
+            }
             result.add(')');
             if (this.value === 'proto_statement') {
                 result.add(';');
@@ -5611,6 +5636,19 @@ module('targets/adria_parser.adria', function(module, resource) {
             parser.resultData = { globals: new Set(), requires: new Set(), resources: new Set() };
             return parser;
         };
+        ___self.prototype.preprocessRaw = function preprocessRaw(data) {
+            var defines;
+            var ___p, ___p0 = ___p = (this === this.constructor.prototype ? this : Object.getPrototypeOf(this));
+            while (___p !== null && (___p.preprocessRaw !== preprocessRaw || ___p.hasOwnProperty('preprocessRaw') === false)) {
+                ___p = Object.getPrototypeOf(___p);
+            }
+            ___p = (___p !== null ? Object.getPrototypeOf(___p).constructor : ___p0);
+            data = ___p.prototype.preprocessRaw.call(this, data);
+            defines = this.transform.options.defines;
+            return data.replace(/\{\{([a-zA-Z][a-zA-Z_0-9]*)\}\}/g, function(matches, key) {
+                return (defines[key] === undefined ? '' : defines[key]);
+            });
+        };
         ___self.prototype.trainSelf = function trainSelf() {
             var keywords, matchKeywords;
             keywords = new Set([
@@ -5705,8 +5743,9 @@ module('targets/adria_parser.adria', function(module, resource) {
             }
             return node;
         };
-        ___self.prototype.loadSourceFromCache = function loadSourceFromCache(filename) {
-            LanguageParser.prototype.loadSourceFromCache.call(this, filename);
+        ___self.prototype.loadSourceFromCache = function loadSourceFromCache(filename, cacheModifier) {
+            cacheModifier = (cacheModifier !== undefined ? cacheModifier : (null));
+            LanguageParser.prototype.loadSourceFromCache.call(this, filename, cacheModifier);
             if (this.cacheData !== null && this.transform.options['map']) {
                 this.sourceCode = fs.readFileSync(filename, 'UTF-8').replace('\r\n', '\n');
             }
@@ -5742,6 +5781,7 @@ module('targets/adria_transform.adria', function(module, resource) {
         ___self.prototype = Object.create(___parent.prototype);
         ___self.prototype.constructor = ___self;
         var AdriaTransform = ___self;
+        ___self.prototype.cacheModifier = null;
         ___self.prototype.globals = null;
         ___self.prototype.implicits = null;
         ___self.prototype.requires = null;
@@ -5788,7 +5828,23 @@ module('targets/adria_transform.adria', function(module, resource) {
                 dest: 'platform',
                 defaultValue: 'node'
             });
-            args.add([ 'files' ], { help: 'File(s) to compile', action: 'append' });
+            args.add([ '-D', '--define' ], {
+                help: 'Define preprocessor value, i.e. version="1.2"',
+                metavar: '<key>=<value>',
+                action: 'append',
+                dest: 'defines'
+            }, function(data) {
+                var result;
+                result = {  };
+                var id, value, pair;
+                for (id in data) {
+                    value = data[id];
+                    pair = value.split('=');
+                    result[pair[0]] = (pair[1] === undefined ? true : pair[1]);
+                }
+                return result;
+            });
+            args.add([ 'files' ], { help: 'File(s) to compile', nargs: '+' });
             args.addSwitch('application', 'Generate application global', true);
             args.addSwitch('map', 'Generate source map', false);
             args.addSwitch('link', 'Link sourcemap to output', true);
@@ -5797,6 +5853,15 @@ module('targets/adria_transform.adria', function(module, resource) {
             args.addSwitch('closure', 'Contain code in closure', true);
             args.addSwitch('assert', 'Add assert() support', false);
             args.addSwitch('scan', 'Perform basic logic checks', true);
+        };
+        ___self.prototype.processOptions = function processOptions() {
+            var ___p, ___p0 = ___p = (this === this.constructor.prototype ? this : Object.getPrototypeOf(this));
+            while (___p !== null && (___p.processOptions !== processOptions || ___p.hasOwnProperty('processOptions') === false)) {
+                ___p = Object.getPrototypeOf(___p);
+            }
+            ___p = (___p !== null ? Object.getPrototypeOf(___p).constructor : ___p0);
+            ___p.prototype.processOptions.call(this);
+            this.cacheModifier = util.md5(JSON.stringify(this.options));
         };
         ___self.prototype.defineImplicits = function defineImplicits() {
             this.implicits.add([
@@ -5877,9 +5942,9 @@ module('targets/adria_transform.adria', function(module, resource) {
             parser = this.protoParser.clone();
             parser.moduleName = moduleName;
             if (data === undefined) {
-                parser.loadSource(this.options['basePath'] + moduleName);
+                parser.loadSource(this.options['basePath'] + moduleName, this.cacheModifier);
             } else {
-                parser.setSource(moduleName, data);
+                parser.setSource(moduleName, data, this.cacheModifier);
             }
             parser.preprocess({  });
             result = parser.output();
@@ -5894,12 +5959,7 @@ module('targets/adria_transform.adria', function(module, resource) {
             this.requires = this.requires.merge(parser.resultData.requires);
             this.globals = this.globals.merge(parser.resultData.globals);
             this.resources = this.resources.merge(parser.resultData.resources);
-            this.modules.push({
-                filename: parser.file,
-                sourceCode: parser.sourceCode,
-                result: result,
-                parser: parser
-            });
+            this.modules.push({ result: result, parser: parser });
         };
         ___self.prototype.generateOutputTree = function generateOutputTree() {
             var options, node, tpl, fw, tmpNode, usedBuiltins;
@@ -5939,8 +5999,8 @@ module('targets/adria_transform.adria', function(module, resource) {
             var id, currentModule;
             for (id in this.modules) {
                 currentModule = this.modules[id];
-                tmpNode = node.add(new SourceNode(null, null, currentModule.filename, currentModule.result));
-                tmpNode.setSourceContent(currentModule.filename, currentModule.sourceCode);
+                tmpNode = node.add(new SourceNode(null, null, currentModule.parser.file, currentModule.result));
+                tmpNode.setSourceContent(currentModule.parser.file, currentModule.parser.sourceCode);
             }
             var id, name;
             for (id in usedBuiltins) {
@@ -6086,14 +6146,12 @@ module('targets/adriadebug_transform.adria', function(module, resource) {
     module.exports = AdriaDebugTransform;
 });
 module('main.adria', function(module, resource) {
-    var util, args, AdriaTransform, AdriaDebugTransform, options, handle, run;
+    var util, args, options, handle, run;
     ___require('../../astdlib/astd/prototype/string.adria').extend();
     ___require('../../astdlib/astd/prototype/regexp.adria').extend();
     ___require('../../astdlib/astd/prototype/object.adria').extend();
     util = ___require('util.adria');
     args = ___require('args.adria');
-    AdriaTransform = ___require('targets/adria_transform.adria');
-    AdriaDebugTransform = ___require('targets/adriadebug_transform.adria');
     args.add([ '-m', '--mode' ], {
         help: 'Translation mode (adria)',
         defaultValue: 'adria',
@@ -6102,12 +6160,16 @@ module('main.adria', function(module, resource) {
     });
     args.add([ '--stdin' ], { help: 'Read from stdin (false)', action: 'storeTrue' });
     args.add([ '-d', '--debug' ], { help: 'Enable debug mode (false)', action: 'storeTrue' });
-    options = args.partial();
+    options = args.parseKnown();
     handle = function handle(pipeData) {
         var transform;
         if (options['mode'] === 'adria') {
+            var AdriaTransform;
+            AdriaTransform = ___require('targets/adria_transform.adria');
             transform = new AdriaTransform(pipeData);
         } else if (options['mode'] === 'adriadebug') {
+            var AdriaDebugTransform;
+            AdriaDebugTransform = ___require('targets/adriadebug_transform.adria');
             transform = new AdriaDebugTransform(pipeData);
         } else {
             throw new Error('Unsupported mode "' + options['mode'] + '".');

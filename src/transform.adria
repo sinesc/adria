@@ -82,7 +82,7 @@ module Transform = proto {
      */
     processOptions: func() {
 
-        this.options = args.consume();
+        this.options = args.parseAll();
     },
 
     /**
