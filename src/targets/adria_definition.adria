@@ -106,6 +106,7 @@ export AssertStatement = require('./adria/assert_statement');
 
 export Statement = require('./adria/statement');
 
+export InterfaceStatement = require('./adria/interface_statement');
 export ModuleStatement = require('./adria/module_statement');
 export ExportStatement = require('./adria/export_statement');
 

@@ -19,9 +19,10 @@ var_statement {
     entry -> "var" -> dec_def_list -> return
 }
 
-const_def {
+//!todo
+/*const_statement {
     entry -> "const" -> dec_def_list -> return
-}
+}*/
 
 global_statement {
     entry -> "global" -> dec_def_list -> return
@@ -67,11 +68,19 @@ assert_statement {
  * array deconstruction
  */
 
-deconstruct {
+/*deconstruct {
     //!todo recursive
     entry -> "[" -> ident:item -> "]" -> "=" -> literal_expression:source -> return
     ident:item -> "," -> ident:item
+}*/
+
+/*
+ * interface
+ */
+interface_statement {
+    entry -> "interface" -> return
 }
+
 
 /*
  * statement groups
@@ -90,14 +99,13 @@ statement {
     entry -> module_statement:module -> t -> return
     entry -> expression:expression -> t -> return
 
-    entry -> const_def:const_def -> t -> return
+    // entry -> const_statement:const -> t -> return
     entry -> global_statement:global -> t -> return
-    entry -> deconstruct:deconstruct -> t -> return
+    // entry -> deconstruct:deconstruct -> t -> return
     entry -> throw_statement:throw -> t -> return
     entry -> do_while_statement:do_while -> t -> return
     entry -> assert_statement:assert -> t -> return
-
-    entry -> flow_statement:control -> t -> return
+    entry -> flow_statement:flow -> t -> return
 
     entry -> while_statement:while -> return
     entry -> switch_statement:switch -> return
@@ -105,8 +113,10 @@ statement {
     entry -> try_catch_finally_statement:try_catch_finally -> return
     entry -> proto_statement:proto -> return
     entry -> generator_statement:generator -> return
+    entry -> async_statement:async -> return
 
     entry -> import_statement:import -> t -> return
+    entry -> interface_statement:interface -> t -> return
 }
 
 /*

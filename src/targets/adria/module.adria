@@ -6,11 +6,23 @@ var ASTException = require('../../language_parser/ast_exception');
 module Module = proto (Scope) {
 
     moduleExport: null,
-    exports: null,
+    exports     : null,
+    isInterface : false,
 
     constructor: func(key, value) {
         this.exports = new Map();
         Scope->constructor(key, value);
+    },
+
+    setInterface: func() {
+
+        if (this.isInterface) {
+            throw new ASTException('Duplicate interface declaration', this);
+        }
+
+        var parser = this.parser();
+        parser.resultData.isInterface = true;
+        this.isInterface = true;
     },
 
     setModuleExport: func(name) {
@@ -79,6 +91,12 @@ module Module = proto (Scope) {
 
         for (var id in exports) {
             result.add('module.exports.' + exports[id] + ' = ' + this.exports.get(exports[id]) + ';' + this.nl());
+        }
+
+        // publish as application interface
+
+        if (this.isInterface) {
+            result.add('___module.exports = module.exports' + this.nl());
         }
 
         result.add(this.nl(-1) + '});' + this.nl());

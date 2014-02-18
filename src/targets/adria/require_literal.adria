@@ -10,8 +10,7 @@ module RequireLiteral = proto (AdriaFileNode) {
         var parser = this.parser();
         var options = parser.transform.options;
         var fileNode = this.get('file');
-        var moduleName = fileNode.toSourceNode().toString().slice(1, -1);
-        var result = this.csn();
+        var moduleName = fileNode.toString().slice(1, -1);
         var requireFunction = 'require';
         var resolvedName;
 
@@ -21,17 +20,13 @@ module RequireLiteral = proto (AdriaFileNode) {
 
         if (parser.transform.builtins[resolvedName] !== undefined) {
 
-            // module is builtin, set flag for inclusion by transform
+            // module is builtin, set flag for inclusion by transform and update modulename
 
             parser.transform.usedBuiltins.add(resolvedName);
             moduleName = resolvedName;
 
             if (resolvedName === 'async.adria') {
                 parser.resultData.globals.add('___Async'); //!todo add a useBuiltin function to handle cases like this
-            }
-
-            if (options['platform'] === 'node') {
-                requireFunction = '___require';
             }
 
         } else {
@@ -42,22 +37,23 @@ module RequireLiteral = proto (AdriaFileNode) {
 
             if (resolvedName !== null) {
 
+                // resolved to an adria file, include in application
+
                 moduleName = resolvedName;
                 parser.resultData.requires.add(moduleName);
 
-                if (options['platform'] === 'node') {
-                    requireFunction = '___require';
-                }
+            } else if (options['platform'] === 'node' && moduleName.hasPostfix(options['extension']) === false) {
 
-            } else if (options['platform'] !== 'node' || moduleName.hasPostfix(options['extension'])) {
+                // seems to be a node module, use node require function
+
+                requireFunction = '___require';
+
+            } else {
 
                 throw new ASTException('Could not find require "' + moduleName + '"', this);
             }
         }
 
-        result.add(requireFunction + '(');
-        result.add(fileNode.csn("'" + moduleName + "'"));
-        result.add(')');
-        return result;
+        return this.csn([ requireFunction + '(', fileNode.csn("'" + moduleName + "'"), ')' ]);
     },
 };

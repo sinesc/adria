@@ -30,6 +30,7 @@ var SourceNode = require('source-map').SourceNode;
 var Template = require('../template');
 var Transform = require('../transform');
 var AdriaParser = require('./adria_parser');
+var ASTException = require('../language_parser/ast_exception');
 
 /**
  * Transforms a set of input files into one or more output files using the
@@ -39,9 +40,6 @@ var AdriaParser = require('./adria_parser');
  */
 module AdriaTransform = proto (Transform) {
 
-    /**
-     * populated by globals node, names of application-wide globals
-     */
     cacheModifier   : null,
     globals         : null,
     implicits       : null,
@@ -52,6 +50,7 @@ module AdriaTransform = proto (Transform) {
     requiresDone    : null,
     sourceCode      : null,
     protoParser     : null,
+    addInterface    : false,
 
     builtins: {
         'async.adria': resource('../../templates/adria/async.tpl'),
@@ -134,7 +133,6 @@ module AdriaTransform = proto (Transform) {
         args.addSwitch('link', 'Link sourcemap to output', true);
         args.addSwitch('blanks', 'Allow blank lines [to be removed]', true);
         args.addSwitch('strict', 'Compile strict Javascript', true);
-        args.addSwitch('closure', 'Contain code in closure', true);
         args.addSwitch('assert', 'Add assert() support', false);
         args.addSwitch('scan', 'Perform basic logic checks', true);
     },
@@ -218,6 +216,13 @@ module AdriaTransform = proto (Transform) {
         this.globals = this.globals.merge(parser.resultData.globals);
         this.resources = this.resources.merge(parser.resultData.resources);
 
+        if (parser.resultData.isInterface) {
+            if (this.addInterface) {
+                throw new ASTException('Interface already defined', parser); //!todo where
+            }
+            this.addInterface = true;
+        }
+
         // push module after all dependencies have been resolved
 
         this.modules.push({ result: result, parser: parser });
@@ -229,8 +234,8 @@ module AdriaTransform = proto (Transform) {
     generateOutputTree: func() {
 
         var options = this.options;
-        var node = new SourceNode(null, null);
-        var tpl = new Template();
+        var node    = new SourceNode(null, null);
+        var tpl     = new Template();
 
         tpl.debug = this.options['debug'];
         tpl.assign('globals', this.globals.toArray());
@@ -238,6 +243,7 @@ module AdriaTransform = proto (Transform) {
         tpl.assign('enableAssert', options['assert']);
         tpl.assign('enableApplication', options['application']);
         tpl.assign('platform', options['platform']);
+        tpl.assign('enableInterface', this.addInterface);
 
         // wrap in shellscript
 
@@ -254,17 +260,15 @@ module AdriaTransform = proto (Transform) {
 
         // wrap with application and merge
 
-        var fw, tmpNode;
-
-        if (options['closure']) {
-            node.add(';(function() {\n');
-        }
+        node.add(';(function(' + (options['platform'] === 'node' ? '___module, ___require, window' : '') + ') {\n');
 
         // apply strict mode
 
         if (options['strict']) {
             node.add('"use strict";\n');
         }
+
+        var fw, tmpNode;
 
         fw = tpl.fetch(resource('../../templates/adria/framework.tpl'));
         tmpNode = node.add(new SourceNode(1, 0, 'adria-framework.js', fw));
@@ -299,18 +303,16 @@ module AdriaTransform = proto (Transform) {
         // start builtins
 
         for (var id, name in usedBuiltins) {
-            node.add('\n' + (options['platform'] === 'node' ? '___' : '') + 'require(\'' + name + '\');');
+            node.add('\nrequire(\'' + name + '\');');
         }
 
         // start entry module
 
         for (var id, file in options['files']) {
-            node.add('\n' + (options['platform'] === 'node' ? '___' : '') + 'require(\'' + util.normalizeExtension(file, this.options['extension']) + '\');');
+            node.add('\nrequire(\'' + util.normalizeExtension(file, this.options['extension']) + '\');');
         }
 
-        if (options['closure']) {
-            node.add('\n})();');
-        }
+        node.add('\n})(' + (options['platform'] === 'node' ? 'module, require, global' : '') + ');');
 
         return node;
     },

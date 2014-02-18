@@ -1,8 +1,5 @@
-var {! if (platform == 'node'): !}___{! endif !}require;
-var resource;{! if (enableApplication): !}
-var application;{! endif !}
-var module;{! if (platform == 'node'): !}
-var window = global;{! endif !}{! if (enableAssert): !}
+var require, resource, module;{! if (enableApplication): !}
+var application;{! endif !}{! if (enableAssert): !}
 var assert;{! endif !}{! if (globals.length != 0): !}
 var {% globals.join(', ') %};{! endif !}
 var Exception{! if (enableAssert): !}, AssertionFailedException{! endif !};
@@ -18,7 +15,7 @@ var Exception{! if (enableAssert): !}, AssertionFailedException{! endif !};
     };
     var Module = function(name, func) {
         this.name = name;
-        this.exports = { };
+        this.exports = Object.create(null);
         this.func = func;
     };
     Module.prototype.exports = null;
@@ -53,7 +50,7 @@ var Exception{! if (enableAssert): !}, AssertionFailedException{! endif !};
         args[0] = null;
         return new (Function.prototype.bind.apply(Application, args));
     };{! endif !}
-    {! if (platform == 'node') { !}___{! } !}require = function(file) {
+    require = function(file) {
         var module = modules[file];{! if (enableAssert): !}
         if (module === undefined) {
             throw Error('missing dependency ' + file);

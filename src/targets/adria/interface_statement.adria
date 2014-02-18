@@ -1,0 +1,12 @@
+
+var AdriaNode = require('./adria_node');
+var Module = require('./module');
+
+module InterfaceStatement = proto (AdriaNode) {
+
+    toSourceNode: func() {
+
+        this.findProto(Module).setInterface();
+        return this.csn();
+    },
+};
