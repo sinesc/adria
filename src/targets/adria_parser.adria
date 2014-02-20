@@ -67,6 +67,12 @@ module AdriaParser = proto(LanguageParser) {
         return parser;
     },
 
+    /**
+     * preprocesses raw input string, replaces commandline defines {{DEFINE}}
+     *
+     * @param string data
+     * @return string replaced data
+     */
     preprocessRaw: func(data) {
 
         data = parent->preprocessRaw(data);
@@ -86,16 +92,14 @@ module AdriaParser = proto(LanguageParser) {
 
         var keywords = new Set([
             'var', 'global',
-            'if', 'else',
-            'for', 'in', 'do', 'while', 'break', 'continue',
-            'switch', 'case',
-            'throw', 'try', 'catch', 'finally', 'yield', 'await',
-            'func', 'proto', 'prop', 'parent', 'storage', //!todo TBD 'scope',
-            'require', 'assert', 'resource', 'module', 'export', 'interface',
-            'delete', 'new',
-            'instanceof', 'typeof',
-            //!todo remove
-            'function'
+            'if', 'else', 'for', 'in', 'do', 'while', 'switch', 'case', 'break', 'continue', 'return',
+            'throw', 'try', 'catch', 'finally',
+            'yield', 'await',
+            'parent', 'self',
+            'func', 'proto', 'prop', 'storage', //!todo TBD 'scope',
+            'require', 'resource', 'module', 'export', 'interface',
+            'delete', 'new', 'instanceof', 'typeof',
+            'assert',
         ]);
 
         var matchKeywords = func(match) {

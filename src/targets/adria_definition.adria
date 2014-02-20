@@ -115,5 +115,6 @@ export VarStatement = require('./adria/var_statement');
 
 export StorageLiteral = require('./adria/storage_literal');
 export ParentLiteral = require('./adria/parent_literal');
+export SelfLiteral = require('./adria/self_literal');
 
 export FlowStatement = require('./adria/flow_statement');

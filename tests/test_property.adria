@@ -84,6 +84,18 @@ var TestObj = proto {
     }
 };
 
+var TestPropObj = proto {
+    value: 1,
+    myProp: prop {
+        get: func() {
+            return this.value;
+        },
+        set: func(value) {
+            this.value = value;
+        }
+    },
+};
+
 /**
  * support function for property testing
  *
@@ -124,6 +136,30 @@ var testProp = func(Type, propName, storageName, initialValue) {
  * tests
  */
 
+test.group('test_property');
+
+test('direct object attachment', func() {
+
+    var obj = {
+        value: 1,
+    };
+
+    obj.test = prop {
+        get: func() {
+            return 123 * this.value;
+        },
+        set: func(val) {
+            this.value = val;
+        }
+    };
+
+    assert(obj.test === 123);
+
+    obj.test = 2;
+
+    assert(obj.test === 246);
+});
+
 test('simple fields', func() {
 
     var testObj = new TestObj();
@@ -141,7 +177,7 @@ test('simple fields', func() {
     assert(descriptor.configurable === true);
 });
 
-test('non-storage properties', function() {
+test('non-storage properties', func() {
 
     var testObj = new TestObj();
 
@@ -231,6 +267,82 @@ test('prototype extension', func() {
 
     assert(mytest.myAnonStorageProp === undefined);
     assert(mytest.myDefaultStorageProp === 'my default value');
+});
+
+test('property inheritance (get)', func() {
+
+    var InheritGet = proto (TestPropObj) {
+        myProp: prop {
+            inherit get,
+            set: func(value) {
+                this.value = value * 2;
+            }
+        }
+    };
+
+    var ig = new InheritGet();
+    ig.myProp = 3;
+    assert(ig.myProp === 6);
+    assert(ig.value === 6);
+});
+
+test('property inheritance (set)', func() {
+
+    var InheritSet = proto (TestPropObj) {
+        myProp: prop {
+            get: func() {
+                return this.value * 2;
+            },
+            inherit set
+        }
+    };
+
+    var ig = new InheritSet();
+    ig.myProp = 3;
+    assert(ig.myProp === 6);
+    assert(ig.value === 3);
+});
+
+test('deep property inheritance', func() {
+
+    var Intermediate = proto (TestPropObj) {
+        value: prop {
+            set: func(val) {
+                storage = val * 8;
+            },
+            get: func() {
+                return storage / 6;
+            }
+        }
+    };
+
+    var InheritSet = proto (Intermediate) {
+        myProp: prop {
+            get: func() {
+                return this.value * 2;
+            },
+            inherit set
+        }
+    };
+
+    var ia = new InheritSet();
+    ia.myProp = 3;
+    assert(ia.myProp === 8);
+    assert(ia.value === 4);
+
+    var InheritGet = proto (InheritSet) {
+        myProp: prop {
+            inherit get,
+            set: func(val) {
+                this.value = val * 8;
+            },
+        }
+    };
+
+    var ib = new InheritGet();
+    ib.myProp = 1.5;            // 1.5 * 8 * 8 = 96 in storage
+    assert(ib.myProp === 32);   // storage * 2 / 6  = 32
+    assert(ib.value === 16);    // storage / 6 = 16
 });
 
 if (test.noSummary !== true) {

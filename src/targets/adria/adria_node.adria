@@ -6,7 +6,7 @@ var CaptureNode = LanguageParser.CaptureNode;
 module AdriaNode = proto (CaptureNode) {
 
     /**
-     * constructor-type to findScope will search for
+     * constructor-type findScope will search for (should be set to Scope)
      */
     Scope: null,
 
@@ -38,30 +38,6 @@ module AdriaNode = proto (CaptureNode) {
         }
 
         throw new ASTException('Undefined reference "' + name + '"', this);
-    },
-
-    /**
-     * adds dynamic parent lookup code to given source-node
-     *
-     * @param result SourceNode
-     * @param lookupName name of function to look up
-     * @param ownName name of function containing the lookup
-     */
-    addParentLookup: func(result, lookupName, ownName = lookupName) {
-
-        // check if in a prototype, don't skip it if we are
-
-        result.add('var ___p, ___p0 = ___p = (this === this.constructor.prototype ? this : Object.getPrototypeOf(this));' + this.nl());
-
-        // find self in proto-chain
-
-        result.add('while (___p !== null && (___p.' + lookupName + ' !== ' + ownName + ' || ___p.hasOwnProperty(\'' + lookupName + '\') === false)) {' + this.nl(1));
-        result.add('___p = Object.getPrototypeOf(___p);' + this.nl(-1));
-        result.add('}' + this.nl());
-
-        // get parent prototype
-
-        result.add('___p = (___p !== null ? Object.getPrototypeOf(___p).constructor : ___p0);' + this.nl());
     },
 
     /**

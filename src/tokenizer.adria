@@ -118,7 +118,7 @@ module Tokenizer = proto {
 /**
  * represents a single token match
  */
-function Match(name, data, endPosition, containedRows, lastRowLen) {
+func Match(name, data, endPosition, containedRows, lastRowLen) {
     this.name = name;
     this.data = data;
     this.endPosition = endPosition;

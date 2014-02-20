@@ -74,7 +74,7 @@ module test = func(name, timeout, testFunction) {
         timeout = 1000;
     }
 
-    queue.push({ name: name, test: testFunction, timeout: timeout });
+    queue.push({ type: 'test', name: name, test: testFunction, timeout: timeout });
 
     if (inAsync) {
         return;
@@ -109,7 +109,21 @@ export TestException = proto (Exception) {
  */
 export summary = func() {
 
-    queue.push({ summary: true });
+    queue.push({ type: 'summary' });
+
+    if (inAsync) {
+        return;
+    } else {
+        consume();
+    }
+};
+
+/**
+ * queues a new group of tests (display purposes only)
+ */
+export group = func(title) {
+
+    queue.push({ type: 'group', title: title });
 
     if (inAsync) {
         return;
@@ -166,11 +180,13 @@ var consume = func() {
 
         var item = queue.shift();
 
-        if (item.test) {
+        if (item.type === 'test') {
             if (runTest(item)) {
-                break;
+                break;  // break here on async test and wait for callback
             }
-        } else if (item.summary) {
+        } else if (item.type === 'group') {
+            showGroup(item);
+        } else if (item.type === 'summary') {
             showSummary();
         }
     }
@@ -217,8 +233,14 @@ var showSummary = func() {
     log((oks + fails) + ' tests done, ' + oks + ' ok, ' + fails + (fails > 0 ? ' FAILURES' : ' failures'));
 
     for (var id, exception in exceptions) {
-        console.log('failure ' + (+id + 1), exception.stack);
+        console.log('\nfailure ' + (+id + 1), exception.stack);
     }
+};
+
+var showGroup = func(item) {
+
+    process.stdout.write('\n');
+    log('group: ' + item.title);
 };
 
 /**
@@ -255,12 +277,12 @@ var runTest = func(item) {
             }
         }
 
-    } catch (e) {
+    } catch (exception) {
 
         // test failed, log exception
 
         success = false;
-        exceptions.push(e);
+        exceptions.push(exception);
         fails++;
         print('(FAILED)');
     }

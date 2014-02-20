@@ -14,13 +14,13 @@ block {
  */
 
 return_statement {
-    entry -> "return":type -> return
-    "return":type -> literal_expression:value -> return
+    entry -> "return":type -> ";" -> return
+    "return":type -> literal_expression:value -> ";"
 }
 
 flow_statement {
-    entry -> "break":type -> return
-    entry -> "continue":type -> return
+    entry -> "break":type -> ";" -> return
+    entry -> "continue":type -> ";" -> return
 }
 
 /*
@@ -50,7 +50,7 @@ if_statement {
  */
 
 do_while_statement {
-    entry -> "do" -> block:body -> "while" -> "(" -> expression:condition -> ")" -> return
+    entry -> "do" -> block:body -> "while" -> "(" -> expression:condition -> ")" -> ";" -> return
 }
 
 while_statement {
@@ -63,11 +63,11 @@ while_statement {
 
 for_count_init {
     entry -> var_statement:init -> return
-    entry -> expression:init -> return
+    entry -> expression:init -> ";" -> return
 }
 
 for_count_statement {
-    entry -> "for" -> "(" -> for_count_init -> t -> expression:test[full] -> t -> expression:cond_op -> ")" -> block:body -> return
+    entry -> "for" -> "(" -> for_count_init -> expression:test[full] -> ";" -> expression:cond_op -> ")" -> block:body -> return
     "(" -> expression:test[short] -> ")"
 }
 
@@ -112,7 +112,7 @@ switch_statement {
  */
 
 throw_statement {
-    entry -> "throw" -> expression:exception -> return
+    entry -> "throw" -> expression:exception -> ";" -> return
 }
 
 try {

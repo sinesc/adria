@@ -4,19 +4,19 @@
  */
 
 module_statement {
-    entry -> "module" -> dec_def -> return
+    entry -> "module" -> dec_def -> ";" -> return
 }
 
 export_statement {
-    entry -> "export" -> dec_def -> return
+    entry -> "export" -> dec_def -> ";" -> return
 }
 
 import_statement {
-    entry -> "import" -> dec_list -> return
+    entry -> "import" -> dec_list -> ";" -> return
 }
 
 var_statement {
-    entry -> "var" -> dec_def_list -> return
+    entry -> "var" -> dec_def_list -> ";" -> return
 }
 
 //!todo
@@ -25,13 +25,13 @@ var_statement {
 }*/
 
 global_statement {
-    entry -> "global" -> dec_def_list -> return
+    entry -> "global" -> dec_def_list -> ";" -> return
 }
 
 function_statement {
-    entry -> "func" -> ident:name
+    //entry -> "function" -> ident:name
 
-    entry -> "function" -> ident:name -> "(" -> ")" -> block:body -> return
+    entry -> "func" -> ident:name -> "(" -> ")" -> block:body -> return
     "(" -> function_param_list:param_list -> ")"
 }
 
@@ -43,16 +43,16 @@ proto_statement {
 }
 
 generator_statement {
-    entry -> "func" -> "*":generator
+    //entry -> "function" -> "*":generator
 
-    entry -> "function" -> "*":generator -> ident:name -> "(" -> ")" -> block:body -> return
+    entry -> "func" -> "*":generator -> ident:name -> "(" -> ")" -> block:body -> return
     "(" -> function_param_list:param_list -> ")"
 }
 
 async_statement {
-    entry -> "func" -> "#":async
+    //entry -> "function" -> "#":async
 
-    entry -> "function" -> "#":async -> ident:name -> "(" -> ")" -> block:body -> return
+    entry -> "func" -> "#":async -> ident:name -> "(" -> ")" -> block:body -> return
     "(" -> function_param_list:param_list -> ")"
 }
 
@@ -61,7 +61,7 @@ async_statement {
  */
 
 assert_statement {
-    entry -> "assert" -> invoke_operation:call -> return
+    entry -> "assert" -> invoke_operation:call -> ";" -> return
 }
 
 /*
@@ -77,8 +77,9 @@ assert_statement {
 /*
  * interface
  */
+
 interface_statement {
-    entry -> "interface" -> return
+    entry -> "interface" -> ";" -> return
 }
 
 
@@ -88,43 +89,36 @@ interface_statement {
 
 statement {
 
-    entry -> var_statement:var -> t -> return
+    entry -> var_statement:var -> return
 
     entry -> if_statement:if -> return
     entry -> for_in_statement:for_in -> return
+    entry -> return_statement:control -> return
+    entry -> throw_statement:throw -> return
     entry -> for_count_statement:for_count -> return
-
-    entry -> return_statement:control -> t -> return
-    entry -> export_statement:export -> t -> return
-    entry -> module_statement:module -> t -> return
-    entry -> expression:expression -> t -> return
-
-    // entry -> const_statement:const -> t -> return
-    entry -> global_statement:global -> t -> return
-    // entry -> deconstruct:deconstruct -> t -> return
-    entry -> throw_statement:throw -> t -> return
-    entry -> do_while_statement:do_while -> t -> return
-    entry -> assert_statement:assert -> t -> return
-    entry -> flow_statement:flow -> t -> return
-
     entry -> while_statement:while -> return
-    entry -> switch_statement:switch -> return
+    entry -> flow_statement:flow -> return
+
+    entry -> expression:expression -> ";" -> return
+
+    entry -> global_statement:global -> return
+    entry -> import_statement:import -> return
+    entry -> export_statement:export -> return
+    entry -> module_statement:module -> return
+    entry -> interface_statement:interface -> return
+
     entry -> function_statement:function -> return
-    entry -> try_catch_finally_statement:try_catch_finally -> return
-    entry -> proto_statement:proto -> return
     entry -> generator_statement:generator -> return
     entry -> async_statement:async -> return
+    entry -> proto_statement:proto -> return
 
-    entry -> import_statement:import -> t -> return
-    entry -> interface_statement:interface -> t -> return
-}
+    entry -> try_catch_finally_statement:try_catch_finally -> return
+    entry -> switch_statement:switch -> return
+    entry -> do_while_statement:do_while -> return
 
-/*
- * statement terminator
- */
-
-t {
-    entry -> ";" -> return
+    entry -> assert_statement:assert -> return
+    // entry -> deconstruct:deconstruct -> return
+    // entry -> const_statement:const -> return
 }
 
 /*

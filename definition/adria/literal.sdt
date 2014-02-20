@@ -41,6 +41,9 @@ property_data {
 }
 
 property_accessor_item {
+    entry -> "inherit":inherit -> "get":key[inherited] -> return
+    "inherit":inherit -> "set":key[inherited] -> return
+    
     entry -> "default":key -> ":"
     entry -> "storage":key -> ":"[storage] -> string:value -> return
     entry -> "get":key -> ":"
@@ -85,35 +88,37 @@ array_literal {
  */
 
 async_literal {
-    entry -> "func" -> "#":async
+    //entry -> "function" -> "#":async
 
-    entry -> "function" -> "#":async -> "(" -> ")" -> block:body -> return
+    entry -> "func" -> "#":async -> "(" -> ")" -> block:body -> return
     "#":async -> ident:name -> "("
     "(" -> async_param_list:param_list -> ")"
 }
 
 generator_literal {
-    entry -> "func" -> "*":generator
+    //entry -> "function" -> "*":generator
 
-    entry -> "function" -> "*":generator -> "(" -> ")" -> block:body -> return
+    entry -> "func" -> "*":generator -> "(" -> ")" -> block:body -> return
     "*":generator -> ident:name -> "("
     "(" -> function_param_list:param_list -> ")"
 }
 
 function_literal {
-    entry -> "func" -> "("
-    "func" -> ident:name
+    //entry -> "function" -> "("
+    //"function" -> ident:name
 
-    entry -> "function" -> "(" -> ")" -> block:body -> return
-    "function" -> ident:name -> "("
+    entry -> "func" -> "(" -> ")" -> block:body -> return
+    "func" -> ident:name -> "("
     "(" -> function_param_list:param_list -> ")"
 }
 
 function_param {
+    entry -> ident:annotation -> ident:name
     entry -> ident:name -> return
 }
 
 function_param_default {
+    entry -> ident:annotation -> ident:name
     entry -> ident:name -> "=" -> expression:value -> return
 }
 
@@ -177,11 +182,15 @@ await_literal {
 }
 
 /*
- * parent
+ * interheritance
  */
 
 parent_literal {
     entry -> "parent" -> return
+}
+
+self_literal {
+    entry -> "self" -> return
 }
 
 /*
@@ -211,6 +220,7 @@ base_literal {
     entry -> require_literal:require -> return
     entry -> resource_literal:resource -> return
     entry -> parent_literal:parent -> return
+    entry -> self_literal:self -> return
     entry -> storage_literal:storage -> return
     entry -> yield_literal:yield -> return
     entry -> await_literal:await -> return
@@ -227,6 +237,6 @@ complex_literal {
 }
 
 literal {
-    entry -> base_literal:base -> return //!todo where is extra base capture used?
+    entry -> base_literal -> return
     entry -> complex_literal -> return
 }

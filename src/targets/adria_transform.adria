@@ -41,6 +41,7 @@ var ASTException = require('../language_parser/ast_exception');
 module AdriaTransform = proto (Transform) {
 
     cacheModifier   : null,
+    startTime       : 0,
     globals         : null,
     implicits       : null,
     requires        : null,
@@ -135,12 +136,17 @@ module AdriaTransform = proto (Transform) {
         args.addSwitch('strict', 'Compile strict Javascript', true);
         args.addSwitch('assert', 'Add assert() support', false);
         args.addSwitch('scan', 'Perform basic logic checks', true);
+        args.addSwitch('time', 'Report compilation duration', false);
     },
 
     processOptions: func() {
 
         parent->processOptions();
         this.cacheModifier = util.md5(JSON.stringify(this.options));
+
+        if (this.options['time']) {
+            this.startTime = Date.now();
+        }
     },
 
     /**
@@ -334,6 +340,12 @@ module AdriaTransform = proto (Transform) {
         this.protoParser = new AdriaParser(this);
         this.protoParser.trainSelf();
 
+        if (this.options['time'] && this.options['outFile'] !== null) {
+            var duration = Date.now() - this.startTime;
+            console.log('Setup duration: ' + duration + 'ms');
+            this.startTime = Date.now();
+        }
+
         // process piped data and initial files
 
         if (this.piped !== undefined) {
@@ -355,29 +367,33 @@ module AdriaTransform = proto (Transform) {
         // result
 
         var node = this.generateOutputTree();
-        var options = this.options;
 
-        if (options['outFile'] !== null) {
+        if (this.options['outFile'] !== null) {
 
-            var jsFile = options['basePath'] + options['outFile'];
+            var jsFile = this.options['basePath'] + this.options['outFile'];
             var mapFile = jsFile.stripPostfix('.js') + '.map';
 
-            if (options['map']) {
+            if (this.options['map']) {
 
-                var result = node.toStringWithSourceMap({ file: options['outFile'] });
-                var mapLink = '\n//@ sourceMappingURL=' + path.relative(options['basePath'], mapFile);
+                var result = node.toStringWithSourceMap({ file: this.options['outFile'] });
+                var mapLink = '\n//@ sourceMappingURL=' + path.relative(this.options['basePath'], mapFile);
 
-                fs.writeFileSync(jsFile, result.code + (options['link'] ? mapLink : ''));
+                fs.writeFileSync(jsFile, result.code + (this.options['link'] ? mapLink : ''));
                 fs.writeFileSync(mapFile, result.map);
 
             } else {
 
                 var result = node.toString();
-                fs.writeFileSync(jsFile, options['blanks'] ? result : this.postProcess(result));
+                fs.writeFileSync(jsFile, this.options['blanks'] ? result : this.postProcess(result));
             }
 
-            if (options['shellwrap']) {
+            if (this.options['shellwrap']) {
                 fs.chmodSync(jsFile, 493 /*0755*/);
+            }
+
+            if (this.options['time']) {
+                var duration = Date.now() - this.startTime;
+                console.log('Transformation duration: ' + duration + 'ms');
             }
 
         } else {

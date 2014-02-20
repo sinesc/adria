@@ -93,34 +93,30 @@ module Expression = proto (AdriaNode) {
 
         if (propertyAssignSplit > -1) {
 
-            //result.prepend('Object.defineProperty(');
             var target, name;
-
             var child = children[propertyAssignSplit - 1];
 
             switch (child.key) {
                 case 'member':
                     target = result;
-                    name = child.children[0].value;
-                    //result.add(", '" + child.children[0].value + "',");
+                    name = "'" + child.children[0].value + "'";
                     break;
                 case 'index':
                     target = result;
                     name = child.toSourceNode();
-                    //result.add([ ', ', child.toSourceNode(), ', ' ]);
                     break;
                 case 'proto':
                     result.add('.prototype');
                     target = result;
                     name = "'" + child.children[0].value + "'";
-                    //result.add(".prototype, '" + child.children[0].value + "', ");
                     break;
             }
 
+            // handle readonly assignment
+
             if (children[propertyAssignSplit].value === ':=') {
                 result.prepend('Object.defineProperty(');
-                result.add([', ', name]);
-                result.add('{' + this.nl(1) + 'value: ');
+                result.add([ ', ', name, ', {' + this.nl(1) + 'value: ' ]);
                 result.add(children[propertyAssignSplit + 1].toSourceNode());
                 result.add(',' + this.nl() + 'writable: false' + this.nl(-1) + '})');
             } else {

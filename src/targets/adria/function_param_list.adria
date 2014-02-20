@@ -1,8 +1,18 @@
 
 var AdriaNode = require('./adria_node');
+var FunctionLiteral = require('./function_literal');
 
 module FunctionParamList = proto (AdriaNode) {
 
+    /**
+     * handle individual parameter
+     *
+     * @param boolean declare
+     * @param FunctionLiteral functionNode
+     * @param Scope scope
+     * @param SourceNode result
+     * @param CaptureNode node parameter
+     */
     handle: func(declare, functionNode, scope, result, node) {
 
         if (node.key === 'item') {
@@ -11,7 +21,7 @@ module FunctionParamList = proto (AdriaNode) {
             result.add(name);
 
             if (declare) {
-                scope.addImplicit(name.toString());
+                scope.addImplicit(name.toString(), true);
             }
 
             // check for default args, push those to FunctionLiteral's defaultArgs property
@@ -33,7 +43,7 @@ module FunctionParamList = proto (AdriaNode) {
     toSourceNode: func(declare = true) {
 
         var result = this.csn();
-        var functionNode = this.ancestor([ 'function', 'generator', 'async' ]);
+        var functionNode = this.findProto(FunctionLiteral);
         var scope = this.findScope();
 
         this.each(this.handle.bind(this, declare, functionNode, scope, result));

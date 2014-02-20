@@ -1,16 +1,16 @@
 
+var AdriaFunctionNode = require('./adria_function_node');
 var Scope = require('./scope');
 
 var thisId = 1;
 
-module FunctionLiteral = proto (Scope) {
+module FunctionLiteral = proto (AdriaFunctionNode) {
 
     thisId              : 0,
-    defaultArgs         : null,
     name                : null, //!todo seems to be a sourcenode!
-    lookupParent        : false,
     provideContext      : false,
     registerWithParent  : false,
+    defaultArgs         : null,
 
     constructor: func(key, value) {
         this.defaultArgs = [ ];
@@ -39,7 +39,7 @@ module FunctionLiteral = proto (Scope) {
         // nothing to do here
     },
 
-    postBody: function(result, body) {
+    postBody: func(result, body) {
 
         result.add(body);
     },
@@ -95,10 +95,10 @@ module FunctionLiteral = proto (Scope) {
             result.add('var '  + this.storeContext() + ' = this;' + this.nl());
         }
 
-        // prepare parent lookup, if parent keyword is used in body
+        // prepare parent/self lookup, if any of those keywords were used
 
-        if (this.lookupParent) {
-            this.addParentLookup(result, this.name);
+        if (this.provideParent || this.provideSelf) {
+            this.getParentLookupCode(result, this.name);
         }
 
         // finalize body

@@ -2,11 +2,11 @@
 var AdriaNode = require('./adria_node');
 var FunctionLiteral = require('./function_literal');
 
-module ParentLiteral = proto (AdriaNode) {
+module SelfLiteral = proto (AdriaNode) {
 
     toSourceNode: func() {
 
         var host = this.findProto(FunctionLiteral);
-        return this.csn(host.getParentLookup());
+        return this.csn(host.getSelfLookup());
     }
 };

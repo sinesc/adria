@@ -78,7 +78,7 @@ module Node = proto {
         assert(node instanceof Node);
 
         // definition parsing only detects duplicate pairs, prevent duplicate node insertion
-        
+
         if (this.hasChild(node)) {
             return;
         }
@@ -195,7 +195,7 @@ module Node = proto {
      *
      * @param token to match
      */
-    filter: function*(parser, token, stack) {
+    filter: func*(parser, token, stack) {
 
         var children = this.children;
         var child, blockRoot, generator, result;

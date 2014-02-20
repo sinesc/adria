@@ -23,6 +23,8 @@
  */
 var test = require('./test');
 
+test.group('test_assert');
+
 test('assert exception type', func() {
 
     var caught = false;

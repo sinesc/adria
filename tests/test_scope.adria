@@ -40,6 +40,8 @@ proto TestObj {
  * tests
  */
 
+test.group('test_scope');
+
 test('constructor scope', func() {
 
     var test = new TestObj();

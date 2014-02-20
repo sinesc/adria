@@ -2,9 +2,9 @@
 set -e
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 ASTD_PATH="../../astdlib/"
-BASE_PARAMS="--no-application --no-cache --no-blanks -t node --no-map --path $ASTD_PATH -D version=0.1.8"
-BUILD_PARAMS="$@ $BASE_PARAMS --base src/ --shellwrap --header ../LICENSE --out ../bin/ngadria.js main.adria"
-TEST_PARAMS="$@ $BASE_PARAMS --base tests/ --assert --out test.js test_all.adria";
+BASE_PARAMS="--no-application --no-cache --no-blanks --shellwrap -t node --no-map --path $ASTD_PATH -D version=0.1.9"
+BUILD_PARAMS="$@ $BASE_PARAMS --base src/ --header ../LICENSE --out ../bin/ngadria.js main.adria"
+TEST_PARAMS="$@ $BASE_PARAMS --base tests/ --assert --out test_all.js test_all.adria";
 
 echo "changing working directory to $DIR"
 cd $DIR
@@ -23,4 +23,4 @@ md5sum ./bin/ngadria.js
 
 echo "unit testing...";
 ./bin/ngadria.js $TEST_PARAMS
-node --harmony ./tests/test.js
+./tests/test_all.js

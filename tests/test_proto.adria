@@ -23,6 +23,39 @@
  */
 var test = require('./test');
 
+var Base = proto {
+    value: 1,
+    constructor: func(value = 4) {
+        this.value = value;
+    },
+};
+
+var Sub = proto (Base) {
+    constructor: func(value = 3) {
+        parent->constructor(value * 2);
+    },
+};
+
+/*
+ * tests
+ */
+
+test.group('test_proto');
+
+test('proto statement', func() {
+
+    proto Base {
+    }
+
+    proto Sub (Base) {
+    }
+
+    assert(typeof Base === 'function');
+    assert(typeof Sub === 'function');
+    assert((new Base) instanceof Base);
+    assert((new Sub) instanceof Base);
+});
+
 test('null proto', func() {
 
     var P = null;
@@ -52,3 +85,74 @@ test('object proto', func() {
 
     assert((p instanceof P) && (p instanceof Object));
 });
+
+test('parent keyword', func() {
+
+    // provide parameter
+
+    var base = new Base(2);
+    assert(base.value === 2);
+
+    var sub = new Sub(2);
+    assert(sub.value === 4);
+
+    // default parameter
+
+    var baseD = new Base();
+    assert(baseD.value === 4);
+
+    var subD = new Sub();
+    assert(subD.value === 6);
+});
+
+test('self keyword', func() {
+
+    var success = false;
+
+    proto Single {
+        funcA: func() {
+            success = true;
+        },
+        funcB: func() {
+            self::funcA();
+        },
+        funcC: func() {
+            self::funcB();
+        }
+    }
+
+    Single::funcC();
+
+    assert(success);
+});
+
+test('self keyword (inheritance)', func() {
+
+    var success = false;
+
+    var Base = proto {
+        funcA: func() {
+            success = true;
+        },
+        funcB: func() {
+            self::funcA();
+        }
+    };
+
+    var Single = proto (Base) {
+        funcC: func() {
+            parent::funcB();
+        },
+        funcD: func() {
+            self::funcC();
+        }
+    };
+
+    Single::funcD();
+
+    assert(success);
+});
+
+if (test.noSummary !== true) {
+    test.summary();
+}

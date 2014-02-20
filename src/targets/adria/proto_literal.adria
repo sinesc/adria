@@ -1,20 +1,20 @@
 
-var AdriaNode = require('./adria_node');
+var AdriaFunctionNode = require('./adria_function_node');
 
-module ProtoLiteral = proto (AdriaNode) {
+module ProtoLiteral = proto (AdriaFunctionNode) {
 
     constructorFunc: null,
     constructorArgs: null,
     constructorBody: null,
     constructorDefaults: null,
-    lookupParent: false,
+    provideParent: false,
     name: '',
 
     constructor: func(key, value) {
 
         this.constructorArgs = [ ];
         this.constructorDefaults = [ ];
-        AdriaNode->constructor(key, value);
+        parent->constructor(key, value);
     },
 
     toSourceNode: func() {
@@ -33,23 +33,24 @@ module ProtoLiteral = proto (AdriaNode) {
 
         // generate output
 
-        var assignTo = '';
+        var result = this.csn();
 
         if (this.value === 'proto_statement') {
 
             // statement requires assignment of wrapper
 
-            this.parent.findScope().addLocal(this.name);
-            assignTo = this.name + ' = ';
+            var mangledName = this.parent.findScope().addLocal(this.name);
+            result.add(mangledName + ' = ');
         }
 
-        var result = this.csn(assignTo + '(function(' + (haveParent && blankParent === false ? '___parent' : '') + ') {' + this.nl(1));
+        result.add('(function(' + (haveParent && blankParent === false ? '___parent' : '') + ') {' + this.nl(1));
+
         var body = this.get('body').toSourceNode();
 
         // user- or default-constructor
 
         if (this.constructorBody !== null) {
-
+//!todo refactor this crap
             result.add('var ___self = function ' + this.name + '(');
             result.add(this.constructorArgs);
             result.add(') {' + this.nl(1));
@@ -63,8 +64,8 @@ module ProtoLiteral = proto (AdriaNode) {
 
             // dynamic parent lookup
 
-            if (this.lookupParent) {
-                this.addParentLookup(result, 'constructor', '___self');
+            if (this.provideParent) {
+                this.getParentLookupCode(result, 'constructor', '___self');
             }
 
             result.add(this.constructorBody);

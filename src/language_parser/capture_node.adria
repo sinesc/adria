@@ -161,7 +161,7 @@ module CaptureNode = proto {
         /**
          * the actual conversion function
          */
-        return function fromResults(results, typeMapper) {
+        return func fromResults(results, typeMapper) {
 
             var root = new CaptureNode();
             var current = root;
@@ -361,6 +361,27 @@ module CaptureNode = proto {
         }
 
         return dummy;
+    },
+
+    /**
+     * check if node has a child with given key
+     *
+     * @param string key node key to find
+     * @return boolean
+     */
+    has: func(key) {
+
+        if (this.children instanceof Array) {
+
+            for (var id, child in this.children) {
+
+                if (child.key == key) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
     },
 
     /**

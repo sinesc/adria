@@ -20,7 +20,7 @@ module ProtoBodyItem = proto (AdriaNode) {
             protoNode.constructorArgs = functionNode.get('param_list').toSourceNode();
             protoNode.constructorDefaults = functionNode.defaultArgs;
             protoNode.constructorBody = functionNode.get('body').toSourceNode();
-            protoNode.lookupParent = functionNode.lookupParent;
+            protoNode.provideParent = functionNode.provideParent;
             this.nl(-1);
             return this.csn();
 
