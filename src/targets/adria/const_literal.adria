@@ -1,7 +1,7 @@
 
-var AdriaNode = require('./adria_node');
+var Node = require('./base/node');
 
-module ConstLiteral = proto (AdriaNode) {
+module ConstLiteral = proto (Node) {
 
     toSourceNode: func() {
 

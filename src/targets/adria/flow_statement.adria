@@ -1,10 +1,10 @@
 
-var AdriaNode = require('./adria_node');
+var Node = require('./base/node');
 
 /**
  * handles break and continue
  */
-module FlowStatement = proto (AdriaNode) {
+module FlowStatement = proto (Node) {
 
     toSourceNode: func() {
 

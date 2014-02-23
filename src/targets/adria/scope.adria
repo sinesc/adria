@@ -1,13 +1,13 @@
 
 var Map = require('astd/map');
-var AdriaNode = require('./adria_node');
+var Node = require('./base/node');
 var ASTException = require('../../language_parser/ast_exception');
 
 // keep unique scope ids
 
 var scopeLocalId = 1;
 
-module Scope = proto (AdriaNode) {
+module Scope = proto (Node) {
 
     locals      : null,
     implicits   : null,
@@ -15,7 +15,7 @@ module Scope = proto (AdriaNode) {
     constructor: func(key, value) {
         this.locals = new Map();
         this.implicits = new Map();
-        AdriaNode->constructor(key, value);
+        Node->constructor(key, value);
     },
 
     addLocal: func(name) {
@@ -82,9 +82,9 @@ module Scope = proto (AdriaNode) {
     },
 };
 
-// register with AdriaNode
+// register with Node
 
-AdriaNode::Scope = Scope;
+Node::Scope = Scope;
 
 var findRefScope = func(name) {
 

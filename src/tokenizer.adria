@@ -129,7 +129,7 @@ func Match(name, data, endPosition, containedRows, lastRowLen) {
 /*
  * predefined tokenizer functions
  */
-Tokenizer.prefab = new (func() {
+export prefab = new (func() {
     var regexFunc = func(name, regex, lastRegex = null, callback = null) {
         return {
             name: name,

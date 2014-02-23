@@ -1,10 +1,10 @@
 
-var AdriaNode = require('./adria_node');
+var Node = require('./base/node');
 var FunctionLiteral = require('./function_literal');
 var PropertyLiteral = require('./property_literal');
 var ASTException = require('../../language_parser/ast_exception');
 
-module StorageLiteral = proto (AdriaNode) {
+module StorageLiteral = proto (Node) {
 
     toSourceNode: func() {
 

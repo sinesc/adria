@@ -1,8 +1,8 @@
 
-var AdriaNode = require('./adria_node');
+var Node = require('./base/node');
 var ASTException = require('../../language_parser/ast_exception');
 
-module YieldLiteral = proto (AdriaNode) {
+module YieldLiteral = proto (Node) {
 
     checkEnvironment: func() {
         if (this.ancestor([ 'function', 'generator', 'async' ]).key !== 'generator') {

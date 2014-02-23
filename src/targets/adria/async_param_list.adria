@@ -12,6 +12,7 @@ module AsyncParamList = proto (FunctionParamList) {
         if (node.key === 'callback') {
 
             result.add(functionNode.storeCallback());
+            this.numParams++;
             return true;
         }
 

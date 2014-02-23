@@ -1,11 +1,11 @@
 
-var AdriaNode = require('./adria_node');
+var Node = require('./base/node');
 
 /**
  * handles an async-wrap-operation. note: wrapping happens in Expression, this
  * is just the operation where "(..., #)" is the operator.
  */
-module AsyncWrapOperation = proto (AdriaNode) {
+module AsyncWrapOperation = proto (Node) {
 
     params: null,
 

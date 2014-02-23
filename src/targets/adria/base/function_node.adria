@@ -1,7 +1,7 @@
 
-var Scope = require('./scope');
+var Scope = require('../scope');
 
-module AdriaFunctionNode = proto (Scope) {
+module FunctionNode = proto (Scope) {
 
     provideParent   : false,
     provideSelf     : false,

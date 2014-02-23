@@ -136,7 +136,7 @@ var testProp = func(Type, propName, storageName, initialValue) {
  * tests
  */
 
-test.group('test_property');
+test.group('test_prop');
 
 test('direct object attachment', func() {
 

@@ -1,7 +1,7 @@
 
-var AdriaValueType = require('./adria_value_type');
+var ValueType = require('./base/value_type');
 
-module Ident = proto (AdriaValueType) {
+module Ident = proto (ValueType) {
 
     toSourceNode: func() {
         var name = this.findScope().findRef(this.value);

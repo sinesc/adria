@@ -1,5 +1,5 @@
 
-var AdriaNode = require('./adria_node');
+var Node = require('./base/node');
 var Scope = require('./scope');
 
 var catchId = 1;
@@ -20,7 +20,7 @@ export Try = proto (Scope) {
     },
 };
 
-export Catch = proto (AdriaNode) {
+export Catch = proto (Node) {
 
     exceptionName: '',
 

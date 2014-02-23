@@ -1,9 +1,9 @@
 
-var AdriaNode = require('./adria_node');
+var Node = require('./base/node');
 var AsyncLiteral = require('./async_literal');
 var FunctionLiteral = require('./function_literal');
 
-module ReturnStatement = proto (AdriaNode) {
+module ReturnStatement = proto (Node) {
 
     toSourceNode: func() {
 

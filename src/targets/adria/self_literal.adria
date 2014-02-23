@@ -1,8 +1,8 @@
 
-var AdriaNode = require('./adria_node');
+var Node = require('./base/node');
 var FunctionLiteral = require('./function_literal');
 
-module SelfLiteral = proto (AdriaNode) {
+module SelfLiteral = proto (Node) {
 
     toSourceNode: func() {
 

@@ -1,7 +1,7 @@
 
-var AdriaNode = require('./adria_node');
+var Node = require('./base/node');
 
-module ThrowStatement = proto (AdriaNode) {
+module ThrowStatement = proto (Node) {
 
     toSourceNode: func() {
 

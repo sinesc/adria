@@ -1,8 +1,14 @@
 
-var AdriaNode = require('./adria_node');
+var Set = require('astd/set');
+var ParamsNode = require('./base/params_node');
 var FunctionLiteral = require('./function_literal');
+var ASTException = require('../../language_parser/ast_exception');
 
-module FunctionParamList = proto (AdriaNode) {
+module FunctionParamList = proto (ParamsNode) {
+
+    numParams           : 0,
+    optionalPermutations: null,
+    optionalGroups      : null,
 
     /**
      * handle individual parameter
@@ -18,21 +24,50 @@ module FunctionParamList = proto (AdriaNode) {
         if (node.key === 'item') {
 
             var name = node.get('name').toSourceNode();
-            result.add(name);
+
+            // don't add to formal parameter list when using advanced optionals, add to locals instead
+
+            if (this.optionalPermutations === null) {
+                result.add(name);
+            }
+
+            if (declare) {
+                if (this.optionalPermutations === null) {
+                    scope.addImplicit(name.toString(), true);
+                } else {
+                    scope.addLocal(name.toString());
+                }
+            }
+
+            // check for default args, push those to FunctionLiteral's specialArgs property
+
+            var valueNode = node.get('value');
+
+            if (valueNode.isNode() && this.optionalPermutations === null) {
+
+                var defaultArg = this.csn([ name, ' = (', name, ' !== undefined ? ', name, ' : (', valueNode.toSourceNode(), '))' ]);
+                functionNode.specialArgs.push(defaultArg);
+            }
+
+            // count required by rest params
+
+            this.numParams++;
+            return true;
+
+        } else if (node.key === 'opt_items') {
+
+            node.each(this.handle.bind(this, declare, functionNode, scope, result));
+
+        } else if (node.key === 'rest') {
+
+            var name = node.get('name').toSourceNode();
 
             if (declare) {
                 scope.addImplicit(name.toString(), true);
             }
 
-            // check for default args, push those to FunctionLiteral's defaultArgs property
-
-            var valueNode = node.get('value');
-
-            if (valueNode.isNode()) {
-
-                var defaultArg = this.csn([ name, ' = (', name, ' !== undefined ? ', name, ' : (', valueNode.toSourceNode(), '))' ]);
-                functionNode.defaultArgs.push(defaultArg);
-            }
+            var restArg = this.csn([ 'var ', name, ' = Array.prototype.slice.call(arguments, ' + this.numParams + ')' ]);
+            functionNode.specialArgs.push(restArg);
 
             return true;
         }
@@ -40,11 +75,93 @@ module FunctionParamList = proto (AdriaNode) {
         return false;
     },
 
+    /**
+     * iterates over all combinations of optionals and checks that no two combinations result in the same number of
+     * arguments. sets optionalPermutations
+     */
+    initOptionals: func() {
+
+        var optionals = this.indexOptionals();
+        var permutations = this.findValidOptionalPermutations(optionals);
+        var counts = new Set();
+
+        // try all permutations, log allowed ones
+
+        for (var permutation, numParameters in permutations.data) {
+
+            if (counts.has(numParameters)) {
+                throw new ASTException('Ambiguous parameter-list, multiple permutations result in ' + numParameters + ' optional parameters', this);
+            }
+
+            counts.add(numParameters);
+        }
+
+        this.optionalGroups = optionals;
+        this.optionalPermutations = permutations.data;
+    },
+
+    /**
+     * generates source code for the advanced optionals syntax
+     *
+     * @param FunctionLiteral functionNode
+     */
+    generatePermutationSwitch: func(functionNode) {
+
+        var FunctionParamsOptional = require('./function_params_optional');
+        var parameters = this.indexParameters();
+        var parameterGroups = new Array(parameters.length);
+        var numUngrouped = 0;
+        var result = this.csn();
+
+        // map optional-group for each parameter and count ungrouped parameters
+
+        for (var id, parameter in parameters) {
+            var optionalGroup = parameter.findProto(FunctionParamsOptional, FunctionParamList);
+            if (optionalGroup instanceof FunctionParamsOptional) {
+                parameterGroups[id] = optionalGroup;
+            } else {
+                parameterGroups[id] = null;
+                numUngrouped++;
+            }
+        }
+
+        // generate code
+
+        for (var permutation, numGrouped in this.optionalPermutations) {
+
+            result.add('if (arguments.length === ' + (numGrouped + numUngrouped) + ') {' + this.nl(1));
+
+            var argId = 0;
+            this.applyOptionalPermutation(permutation, this.optionalGroups);
+
+            // either get parameter value from arguments or default values
+
+            for (var id, parameter in parameters) {
+                if (parameterGroups[id] === null || parameterGroups[id].optionalIsActive) {
+                    result.add([ parameter.get('name').toSourceNode(), ' = arguments[' + (argId++) + ']' + this.nl() ]);
+                } else {
+                    result.add([ parameter.get('name').toSourceNode(), ' = ', parameter.get('value').toSourceNode(), this.nl() ]);
+                }
+            }
+
+            result.add(this.nl(-1) + '} else ');
+        }
+
+        result.add('{' + this.nl(1) + 'throw new Exception(\'invalid number of arguments\');' + this.nl(-1) + '}');
+
+        functionNode.specialArgs.push(result);
+    },
+
     toSourceNode: func(declare = true) {
 
         var result = this.csn();
         var functionNode = this.findProto(FunctionLiteral);
         var scope = this.findScope();
+
+        if (this.has('opt_items')) {
+            this.initOptionals();
+            this.generatePermutationSwitch(functionNode);
+        }
 
         this.each(this.handle.bind(this, declare, functionNode, scope, result));
 

@@ -1,7 +1,7 @@
 
-var AdriaNode = require('./adria_node');
+var Node = require('./base/node');
 
-module InvokeOperation = proto (AdriaNode) {
+module InvokeOperation = proto (Node) {
 
     toSourceNode: func(includeBraces = true) {
 

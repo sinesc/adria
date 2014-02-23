@@ -1,8 +1,8 @@
 
-var AdriaNode = require('./adria_node');
+var Node = require('./base/node');
 var Ident = require('./ident');
 
-module ProtoBodyItem = proto (AdriaNode) {
+module ProtoBodyItem = proto (Node) {
 
     toSourceNode: func()  {
 
@@ -16,11 +16,11 @@ module ProtoBodyItem = proto (AdriaNode) {
 
             var functionNode = this.path('value.function');
             this.nl(1);
-            protoNode.constructorFunc = functionNode;
-            protoNode.constructorArgs = functionNode.get('param_list').toSourceNode();
-            protoNode.constructorDefaults = functionNode.defaultArgs;
-            protoNode.constructorBody = functionNode.get('body').toSourceNode();
-            protoNode.provideParent = functionNode.provideParent;
+            protoNode.constructorFunc       = functionNode;
+            protoNode.constructorArgs       = functionNode.get('param_list').toSourceNode();
+            protoNode.constructorDefaults   = functionNode.specialArgs;
+            protoNode.constructorBody       = functionNode.get('body').toSourceNode();
+            protoNode.provideParent         = functionNode.provideParent;
             this.nl(-1);
             return this.csn();
 

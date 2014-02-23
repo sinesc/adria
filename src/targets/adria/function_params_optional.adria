@@ -1,0 +1,30 @@
+
+var ParamsNode = require('./base/params_node');
+var FunctionParamList = require('./function_param_list');
+
+module FunctionParamsOptional = proto (ParamsNode) {
+
+    optionalIsActive: true,
+
+    /**
+     * attempt to set the optional active status. optionals can only be active if their
+     * parent is active as well
+     *
+     * @param boolean tryStatus new status to attempt to set
+     * @return boolean actual status
+     */
+    setOptionalActive: func(tryStatus) {
+
+        // find parent optional, only set own status to true if parent is as well
+
+        var container = this.findProto(FunctionParamsOptional, FunctionParamList);
+
+        if (container instanceof FunctionParamsOptional) {
+            this.optionalIsActive = container.optionalIsActive && tryStatus;
+        } else {
+            this.optionalIsActive = tryStatus;
+        }
+
+        return this.optionalIsActive;
+    },
+};

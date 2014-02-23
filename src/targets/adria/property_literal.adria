@@ -8,7 +8,7 @@ module PropertyLiteral = proto (ObjectLiteral) {
 
     useStorage          : false,
     storageName         : null,
-    defaultValueNode    : 'undefined', //!todo should be sourcenode, but returning sourcenodes also needs to be refactored. eventually should be AdriaNode
+    defaultValueNode    : 'undefined', //!todo should be sourcenode, but returning sourcenodes also needs to be refactored. eventually should be Node
     target              : 'undefined',
     name                : 'undefined',
 

@@ -291,15 +291,16 @@ module CaptureNode = proto {
      * finds given constructor in ancestors
      *
      * @param function Constructor prototype constructor to find
+     * @param function StopConstructor prototype constructor to stop searching at
      * @param boolean fromParent default true, will also check this if false
      * @param any dummy result when constructor is not found
      * @return CaptureNode/dummy
      */
-    findProto: func(Constructor, fromParent = true, dummy = this.dummy) {
+    findProto: func(Constructor, StopConstructor = null, fromParent = true, dummy = this.dummy) {
 
         var current = fromParent ? this.parent : this;
 
-        while (current instanceof CaptureNode && current instanceof Constructor === false) {
+        while (current instanceof CaptureNode && current instanceof Constructor === false && (StopConstructor === null || current instanceof StopConstructor === false)) {
             current = current.parent;
         }
 

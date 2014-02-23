@@ -43,7 +43,7 @@ property_data {
 property_accessor_item {
     entry -> "inherit":inherit -> "get":key[inherited] -> return
     "inherit":inherit -> "set":key[inherited] -> return
-    
+
     entry -> "default":key -> ":"
     entry -> "storage":key -> ":"[storage] -> string:value -> return
     entry -> "get":key -> ":"
@@ -84,37 +84,40 @@ array_literal {
 }*/
 
 /*
- * function literal
+ * function literals
  */
 
 async_literal {
-    //entry -> "function" -> "#":async
-
     entry -> "func" -> "#":async -> "(" -> ")" -> block:body -> return
     "#":async -> ident:name -> "("
     "(" -> async_param_list:param_list -> ")"
 }
 
 generator_literal {
-    //entry -> "function" -> "*":generator
-
     entry -> "func" -> "*":generator -> "(" -> ")" -> block:body -> return
     "*":generator -> ident:name -> "("
     "(" -> function_param_list:param_list -> ")"
 }
 
 function_literal {
-    //entry -> "function" -> "("
-    //"function" -> ident:name
-
     entry -> "func" -> "(" -> ")" -> block:body -> return
     "func" -> ident:name -> "("
     "(" -> function_param_list:param_list -> ")"
 }
 
+/*
+ * function parameter lists
+ */
+
 function_param {
     entry -> ident:annotation -> ident:name
     entry -> ident:name -> return
+}
+
+function_params {
+    // standard params: a, b, c ....
+    entry -> function_param:item -> return
+    function_param:item -> "," -> function_param:item
 }
 
 function_param_default {
@@ -122,23 +125,46 @@ function_param_default {
     entry -> ident:name -> "=" -> expression:value -> return
 }
 
+function_params_default {
+    // defaulted params: d = 1, e = 2, f = 3 ....
+    entry -> function_param_default:item -> return
+    function_param_default:item -> "," -> function_param_default:item
+}
+
+function_param_rest {
+    entry -> "..." -> function_param:rest -> return
+}
+
+function_params_optional {
+    // optional params: a [ b, c [ d ] ] e
+    entry -> "[" -> function_params_default -> "]" -> return
+    "[" -> function_params_optional:opt_items -> "]"
+    function_params_optional:opt_items -> ","[opt_to_default] -> function_params_default
+    function_params_default -> ","[default_to_opt] -> function_params_optional:opt_items
+    function_params_optional:opt_items -> ","[opt_to_opt] -> function_params_optional:opt_items
+}
+
 function_param_list {
 
-    // standard params:  a, b, c ....
+    entry -> function_params -> return
+    entry -> function_params_default -> return
+    entry -> function_params_optional:opt_items -> return
 
-    entry -> function_param:item -> return
-    function_param:item -> ","[type_standard] -> function_param:item
+    // defaulted params following standard params: a, b, c, d = 1, e = 2, f = 3
 
-    // defaulted params:  d = 1, e = 2, f = 3 ....
+    entry -> function_params -> ","[nodefault_to_default] -> function_params_default -> return
 
-    entry -> function_param_default:item -> return
-    function_param_default:item -> ","[type_defaulted] -> function_param_default:item
+    // optional params following standard params, possibly with standard params following
 
-    // defaulted params following standard params:  a, b, c, d = 1, e = 2, f = 3
-    // note: commas are named to prevent the defintion-parser from linking them and thus
-    // creating a backlink from defaulted parameters to standard parameters
+    entry -> function_params -> ","[nodefault_to_optional] -> function_params_optional:opt_items -> return
+    function_params_optional:opt_items -> ","[opt_to_nodefault] -> function_params[post_opt] -> return
+    function_params[post_opt] -> ","[nodefault_to_optional] // full circle
 
-    function_param:item -> ","[one_way_bridge] -> function_param_default:item
+    // rest parameter following standard or default
+
+    entry -> function_param_rest -> return
+    function_params -> ","[nodefault_to_rest] -> function_param_rest
+    function_params_default -> ","[default_to_rest] -> function_param_rest
 }
 
 async_param_list {

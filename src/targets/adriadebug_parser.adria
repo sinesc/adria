@@ -22,13 +22,13 @@
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 var AdriaParser = require('./adria_parser');
-var AdriaNode = require('./adria/adria_node');
+var Node = require('./adria/base/node');
 
 /**
- * Extend AdriaNode with XML-yielding toString function
+ * Extend Node with XML-yielding toString function
  */
 //!todo find better solution without sacrificing the inclusion of precendence-changes caused by the nodes themselves
-AdriaNode::toString = func() {
+Node::toString = func() {
 
     var indent = String.repeat(this.depth() * 4, ' ');
     var result = "";

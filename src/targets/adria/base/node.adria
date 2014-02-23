@@ -1,9 +1,9 @@
 
-var LanguageParser = require('../../language_parser');
+var LanguageParser = require('../../../language_parser');
 var ASTException = LanguageParser.ASTException;
 var CaptureNode = LanguageParser.CaptureNode;
 
-module AdriaNode = proto (CaptureNode) {
+module Node = proto (CaptureNode) {
 
     /**
      * constructor-type findScope will search for (should be set to Scope)
@@ -17,7 +17,7 @@ module AdriaNode = proto (CaptureNode) {
      * @return scope node/null
      */
     findScope: func(fromParent = false) {
-        return this.findProto(AdriaNode::Scope, fromParent, null);
+        return this.findProto(Node::Scope, null, fromParent, null);
     },
 
     /**

@@ -1,7 +1,7 @@
 
-var AdriaNode = require('./adria_node');
+var Node = require('./base/node');
 
-module GlobalStatement = proto (AdriaNode) {
+module GlobalStatement = proto (Node) {
 
     toSourceNode: func() {
 

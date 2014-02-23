@@ -115,7 +115,7 @@ module AdriaParser = proto(LanguageParser) {
             Tokenizer.prefab.regex(null, /^\/\/.*/),
             Tokenizer.prefab.breaker(),
             Tokenizer.prefab.regex('REGEXP', /^\/(?:(?=(\\?))\1.)*?\/[a-z]*/, /^(\(|=|==|===|\+|!=|!==|,|;|\:)$/),
-            Tokenizer.prefab.set('DELIM', [ ';', '.', ',', '(', ')', '[', ']', '{', '}', '!==', '!=', '!', '++', '--', '#' ]),
+            Tokenizer.prefab.set('DELIM', [ ';', '...', '.', ',', '(', ')', '[', ']', '{', '}', '!==', '!=', '!', '++', '--', '#' ]),
             Tokenizer.prefab.group('DELIM', [ '=', '&', '|', '<', '>', ':', '?', '+', '-', '*', '/', '%' ]),
             Tokenizer.prefab.regex('IDENT', /^[a-zA-Z_\$][a-zA-Z0-9_\$]*/, null, matchKeywords),
             Tokenizer.prefab.number('NUMERIC'),
@@ -149,7 +149,7 @@ module AdriaParser = proto(LanguageParser) {
             return definition[typeName];
         }
 
-        return definition.AdriaNode;
+        return definition.Node;
     },
 
     /**

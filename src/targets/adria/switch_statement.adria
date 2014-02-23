@@ -1,7 +1,7 @@
 
-var AdriaNode = require('./adria_node');
+var Node = require('./base/node');
 
-module SwitchStatement = proto (AdriaNode) {
+module SwitchStatement = proto (Node) {
 
     toSourceNode: func() {
 

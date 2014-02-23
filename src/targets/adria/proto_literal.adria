@@ -1,7 +1,7 @@
 
-var AdriaFunctionNode = require('./adria_function_node');
+var FunctionNode = require('./base/function_node');
 
-module ProtoLiteral = proto (AdriaFunctionNode) {
+module ProtoLiteral = proto (FunctionNode) {
 
     constructorFunc: null,
     constructorArgs: null,

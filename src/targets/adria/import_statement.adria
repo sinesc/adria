@@ -1,7 +1,7 @@
 
-var AdriaNode = require('./adria_node');
+var Node = require('./base/node');
 
-module ImportStatement = proto (AdriaNode) {
+module ImportStatement = proto (Node) {
 
     toSourceNode: func() {
 

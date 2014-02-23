@@ -1,5 +1,5 @@
 
-var AdriaNode = require('./adria_node');
+var Node = require('./base/node');
 var ProtoLiteral = require('./proto_literal');
 
 module NewProtoLiteral = proto (ProtoLiteral) {

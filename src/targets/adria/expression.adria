@@ -1,8 +1,8 @@
 
 var Set = require('astd/set');
-var AdriaNode = require('./adria_node');
+var Node = require('./base/node');
 
-module Expression = proto (AdriaNode) {
+module Expression = proto (Node) {
 
     wrapPrefix: new Set([
         'member', 'index', 'proto',
@@ -11,7 +11,7 @@ module Expression = proto (AdriaNode) {
 
     preprocess: func(state) {
 
-        AdriaNode->preprocess(state);
+        Node->preprocess(state);
 
         // restructure async wraps
 
@@ -33,7 +33,7 @@ module Expression = proto (AdriaNode) {
 
     scan: func(state) {
 
-        AdriaNode->scan(state);
+        Node->scan(state);
 
         this.eachKey('ident', func(child) {
             this.checkDefined(child.value);

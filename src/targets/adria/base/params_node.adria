@@ -1,0 +1,118 @@
+
+var Map = require('astd/map');
+var Node = require('./node');
+
+module ParamsNode = proto (Node) {
+
+    /**
+     * returns number of optional parameters in current test-configuration
+     *
+     * @return int
+     */
+    countActiveOptionals: func() {
+
+        var result = 0;
+
+        this.eachKey('opt_items', func(node) {
+            if (node.optionalIsActive === true) {
+                var items = 0;
+                node.eachKey('item', func() {
+                    items++;
+                });
+                result += items + node.countActiveOptionals();
+            }
+        });
+
+        return result;
+    },
+
+    /**
+     * returns flat array of all optionals
+     *
+     * @return Array
+     */
+    indexOptionals: func() {
+
+        var result = [ ];
+
+        this.eachKey('opt_items', func(node) {
+            result.push(node);
+            var nestedOptionals = node.indexOptionals();
+            if (nestedOptionals.length > 0) {
+                result.push.apply(result, nestedOptionals);
+            }
+        });
+
+        return result;
+    },
+
+    /**
+     * returns flat list of all parameters
+     *
+     * @return Array
+     */
+    indexParameters: func() {
+
+        var result = [ ];
+
+        this.each(func(node) {
+            if (node.key === 'opt_items') {
+                var nestedParameters = node.indexParameters();
+                if (nestedParameters.length > 0) {
+                    result.push.apply(result, nestedParameters);
+                }
+            } else {
+                result.push(node);
+            }
+        });
+
+        return result;
+    },
+
+    /**
+     * finds valid optional combinations and returns map of bit-string => used parameters
+     *
+     * @return Map
+     */
+    findValidOptionalPermutations: func(optionals) {
+
+        var bits = optionals.length;
+        var permutations = Math.pow(2, bits);
+        var patterns = new Map();
+
+        // try all permutations, log allowed ones
+
+        for (var permutation = 0; permutation < permutations; permutation++) {
+
+            var pattern = '';
+
+            // try to set bitpattern to optionals and get actual pattern allowed by nested optionals
+
+            for (var bit = 0; bit < bits; bit++) {
+                var actuallySet = optionals[bit].setOptionalActive((permutation & (1 << bit)) > 0);
+                pattern += actuallySet ? '1' : '0';
+            }
+
+            // add pattern
+
+            if (patterns.lacks(pattern)) {
+                patterns.set(pattern, this.countActiveOptionals());
+            }
+        }
+
+        return patterns;
+    },
+    
+    /**
+     * apply given permutation string to optional parameter groups
+     *
+     * @param string permutation as produced by findValidOptionalPermutations
+     * @param Array optionals as indexed by indexOptionals
+     */
+    applyOptionalPermutation: func(permutation, optionals) {
+    
+        for (var id = 0; id < permutation.length; id++) {
+            optionals[id].optionalIsActive = (permutation.slice(id, id + 1) === '1');
+        }
+    },
+};

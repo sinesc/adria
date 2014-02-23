@@ -28,13 +28,13 @@
 // - various nodes do too much stuff that their children should handle, i.e. ProtoBodyItem
 // - sort this
 
-export AdriaNode = require('./adria/adria_node');
+export Node = require('./adria/base/node');
 
-var AdriaValueType = require('./adria/adria_value_type');
+var ValueType = require('./adria/base/value_type');
 export Ident = require('./adria/ident');
 export Name = Ident; //!todo derive from ValueType
-export String = proto (AdriaValueType) { };
-export Numeric = proto (AdriaValueType) { };
+export String = proto (ValueType) { };
+export Numeric = proto (ValueType) { };
 
 export Scope = require('./adria/scope');
 export Module = require('./adria/module');
@@ -54,6 +54,7 @@ export AsyncStatement = proto (AsyncLiteral) {
     registerWithParent: true,
 };
 
+export FunctionParamsOptional = require('./adria/function_params_optional');
 export FunctionParamList = require('./adria/function_param_list');
 export AsyncParamList = require('./adria/async_param_list');
 

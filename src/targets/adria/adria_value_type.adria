@@ -1,9 +1,0 @@
-
-var AdriaNode = require('./adria_node');
-
-module AdriaValueType = proto (AdriaNode) {
-
-    toSourceNode: func() {
-        return this.csn(this.value);
-    }
-};

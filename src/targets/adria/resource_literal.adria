@@ -1,8 +1,8 @@
 
-var AdriaFileNode = require('./adria_file_node');
+var FileNode = require('./base/file_node');
 var ASTException = require('../../language_parser/ast_exception');
 
-module ResourceLiteral = proto (AdriaFileNode) {
+module ResourceLiteral = proto (FileNode) {
 
     toSourceNode: func() {
 

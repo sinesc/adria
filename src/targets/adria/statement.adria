@@ -1,14 +1,14 @@
 
-var AdriaNode = require('./adria_node');
+var Node = require('./base/node');
 
-module Statement = proto (AdriaNode) {
+module Statement = proto (Node) {
 
     toSourceNode: func() {
 
         var type = this.children[0].key;
         var result = this.csn();
 
-        result.add(AdriaNode->toSourceNode());
+        result.add(Node->toSourceNode());
 
         switch (type) {
             case 'expression':
