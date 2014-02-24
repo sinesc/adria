@@ -30,7 +30,7 @@ This is a short and incomplete list of features:
 A few feature examples
 ----------------------
 
-### Asynchronous functions (serially wait for callbacks)
+### Asynchronous functions and callback wrapper syntax
 
 ```javascript
 
@@ -42,11 +42,11 @@ var sleep = func(ms, callback) {
     }, ms);                                         // first is error and would be thrown from within testAsync
 };
 
-// simple async function, # takes the place of the callback parameter
+// simple async function, adds support for await keyword
 
 var testAsync = func#() {
 
-    var result = await sleep(1000, #);
+    var result = await sleep(1000, #);              // # takes place of callback with await return value
     console.log('sleep done', result);
 
     result += await sleep(1000, #);
@@ -61,12 +61,34 @@ console.log('start sleeping');
 // sleep done <sleept 1000ms><sleept 1000ms>    [another 1000ms later]
 ```
 
-### Default parameters
+### Simple default parameters
 
 ```javascript
 function print(greeting, who = 'World!') {
     console.log(greeting + ' ' + who);
 }
+```
+
+### Advanced default parameters
+
+```javascript
+func message(delay, [ type = 'warning', [ text = 'default message' ] ], callback) {
+    setTimeout(callback.bind(null, type, text), delay);
+}
+```
+Below are some usages for the above function. See documentation for more realistic use-cases.
+```javascript
+message(100, func(type, message) {
+    console.log(type + ': ' + message);     // warning: default message
+});
+
+message(200, 'notice', func(type, message) {
+    console.log(type + ': ' + message);     // notice: default message
+});
+
+message(300, 'error', 'awesomeness overflow', func(type, message) {
+    console.log(type + ': ' + message);     // error: awesomeness overflow
+});
 ```
 
 ### For-In key/value support

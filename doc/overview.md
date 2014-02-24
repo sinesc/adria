@@ -30,6 +30,28 @@ This is a short overview of the differences between Javascript and Adria
 
 Default parameters may be provided for parameters not followed by undefaulted parameters.
 
+### advanced default parameters
+
+Adria supports an advanced syntax which allows for arbitrary placement of default parameters. The following code represents a valid function literal (note: args default value is an empty array):
+
+`func wait(delay, [ context = this, [ args = [] ] ], callback) { /* ... */ }`
+
+The function could be called with the following parameter permutations:
+
+`wait(<delay>, <callback>)`
+
+`wait(<delay>, <context>, <callback>)`
+
+`wait(<delay>, <context>, <args>, <callback>)`
+
+A function definition's parameter-list may have multiple blocks of optional or non-optional parameters, each optional block may contain multiple blocks of optional or non-optional parameters and so on. There may be no two possible permutations with the same number of total arguments, otherwise compilation will result in an error, explaining the conflicting permutations.
+
+Another, more complex example:
+
+`func insane(a, [ b = 1, c = 2, [ d = 3 ], e = 4 ], f, [ g = 5, h = 6 ]) { /* ... */ }`
+
+The above function accepts 2, 4, 5, 6, 7 or 8 arguments.
+
 ### new-prototype
 
 `new <constructor>( [<parameter>] ) { <proto body> }`
