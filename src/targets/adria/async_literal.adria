@@ -15,19 +15,19 @@ module AsyncLiteral = proto (GeneratorLiteral) {
 
         // don't name async functions as any recursion attempts need to refer to the outer function
     },
-    
+
     preBody: func(result) {
 
         if (this.useCallback) {
             result.add('try {' + this.nl(1));
         }
-    },   
+    },
 
     postBody: func(result, body) {
-    
+
         if (this.useCallback) {
-            result.add([ body, this.nl() + this.storeCallback() + '(null, undefined);', this.nl(-1) + '}' ]);
-            result.add([ ' catch (___exc) {' + this.nl(1) + this.storeCallback() + '(___exc, undefined);', this.nl(-1) + '}' ]);    
+            result.add([ body, this.nl(0, body) + this.storeCallback() + '(null, undefined);', this.nl(-1) + '}' ]);
+            result.add([ ' catch (___exc) {' + this.nl(1) + this.storeCallback() + '(___exc, undefined);', this.nl(-1) + '}' ]);
         } else {
             parent->postBody(result, body);
         }

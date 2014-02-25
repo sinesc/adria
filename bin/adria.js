@@ -1166,6 +1166,7 @@ var Exception{! if (enableAssert): !}, AssertionFailedException{! endif !};\n\
 (function() {\n\
     var resources = { };\n\
     var modules = { };\n\
+\n\
     var getResource = function(name) {{! if (enableAssert): !}\n\
         if (resources[name] === undefined) {\n\
             throw Error(\'missing resource \' + name);\n\
@@ -1173,6 +1174,7 @@ var Exception{! if (enableAssert): !}, AssertionFailedException{! endif !};\n\
         {! endif !}\n\
         return resources[name];\n\
     };\n\
+\n\
     var Module = function(name, func) {\n\
         this.name = name;\n\
         this.exports = Object.create(null);\n\
@@ -1180,12 +1182,14 @@ var Exception{! if (enableAssert): !}, AssertionFailedException{! endif !};\n\
     };\n\
     Module.prototype.exports = null;\n\
     Module.prototype.name = \'\';\n\
+\n\
     module = function(name, func) {\n\
         modules[name] = new Module(name, func);\n\
     };\n\
     resource = function(name, data) {\n\
         resources[name] = data;\n\
     };\n\
+\n\
     Exception = function Exception(message) {\n\
         this.message = message === undefined ? this.message : message;\n\
         this.name = this.constructor.name === undefined ? \'Exception\' : this.constructor.name;\n\
@@ -1200,6 +1204,7 @@ var Exception{! if (enableAssert): !}, AssertionFailedException{! endif !};\n\
     };\n\
     Exception.prototype = Object.create(Error.prototype);\n\
     Exception.prototype.constructor = Exception;{! if (enableApplication): !}\n\
+\n\
     application = function(Constructor /*, params... */) {\n\
         function Application() {\n\
             application = this;\n\
@@ -1210,6 +1215,7 @@ var Exception{! if (enableAssert): !}, AssertionFailedException{! endif !};\n\
         args[0] = null;\n\
         return new (Function.prototype.bind.apply(Application, args));\n\
     };{! endif !}\n\
+\n\
     require = function(file) {\n\
         var module = modules[file];{! if (enableAssert): !}\n\
         if (module === undefined) {\n\
@@ -1222,11 +1228,13 @@ var Exception{! if (enableAssert): !}, AssertionFailedException{! endif !};\n\
         }\n\
         return module.exports;\n\
     };{! if (enableAssert): !}\n\
+\n\
     AssertionFailedException = function AssertionFailedException(message) {\n\
         Exception.call(this, message);\n\
     };\n\
     AssertionFailedException.prototype = Object.create(Exception.prototype);\n\
     AssertionFailedException.prototype.constructor = AssertionFailedException;\n\
+\n\
     assert = function(assertion, message) {\n\
         if (assertion !== true) {\n\
             throw new AssertionFailedException(message);\n\
@@ -4154,7 +4162,7 @@ module('targets/adria/async_literal.adria', function(module, resource) {
             if (this.useCallback) {
                 result.add([
                     body,
-                    this.nl() + this.storeCallback() + '(null, undefined);',
+                    this.nl(0, body) + this.storeCallback() + '(null, undefined);',
                     this.nl(-1) + '}'
                 ]);
                 result.add([

@@ -248,7 +248,6 @@ module AdriaTransform = proto (Transform) {
         tpl.assign('enableAssert', options['assert']);
         tpl.assign('enableApplication', options['application']);
         tpl.assign('platform', options['platform']);
-        tpl.assign('enableInterface', this.addInterface);
 
         // wrap in shellscript
 
