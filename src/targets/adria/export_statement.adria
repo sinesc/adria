@@ -10,11 +10,6 @@ module ExportStatement = proto (Node) {
         var moduleNode = this.findProto(Module);
         moduleNode.addExport(name);
 
-        var result = this.csn();
-        result.add(name);
-        result.add(' = ');
-        result.add(this.get('value').toSourceNode());
-        result.add(';' + this.nl());
-        return result;
+        return this.csn([ name, ' = ', this.get('value').toSourceNode(), ';' ]);
     },
 };

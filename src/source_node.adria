@@ -21,22 +21,38 @@
  * IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-var fs = require('fs');
-var ASTDTemplate = require('astd/template');
+var MozillaSourceNode = require('source-map').SourceNode;
 
-module Template = proto (ASTDTemplate) {
+module SourceNode = proto (MozillaSourceNode) {
 
-    basePath: 'templates/',
+    trim: func() {
 
-    fetch: func(source) {
+        var id = this.children.length;
 
-        // remove empty lines
+        while (id--) {
 
-        return parent->fetch(source).replace(/\n[\ \n]*\n/g, '\n');
-    },
+            var lastChild = this.children[id];
 
-    fetchFile: func(file) {
-    
-        return this.fetch(fs.readFileSync(this.basePath + file, 'UTF-8'));
-    },
+            if (lastChild instanceof MozillaSourceNode) {
+
+                if (lastChild.trim()) {
+                    this.children.pop();
+                } else {
+                    break;
+                }
+
+            } else if (typeof lastChild === 'string') {
+
+                this.children[id] = lastChild.replace(/\s+$/, '');
+
+                if (this.children[id] === '') {
+                    this.children.pop();
+                } else {
+                    break;
+                }
+            }
+        }
+
+        return this.children.length === 0;
+    }
 };

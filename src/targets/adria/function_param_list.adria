@@ -1,4 +1,5 @@
 
+var Map = require('astd/map');
 var Set = require('astd/set');
 var ParamsNode = require('./base/params_node');
 var FunctionLiteral = require('./function_literal');
@@ -9,6 +10,22 @@ module FunctionParamList = proto (ParamsNode) {
     numParams           : 0,
     optionalPermutations: null,
     optionalGroups      : null,
+
+    toSourceNode: func(declare = true) {
+
+        var result = this.csn();
+        var functionNode = this.findProto(FunctionLiteral);
+        var scope = this.findScope();
+
+        if (this.has('opt_items')) {
+            this.initOptionals();
+            this.generatePermutationSwitch(functionNode);
+        }
+
+        this.each(this.handle.bind(this, declare, functionNode, scope, result));
+
+        return result.join(', ');
+    },
 
     /**
      * handle individual parameter
@@ -45,7 +62,7 @@ module FunctionParamList = proto (ParamsNode) {
 
             if (valueNode.isNode() && this.optionalPermutations === null) {
 
-                var defaultArg = this.csn([ name, ' = (', name, ' !== undefined ? ', name, ' : (', valueNode.toSourceNode(), '))' ]);
+                var defaultArg = this.csn([ name, ' = (', name, ' !== undefined ? ', name, ' : (', valueNode.toSourceNode(), '));' ]);
                 functionNode.specialArgs.push(defaultArg);
             }
 
@@ -66,7 +83,7 @@ module FunctionParamList = proto (ParamsNode) {
                 scope.addImplicit(name.toString(), true);
             }
 
-            var restArg = this.csn([ 'var ', name, ' = Array.prototype.slice.call(arguments, ' + this.numParams + ')' ]);
+            var restArg = this.csn([ 'var ', name, ' = Array.prototype.slice.call(arguments, ' + this.numParams + ');' ]);
             functionNode.specialArgs.push(restArg);
 
             return true;
@@ -138,33 +155,64 @@ module FunctionParamList = proto (ParamsNode) {
 
             for (var id, parameter in parameters) {
                 if (parameterGroups[id] === null || parameterGroups[id].optionalIsActive) {
-                    result.add([ parameter.get('name').toSourceNode(), ' = arguments[' + (argId++) + ']' + this.nl() ]);
+                    result.add([ parameter.get('name').toSourceNode(), ' = arguments[' + (argId++) + '];' + this.nl() ]);
                 } else {
-                    result.add([ parameter.get('name').toSourceNode(), ' = ', parameter.get('value').toSourceNode(), this.nl() ]);
+                    result.add([ parameter.get('name').toSourceNode(), ' = ', parameter.get('value').toSourceNode(), ';' + this.nl() ]);
                 }
             }
 
-            result.add(this.nl(-1) + '} else ');
+            result.add(this.nl(-1, result) + '} else ');
         }
 
-        result.add('{' + this.nl(1) + 'throw new Exception(\'invalid number of arguments\');' + this.nl(-1) + '}');
+        result.add('{' + this.nl(1) + 'throw new Exception(\'invalid number of arguments\');' + this.nl(-1) + '}') ;
 
         functionNode.specialArgs.push(result);
     },
 
-    toSourceNode: func(declare = true) {
+    /**
+     * finds valid optional combinations and returns map of bit-string => used parameters
+     *
+     * @return Map
+     */
+    findValidOptionalPermutations: func(optionals) {
 
-        var result = this.csn();
-        var functionNode = this.findProto(FunctionLiteral);
-        var scope = this.findScope();
+        var bits = optionals.length;
+        var permutations = Math.pow(2, bits);
+        var patterns = new Map();
 
-        if (this.has('opt_items')) {
-            this.initOptionals();
-            this.generatePermutationSwitch(functionNode);
+        // try all permutations, log allowed ones
+
+        for (var permutation = 0; permutation < permutations; permutation++) {
+
+            var pattern = '';
+
+            // try to set bitpattern to optionals and get actual pattern allowed by nested optionals
+
+            for (var bit = 0; bit < bits; bit++) {
+                var actuallySet = optionals[bit].setOptionalActive((permutation & (1 << bit)) > 0);
+                pattern += actuallySet ? '1' : '0';
+            }
+
+            // add pattern
+
+            if (patterns.lacks(pattern)) {
+                patterns.set(pattern, this.countActiveOptionals());
+            }
         }
 
-        this.each(this.handle.bind(this, declare, functionNode, scope, result));
+        return patterns;
+    },
 
-        return result.join(', ');
+    /**
+     * apply given permutation string to optional parameter groups
+     *
+     * @param string permutation as produced by findValidOptionalPermutations
+     * @param Array optionals as indexed by indexOptionals
+     */
+    applyOptionalPermutation: func(permutation, optionals) {
+
+        for (var id = 0; id < permutation.length; id++) {
+            optionals[id].optionalIsActive = (permutation.slice(id, id + 1) === '1');
+        }
     },
 };

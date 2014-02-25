@@ -139,6 +139,7 @@ function_params_optional {
     // optional params: a [ b, c [ d ] ] e
     entry -> "[" -> function_params_default -> "]" -> return
     "[" -> function_params_optional:opt_items -> "]"
+
     function_params_optional:opt_items -> ","[opt_to_default] -> function_params_default
     function_params_default -> ","[default_to_opt] -> function_params_optional:opt_items
     function_params_optional:opt_items -> ","[opt_to_opt] -> function_params_optional:opt_items
@@ -158,6 +159,7 @@ function_param_list {
 
     entry -> function_params -> ","[nodefault_to_optional] -> function_params_optional:opt_items -> return
     function_params_optional:opt_items -> ","[opt_to_nodefault] -> function_params[post_opt] -> return
+    function_params_optional:opt_items -> ","[opt_to_opt] -> function_params_optional:opt_items -> return
     function_params[post_opt] -> ","[nodefault_to_optional] // full circle
 
     // rest parameter following standard or default

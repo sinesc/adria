@@ -46,7 +46,7 @@ module ForCountStatement = proto (Scope) {
         var result = this.csn();
         result.add(this.refsToSourceNode());
         result.add([ 'for (', init, '; ', test, ';', condOp, ') {' + this.nl(1) ]);
-        result.add([ body, this.nl(-1) + '}' ]);
+        result.add([ body, this.nl(-1, body) + '}' ]);
 
         return result;
     },

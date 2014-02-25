@@ -56,8 +56,7 @@ module ProtoLiteral = proto (FunctionNode) {
             result.add(') {' + this.nl(1));
 
             for (var id in this.constructorDefaults) {
-                result.add(this.constructorDefaults[id]);
-                result.add(';' + this.nl());
+                result.add([ this.constructorDefaults[id], this.nl() ]);
             }
 
             result.add(this.constructorFunc.refsToSourceNode());
@@ -69,7 +68,7 @@ module ProtoLiteral = proto (FunctionNode) {
             }
 
             result.add(this.constructorBody);
-            result.add(this.nl(-1) + '};' + this.nl() + this.nl());
+            result.add(this.nl(-1, result) + '};' + this.nl());
 
         } else {
 
@@ -79,7 +78,7 @@ module ProtoLiteral = proto (FunctionNode) {
                 result.add(this.nl(1) + '___parent.apply(this, arguments);' + this.nl(-1));
             }
 
-            result.add('}' + this.nl() + this.nl());
+            result.add('}' + this.nl());
         }
 
         // chain to parent
@@ -97,11 +96,11 @@ module ProtoLiteral = proto (FunctionNode) {
 
         // body elements
 
-        result.add([this.nl(), body]);
+        result.add(body);
 
         // close and return
 
-        result.add(this.nl() + 'return ___self;' + this.nl(-1));
+        result.add('return ___self;' + this.nl(-1));
         result.add('})(');
 
         if (haveParent && blankParent === false) {

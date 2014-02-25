@@ -33,7 +33,7 @@ module ForInStatement = proto (Scope) {
             result.add([ valueNode.toSourceNode(), ' = ', source, '[', key, '];', this.nl() ]);
         }
 
-        result.add([ body, this.nl(-1), '}' ]);
+        result.add([ body, this.nl(-1, body), '}' ]);
 
         return result;
     },

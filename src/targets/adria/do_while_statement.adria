@@ -10,7 +10,7 @@ module DoWhileStatement = proto (Scope) {
 
         var body = this.get('body').toSourceNode();
         result.add([ this.refsToSourceNode(), body ]);
-        result.add([ this.nl(-1) + '} while (', this.get('condition').toSourceNode(), ');' ]);
+        result.add([ this.nl(-1, body) + '} while (', this.get('condition').toSourceNode(), ');' ]);
 
         return result;
     },

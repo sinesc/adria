@@ -76,7 +76,7 @@ func message(delay, [ type = 'warning', [ text = 'default message' ] ], callback
     setTimeout(callback.bind(null, type, text), delay);
 }
 ```
-Below are some usages for the above function. See documentation for more realistic use-cases.
+Below are some usages for the above function. See documentation for more realistic examples.
 ```javascript
 message(100, func(type, message) {
     console.log(type + ': ' + message);     // warning: default message

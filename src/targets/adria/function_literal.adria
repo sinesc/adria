@@ -41,6 +41,7 @@ module FunctionLiteral = proto (FunctionNode) {
 
     postBody: func(result, body) {
 
+        result.add(this.nl(0, result));
         result.add(body);
     },
 
@@ -85,13 +86,13 @@ module FunctionLiteral = proto (FunctionNode) {
         result.add(this.refsToSourceNode());
 
         for (var id in this.specialArgs) {
-            result.add([ this.specialArgs[id], ';' + this.nl() ]);
+            result.add([ this.specialArgs[id], this.nl() ]);
         }
 
         // stored this-context
 
         if (this.provideContext) {
-            result.add('var '  + this.storeContext() + ' = this;' + this.nl());
+            result.add([ 'var ', this.storeContext(), ' = this;' + this.nl() ]);
         }
 
         // prepare parent/self lookup, if any of those keywords were used
@@ -103,7 +104,7 @@ module FunctionLiteral = proto (FunctionNode) {
         // finalize body
 
         this.postBody(result, body);
-        result.add(this.nl(-1) + '}');
+        result.add(this.nl(-1, result) + '}');
 
         return result;
     },

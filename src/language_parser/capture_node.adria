@@ -21,7 +21,7 @@
  * IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-var SourceNode = require('source-map').SourceNode;
+var SourceNode = require('../source_node');
 var Template = require('../template');
 
 /**
@@ -474,12 +474,15 @@ module CaptureNode = proto {
      *
      * @param indent change in indentation
      */
-    nl: func(indent) {
-
-        indent = (indent === undefined ? 0 : indent);
+    nl: func(indent = 0, node = null) {
 
         var parser = this.parser();
         parser.indent += indent;
+
+        if (node !== null) {
+            node.trim();
+        }
+
         return '\n' + String.repeat(parser.indent * 4, ' ');
     },
 
@@ -490,7 +493,7 @@ module CaptureNode = proto {
      */
     csn: func(code) {
 
-        return new SourceNode(this.row, this.col -1, this.parser().file, code); //!todo why is everthing offset by one if I don't subtract 1 here? col start at 0, row at 1? unlikely
+        return new SourceNode(this.row, this.col -1, null, code); //!todo why is everthing offset by one if I don't subtract 1 here? col start at 0, row at 1? unlikely
     },
 
     /**
@@ -522,7 +525,10 @@ module CaptureNode = proto {
 
         if (this.children instanceof Array) {
             for (var id in this.children) {
-                result.add(this.children[id].toSourceNode());
+                var child = this.children[id].toSourceNode();
+                if (child !== '') {
+                    result.add(child);
+                }
             }
         }
 

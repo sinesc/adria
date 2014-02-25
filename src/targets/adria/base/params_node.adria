@@ -2,6 +2,11 @@
 var Map = require('astd/map');
 var Node = require('./node');
 
+/**
+ * @module ParamsNode
+ *
+ * provides methods required by FunctionParamList and FunctionParamsOptional
+ */
 module ParamsNode = proto (Node) {
 
     /**
@@ -67,52 +72,5 @@ module ParamsNode = proto (Node) {
         });
 
         return result;
-    },
-
-    /**
-     * finds valid optional combinations and returns map of bit-string => used parameters
-     *
-     * @return Map
-     */
-    findValidOptionalPermutations: func(optionals) {
-
-        var bits = optionals.length;
-        var permutations = Math.pow(2, bits);
-        var patterns = new Map();
-
-        // try all permutations, log allowed ones
-
-        for (var permutation = 0; permutation < permutations; permutation++) {
-
-            var pattern = '';
-
-            // try to set bitpattern to optionals and get actual pattern allowed by nested optionals
-
-            for (var bit = 0; bit < bits; bit++) {
-                var actuallySet = optionals[bit].setOptionalActive((permutation & (1 << bit)) > 0);
-                pattern += actuallySet ? '1' : '0';
-            }
-
-            // add pattern
-
-            if (patterns.lacks(pattern)) {
-                patterns.set(pattern, this.countActiveOptionals());
-            }
-        }
-
-        return patterns;
-    },
-    
-    /**
-     * apply given permutation string to optional parameter groups
-     *
-     * @param string permutation as produced by findValidOptionalPermutations
-     * @param Array optionals as indexed by indexOptionals
-     */
-    applyOptionalPermutation: func(permutation, optionals) {
-    
-        for (var id = 0; id < permutation.length; id++) {
-            optionals[id].optionalIsActive = (permutation.slice(id, id + 1) === '1');
-        }
     },
 };

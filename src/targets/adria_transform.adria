@@ -26,7 +26,7 @@ var path = require('path');
 var util = require('../util');
 var args = require('../args');
 var Set = require('astd/set');
-var SourceNode = require('source-map').SourceNode;
+var SourceNode = require('../source_node');
 var Template = require('../template');
 var Transform = require('../transform');
 var AdriaParser = require('./adria_parser');
@@ -132,7 +132,6 @@ module AdriaTransform = proto (Transform) {
         args.addSwitch('application', 'Generate application global', true);
         args.addSwitch('map', 'Generate source map', false);
         args.addSwitch('link', 'Link sourcemap to output', true);
-        args.addSwitch('blanks', 'Allow blank lines [to be removed]', true);
         args.addSwitch('strict', 'Compile strict Javascript', true);
         args.addSwitch('assert', 'Add assert() support', false);
         args.addSwitch('scan', 'Perform basic logic checks', true);
@@ -306,6 +305,8 @@ module AdriaTransform = proto (Transform) {
             tmpNode.setSourceContent(currentModule.parser.file, currentModule.parser.sourceCode);
         }
 
+        node.trim();
+
         // start builtins
 
         for (var id, name in usedBuiltins) {
@@ -383,8 +384,7 @@ module AdriaTransform = proto (Transform) {
 
             } else {
 
-                var result = node.toString();
-                fs.writeFileSync(jsFile, this.options['blanks'] ? result : this.postProcess(result));
+                fs.writeFileSync(jsFile, node.toString());
             }
 
             if (this.options['shellwrap']) {
@@ -400,13 +400,5 @@ module AdriaTransform = proto (Transform) {
 
             process.stdout.write(node.toString());
         }
-    },
-
-    postProcess: func(code) {
-
-        // remove blank lines
-
-        code = code.replace(/\n[\ \n]*\n/g, '\n');
-        return code;
     },
 };

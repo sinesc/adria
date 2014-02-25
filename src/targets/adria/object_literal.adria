@@ -31,7 +31,7 @@ module ObjectLiteral = proto (Node) {
 
             result.add('{' + this.nl());
             result.add(items.join(',' + this.nl()));
-            result.add(this.nl() + this.nl(-1) + '}');
+            result.add(this.nl(-1) + '}');
 
         } else {
 

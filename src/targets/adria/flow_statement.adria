@@ -8,6 +8,6 @@ module FlowStatement = proto (Node) {
 
     toSourceNode: func() {
 
-        return this.csn([ this.get('type').value, ' ', this.get('value').toSourceNode(), ';' + this.nl() ]);
+        return this.csn([ this.get('type').value, ' ', this.get('value').toSourceNode(), ';' ]);
     },
 };

@@ -10,14 +10,14 @@ module VarStatement = proto (Node) {
         var result = this.csn();
         var nl = this.nl();
 
-        this.eachKey('item', func(node) {
+        this.eachKey('item', func(node, first, last) {
             nameNode = node.get('name');
             valueNode = node.get('value');
 
             scope.addLocal(nameNode.value);
 
             if (valueNode.isNode()) {
-                result.add([ nameNode.toSourceNode(), ' = ', valueNode.toSourceNode(), ';' + nl ]);
+                result.add([ nameNode.toSourceNode(), ' = ', valueNode.toSourceNode(), ';' + (last ? '' : nl) ]);
             }
         });
 

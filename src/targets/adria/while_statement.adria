@@ -10,7 +10,7 @@ module WhileStatement = proto (Scope) {
 
         var body = this.get('body').toSourceNode();
         result.add([ this.refsToSourceNode(), body ]);
-        result.add(this.nl(-1) + '}');
+        result.add(this.nl(-1, result) + '}');
 
         return result;
     },

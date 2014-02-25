@@ -26,7 +26,7 @@ module AssertStatement = proto (Node) {
                 result.add([ ", '" + paramsSN.toString().jsify("'") + "'" ]);
             }
 
-            result.add(');' + this.nl());
+            result.add(');');
         }
 
         return result;

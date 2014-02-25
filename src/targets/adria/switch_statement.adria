@@ -12,7 +12,7 @@ module SwitchStatement = proto (Node) {
 
         this.eachKey('case', func(caseNode) {
 
-            result.add(['case ', caseNode.get('match').toSourceNode(), ':' + this.nl(1) ]);
+            result.add([ this.nl(0, result) + 'case ', caseNode.get('match').toSourceNode(), ':' + this.nl(1) ]);
             result.add(caseNode.get('body').toSourceNode());
             result.add(this.nl(-1));
         });
@@ -22,12 +22,12 @@ module SwitchStatement = proto (Node) {
         var defaultNode = this.get('default');
 
         if (defaultNode.isNode()) {
-            result.add('default:' + this.nl(1));
+            result.add(this.nl(0, result) + 'default:' + this.nl(1));
             result.add(defaultNode.get('body').toSourceNode());
             result.add(this.nl(-1));
         }
 
-        result.add(this.nl(-1) + '}');
+        result.add(this.nl(-1, result) + '}');
 
         return result;
     },

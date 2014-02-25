@@ -82,7 +82,7 @@ module Module = proto (Scope) {
         // module export
 
         if (this.moduleExport !== null) {
-            result.add('module.exports = ' + this.moduleExport + ';' + this.nl());
+            result.add([ 'module.exports = ', this.moduleExport, ';' + this.nl() ]);
         }
 
         // individual exports
@@ -90,16 +90,16 @@ module Module = proto (Scope) {
         var exports = this.exports.keys();
 
         for (var id in exports) {
-            result.add('module.exports.' + exports[id] + ' = ' + this.exports.get(exports[id]) + ';' + this.nl());
+            result.add([ 'module.exports.' + exports[id] + ' = ', this.exports.get(exports[id]), ';' + this.nl() ]);
         }
 
         // publish as application interface
 
         if (this.isInterface) {
-            result.add('___module.exports = module.exports' + this.nl());
+            result.add('___module.exports = module.exports;' + this.nl());
         }
 
-        result.add(this.nl(-1) + '});' + this.nl());
+        result.add(this.nl(-1, result) + '});' + this.nl());
 
         return result;
     },
