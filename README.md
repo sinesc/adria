@@ -14,7 +14,7 @@ About
 This is a short and incomplete list of features:
 
 - part of the curly-brackets family, syntactically quite similar to Javascript
-- commonJS like module structure, resolved and compiled to single file by command-line compiler (does not prevent circular references resolution at runtime)
+- commonJS like module structure, resolved and compiled to single file by command-line compiler
 - also supports merging in other resources via `resource` keyword, i.e. `var contributors = resource('contributors.txt');`
 - block scope `var` keyword
 - default parameters: `func assertEquals(actual, expected = true) { ... }`
@@ -27,41 +27,61 @@ This is a short and incomplete list of features:
 - `parent` keyword returns the parent constructor for the current `this` context (dynamically, so if a method gets `call`ed this will return that contexts parent constructor): `parent->someMethod(...)` as above.
 - `await` keyword to wait for asynchronous functions or callback functions and `([...,] # [, ...])` operator (async-wrap): `var result = await fs.readFile(name, #);` (waits for `fs.readFile` to invoke the callback passed as second parameter)
 
+Installation/Use
+----------------
+
+- Install a [recent NodeJS](https://github.com/joyent/node/wiki/Installing-Node.js-via-package-manager#wiki-ubuntu-mint-elementary-os) version, i.e. `apt-get install nodejs`
+- `npm install -g adria` (leave out the global flag -g to install for current user only)
+- `adria <input .adria file(s)> -o <output.js>`
+- `node <output.js>` (include --harmony flag to use generators)
+
+Use `adria --help` for more help.
+
 A few feature examples
 ----------------------
 
 ### Asynchronous functions and callback wrapper syntax
 
 ```javascript
-
-// demo function using NodeJS callback style
-
+// demo function using NodeJS callback style (error, result)
 var sleep = func(ms, callback) {
-    setTimeout(func() {
-        callback(null, '<sleept ' + ms + 'ms>');    // second argument will be the await return value
-    }, ms);                                         // first is error and would be thrown from within testAsync
+    setTimeout(func() { callback(null, '<sleept ' + ms + 'ms>'); }, ms);
 };
 
 // simple async function, adds support for await keyword
+var asyncA = func#() {
 
-var testAsync = func#() {
+    // wait for single callback function, # takes place of callback with await return value
+    var result = await sleep(500, #);
+    console.log('A', result);
 
-    var result = await sleep(1000, #);              // # takes place of callback with await return value
-    console.log('sleep done', result);
-
-    result += await sleep(1000, #);
-    console.log('sleep done', result);
+    // can also wait for multiple in parallel (also supports arrays, does not have to be a static literal)
+    console.log('A', await {
+        sleepAOne    : sleep(1200, #),
+        sleepATwo    : sleep(1600, #),
+        sleepAThree  : sleep(500, #),
+    });
 };
 
-testAsync();
+var asyncB = func#() {
+    console.log('B', await sleep(350, #));
+    console.log('B', await sleep(2250, #));
+};
+
+asyncA();
+asyncB();
 console.log('start sleeping');
 
-// start sleeping                               [immediate]
-// sleep done <sleept 1000ms>                   [1000ms later]
-// sleep done <sleept 1000ms><sleept 1000ms>    [another 1000ms later]
+// start sleeping
+// B <sleept 350ms>
+// A <sleept 500ms>
+// A { sleepAThree: '<sleept 500ms>',
+//   sleepAOne: '<sleept 1200ms>',
+//   sleepATwo: '<sleept 1600ms>' }
+// B <sleept 2250ms>
 ```
 
-### Simple default parameters
+### Simple and advanced default parameters
 
 ```javascript
 function print(greeting, who = 'World!') {
@@ -69,14 +89,12 @@ function print(greeting, who = 'World!') {
 }
 ```
 
-### Advanced default parameters
-
 ```javascript
 func message(delay, [ type = 'warning', [ text = 'default message' ] ], callback) {
     setTimeout(callback.bind(null, type, text), delay);
 }
 ```
-Below are some usages for the above function. See documentation for more realistic examples.
+Below are some usages for the message-function. See documentation for more realistic examples.
 ```javascript
 message(100, func(type, message) {
     console.log(type + ': ' + message);     // warning: default message
@@ -138,39 +156,6 @@ console.log(sub.greet('world'));
 // Sub          [also from Base::constructor]
 // hi planet    [base.greet]
 // hello world! [sub.greet]
-```
-
-### Asynchronous wait in parallel using return
-
-```javascript
-var testAsync = func#(#) {   // has a callback, so could be used as await argument in another func#
-
-    var val = await {                   // also supports arrays, does not have to be a static literal
-        sleepOne    : sleep(1200, #),
-        sleepTwo    : sleep(1600, #),
-        sleepThree  : sleep(500, #),
-    };
-
-    return val;     // will pass val to the function passed in via the parameter signified by #
-};
-
-// longest sleep is 1600ms, so testAsync should invoke callback after about 1600ms
-
-var now = process.hrtime();
-
-testAsync(func(err, val) {          // instead of using the callback, we could await this from another func#
-    var diff = process.hrtime(now);
-    console.log(diff[0] + '.' + diff[1] + 's');
-    console.log(val);
-});
-
-console.log('start');
-
-// start
-// 1.607710094s
-// { sleepThree: '<sleept 500ms>',  [result in order of callback time but with proper k->v associations]
-//   sleepOne: '<sleept 1200ms>',
-//   sleepTwo: '<sleept 1600ms>' }
 ```
 
 ### Prototype extension (here with a property)
