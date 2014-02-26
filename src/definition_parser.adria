@@ -27,7 +27,7 @@ var Tokenizer = require('./tokenizer');
 var Path = require('./definition_parser/path');
 
 /**
- * Parser subclass hardwired with the required node tree to process the syntax of .sdt-files.
+ * Parser subclass hard-wired with the required node tree to process the syntax of .sdt-files.
  * Provides trainOther() method to train another parser according to input .sdt-file using
  * the other parser's createNode and integrateNodePair methods
  */
@@ -55,13 +55,13 @@ module DefinitionParser = proto (Parser) {
 
         this.pathBlocks = { };
 
-        // a temporary used to analyze the current path ( a -> b )
+        // a temporary used to analyse the current path ( a -> b )
 
         this.currentPath = new Path();
     },
 
     /**
-     * callback called by Parser.parse() for all capturepoints found in a valid path
+     * callback called by Parser.parse() for all capture-points found in a valid path
      *
      * @param string name capture name
      * @param string value captured value
@@ -70,7 +70,7 @@ module DefinitionParser = proto (Parser) {
 
         var currentPath = this.currentPath;
 
-        // block starting subdefinition
+        // block starting sub-definition
 
         if (name == 'block_name') {
 
@@ -138,7 +138,7 @@ module DefinitionParser = proto (Parser) {
 
         // call parent
 
-        var results = Parser.prototype.parse.call(this, source);
+        var results = Parser->parse(source);
 
         for (var id, result in results) {
 

@@ -472,7 +472,8 @@ module CaptureNode = proto {
     /**
      * returns a newline and optionally increases or decreases indentation for the following lines
      *
-     * @param indent change in indentation
+     * @param integer indent change in indentation
+     * @param CaptureNode node optionally a (previous) node to trim
      */
     nl: func(indent = 0, node = null) {
 
@@ -487,7 +488,7 @@ module CaptureNode = proto {
     },
 
     /**
-     * creates and returns a new sourcenode based on CaptureNode's position and given code
+     * creates and returns a new SourceNode based on CaptureNode's position and given code
      *
      * @param code
      */
@@ -517,7 +518,7 @@ module CaptureNode = proto {
     /**
      * default node to source-node handler, returns empty node but calls children recursively
      *
-     * @return string
+     * @return SourceNode
      */
     toSourceNode: func() {
 
@@ -538,7 +539,7 @@ module CaptureNode = proto {
     /**
      * recursively calls children for scanning purposes
      *
-     * @param state userdefined scan state object passed to every child
+     * @param mixed state user-defined scan state object passed to every child
      */
     scan: func(state) {
 
@@ -552,7 +553,7 @@ module CaptureNode = proto {
     /**
      * recursively calls children for preprocessing purposes
      *
-     * @param state userdefined preprocessing state object passed to every child
+     * @param mixed state user-defined preprocessing state object passed to every child
      */
     preprocess: func(state) {
 
@@ -564,7 +565,7 @@ module CaptureNode = proto {
     },
 
     /**
-     * iterate over all childnodes
+     * iterate over all child-nodes
      *
      * @param NodeCallback func(node, first, last)
      */
@@ -583,7 +584,7 @@ module CaptureNode = proto {
     },
 
     /**
-     * iterate over all childnodes with given key
+     * iterate over all child-nodes with given key
      *
      * @param string key node key
      * @param NodeCallback func(node, first, last)

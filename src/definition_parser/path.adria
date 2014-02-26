@@ -32,10 +32,10 @@ module Path = proto {
     source: null,
     target: null,
 
-    constructor: func(sourceName, sourceCapture, sourceLabel, sourceCondition, targetName, targetCapture, targetLabel, targetCondition) {
+    constructor: func(source = new PathElement(), target = new PathElement()) {
 
-        this.source = new PathElement(sourceName, sourceCapture, sourceLabel, sourceCondition);
-        this.target = new PathElement(targetName, targetCapture, targetLabel, targetCondition);
+        this.source = source;
+        this.target = target;
     },
 
     reset: func() {
@@ -47,8 +47,8 @@ module Path = proto {
     clone: func() {
 
         return new Path(
-            this.source.name, this.source.capture, this.source.label, this.source.condition,
-            this.target.name, this.target.capture, this.target.label, this.target.condition
+            this.source.clone(),
+            this.target.clone()
         );
     },
 
@@ -66,5 +66,9 @@ var PathElement = proto (null) {
         this.capture = capture;
         this.label = label;
         this.condition = condition;
+    },
+
+    clone: func() {
+        return new PathElement(this.name, this.capture, this.label, this.condition);
     },
 };

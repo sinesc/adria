@@ -37,7 +37,7 @@ var Enumeration = func(options) {
             bit += 1;
         }
         if (bit >= 32) {
-            throw new Error('options is expected to be an array and contain <= 32 unique elements');
+            throw new Exception('options is expected to be an array and contain <= 32 unique elements');
         }
     }
 

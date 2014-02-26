@@ -34,7 +34,7 @@ var Exception{! if (enableAssert): !}, AssertionFailedException{! endif !};
         this.message = message === undefined ? this.message : message;
         this.name = this.constructor.name === undefined ? 'Exception' : this.constructor.name;
         var current = this;
-        var ownTraceSize = 0;
+        var ownTraceSize = 1;
         while ((current = Object.getPrototypeOf(current)) instanceof Error) {
             ownTraceSize++;
         }

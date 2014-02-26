@@ -142,7 +142,7 @@ module Parser = proto {
             file        : path.normalize(this.file),
             tokenData   : token.data,
             position    : token.pos.toString(),
-            validNodes  : node.toString(this),
+            validNodes  : node.toString(this.definition, stack),
             trace       : trace
         });
     },
@@ -155,7 +155,7 @@ module Parser = proto {
      */
     checkCondition: func(condition, stack) {
 
-        throw Error('NYI: parser::checkCondition');
+        throw Exception('NYI: parser::checkCondition');
     },
 
     /**
@@ -172,15 +172,15 @@ module Parser = proto {
         log('Parser', 'done', -2);
 
         if (tokens.length === 0) {
-            throw new Error(path.normalize(this.file) + ': File is empty.');
+            throw new Exception(path.normalize(this.file) + ': File is empty.');
         }
 
-        var node = this.definition.getInitialBlock();
-        var stack = [];
-        var len = tokens.length;
-        var id = len;
-        var maxId = 0;
-        var maxStack = [];
+        var node    = this.definition.getInitialBlock();
+        var stack   = [];
+        var len     = tokens.length;
+        var tokenId = len;
+        var maxId   = 0;
+        var maxStack= [];
         var maxNode = node;
         var results = new Array(len);
         var success = false;
@@ -188,11 +188,11 @@ module Parser = proto {
 
         // create a GeneratorState for each token
 
-        while (id--) {
-            results[id] = new GeneratorState();
+        while (tokenId--) {
+            results[tokenId] = new GeneratorState();
         }
 
-        id = 0;
+        tokenId = 0;
 
         // process tokens
 
@@ -200,12 +200,12 @@ module Parser = proto {
 
         do {
 
-            result = results[id];
+            result = results[tokenId];
 
             // on first token visit, generate matching nodes
 
             if (result.generator === null) {
-                token = tokens.get(id);
+                token = tokens.get(tokenId);
                 result.setGenerator(node.filter(this, token, stack), token);
             }
 
@@ -221,22 +221,14 @@ module Parser = proto {
                 }
             }
 
-            // remember deepest positive match for error reporting
-
-            if (result.done === false && id > maxId) {
-                maxId = id;
-                maxStack = result.stack.slice(0);
-                maxNode = result.node;
-            }
-
             if (result.done) {
 
                 // no more matches, discard this generator and go back one token
 
                 result.setGenerator(null);
-                id--;
+                tokenId--;
 
-            } else if (id === len -1) {
+            } else if (tokenId === len -1) {
 
                 // last token, cannot advance further, either reach exit or try next match for same token
 
@@ -249,22 +241,30 @@ module Parser = proto {
 
             } else {
 
-                // a(nother) match was found, update node and go to next token
+                // a(nother) match was found, remember deepest positive match
+
+                if (tokenId > maxId) {
+                    maxId = tokenId;
+                    maxStack = result.stack.slice(0);
+                    maxNode = result.node;
+                }
+            
+                // update node and go to next token
 
                 node = result.node;
                 stack = result.stack.slice(0);
-                id++;
+                tokenId++;
             }
 
-        } while (id >= 0);
+        } while (tokenId >= 0);
 
         // check result
 
         if (success === false) {
             if (maxId +1 === len) {
-                throw new Error(path.normalize(this.file) + ': Unexpected end of file.');
+                throw new Exception(path.normalize(this.file) + ': Unexpected end of file.');
             } else {
-                throw new Error(this.errorMessage(tokens.get(maxId +1), maxNode, maxStack));
+                throw new Exception(this.errorMessage(tokens.get(maxId +1), maxNode, maxStack));
             }
         }
 

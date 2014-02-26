@@ -31,9 +31,9 @@ export ASTException = require('./language_parser/ast_exception');
 
 /**
  * Parser subclass with the capability to use a secondary DefinitionParser to train itself from .sdt-files. Defines
- * defintion fiel entities entry, return, string, numeric as well as literal match (i.e. "matchme") and definition jumps
+ * definition field entities entry, return, string, numeric as well as literal match (i.e. "matchme") and definition jumps
  * (by using the name of a definition as match component)
- * Also provides CaptureNode baseclass to convert parser captures into an object tree of userdefined node-types.
+ * Also provides CaptureNode base-class to convert parser captures into an object tree of user-defined node-types.
  */
 module LanguageParser = proto(Parser) {
 
@@ -189,7 +189,7 @@ module LanguageParser = proto(Parser) {
         switch (name) {
             case 'entry':
             case 'return':
-                node.match          = name; //!todo is this used somewhere somehow? it cannot be used as a match
+                node.match          = '';
                 node.tokenType      = -1;
                 node.type           = (name == 'entry' ? Node.Type.BLOCK : Node.Type.RETURN);
                 node.description    = name;

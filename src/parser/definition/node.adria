@@ -23,6 +23,14 @@
  */
 var Enum = require('../../util').Enum;
 
+/**
+ * Node.Type enumeration
+ *
+ * @item NONE node is a normal matching node
+ * @item BLOCK node is root of a definition block, the entry node in sdt
+ * @item JUMP node references another definition block
+ * @item RETURN node is a valid definition exit, the return node in sdt
+ */
 export Type = Enum([ 'NONE', 'BLOCK', 'JUMP', 'RETURN' ]);
 
 export StackItem = proto {
@@ -41,19 +49,25 @@ export StackItem = proto {
  */
 module Node = proto {
 
-    children: null,
-    tokenType: 0,
-    match: '',
-    type: 0,
-    name: '',
-    capture: '',
-    label: '',
-    description: '',
+    children    : null,
+    tokenType   : 0,
+    match       : '',
+    type        : 0,
+    name        : '',
+    capture     : '',
+    label       : '',
+    description : '',
 
     constructor: func() {
         this.children = [ ];
     },
 
+    /**
+     * checks if node has given child
+     *
+     * @param Node node
+     * @return boolean
+     */
     hasChild: func(node) {
 
         var children = this.children;
@@ -69,7 +83,7 @@ module Node = proto {
     },
 
     /**
-     * adds a node to the list of childnodes, ensuring that the exit node is always last
+     * adds a node to the list of child-nodes, ensuring that the exit node is always last
      *
      * @param node a definition node
      */
@@ -169,7 +183,7 @@ module Node = proto {
      * returns true if the current node can directly reach the root
      * exit without having to match any more tokens
      *
-     * @param stack current stack
+     * @param Array stack current stack
      */
     reachesExit: func(stack) {
 
@@ -191,9 +205,48 @@ module Node = proto {
     },
 
     /**
-     * yields matches for given token recusively from node children
+     * returns list of tokens that would match a child of the node
      *
-     * @param token to match
+     * @param Definition language definition this node belongs to
+     * @param Array stack current stack
+     * @param Object result internally used during recursion, same as function result
+     */
+    matchingTokens: func(definition, stack, result = { }) {
+
+        var children = this.children;
+
+        for (var _, child in children) {
+
+            if (child.type === Type.RETURN) {
+
+                var returnTo = stack[stack.length -1].node;
+                returnTo.matchingTokens(definition, stack.slice(0, -1), result);
+
+            } else if (child.type === Type.JUMP) {
+
+                var jumpTo = definition.getBlock(child.match);
+                jumpTo.matchingTokens(definition, stack.concat([ new StackItem(child, null) ]),result);
+
+            } else if (child.type === Type.BLOCK) {
+
+                child.matchingTokens(definition, stack, result);
+
+            } else {
+
+                result[child.description != '' ? '<' + child.description + '>' : (child.capture != '' ? child.capture : '"' + child.match + '"')] = true;
+
+            }
+        }
+
+        return result;
+    },
+
+    /**
+     * yields matches for given token recursively from node children
+     *
+     * @param Parser parser
+     * @param Token token to match
+     * @param Array definition-jump stack
      */
     filter: func*(parser, token, stack) {
 
@@ -202,7 +255,7 @@ module Node = proto {
 
         if (stack.length > 500) {
             var message = parser.errorMessage(token, this, stack);
-            throw new Error('recursion too deep. last error:\n' + message);
+            throw new Exception('recursion too deep. last error:\n' + message);
         }
 
         for (var id = 0, len = children.length; id < len; id++) {
@@ -257,56 +310,13 @@ module Node = proto {
     /**
      * returns expected tokens for this node and its children
      *
-     * @param Parser owner the parser this node belongs to. used for definition lookups
-     * @param object known if specified, function returns empty string and fills known with expected tokens
+     * @param Definition language definition this node belongs to
+     * @param Array stack
      * @return string comma-separated list of expected tokens
      */
-    toString: func(owner, known) {
+    toString: func(definition, stack) {
 
-        var data;
-
-        if (known === undefined) {
-            data = { };
-        } else {
-            data = known;
-        }
-
-        for (var childId in this.children) {
-
-            var child = this.children[childId];
-
-            if ((child.type & Type.RETURN) === 0) {
-
-                if (child.type === Type.JUMP && owner !== undefined) {
-                    try {
-                        owner.definition.getBlock(child.match).toString(owner, data);
-                    } catch (e) { }
-                } else {
-                    data[child.description != "" ? child.description : (child.capture != "" ? child.capture : "\"" + child.match + "\"")] = true;
-                }
-            }
-        }
-
-        // skip result if not root call
-
-        if (known !== undefined) {
-            return "";
-        }
-
-        // original call, generate result string from gathered data
-
-        var result = this.type === Type.JUMP ? '[' + this.match + '] ' : '';
-
-        for (var item in data) {
-
-            if (result != "") {
-                result += ", ";
-            }
-
-            result += item;
-        }
-
-        return result;
+        var result = this.matchingTokens(definition, stack);
+        return Object.keys(result).join(', ');
     },
-
 };

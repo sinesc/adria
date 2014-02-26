@@ -107,7 +107,7 @@ module Tokenizer = proto {
             // none of the parsers were able to match the next token, error out
 
             if (found !== true) {
-                throw new Error(filename + ': no match found at row ' + row + ', column ' + col + ': "' + data.substr(startPos).split(/\r?\n/)[0] + '"');
+                throw new Exception(filename + ': no match found at row ' + row + ', column ' + col + ': "' + data.substr(startPos).split(/\r?\n/)[0] + '"');
             }
         }
 
@@ -130,7 +130,7 @@ func Match(name, data, endPosition, containedRows, lastRowLen) {
  * predefined tokenizer functions
  */
 export prefab = new (func() {
-    var regexFunc = func(name, regex, lastRegex = null, callback = null) {
+    var regexFunc = func(name, regex, lastRegex, callback) {
         return {
             name: name,
             func: func(data, start, lastMatch) {
@@ -160,11 +160,11 @@ export prefab = new (func() {
     };
 
     this.breaker = func() {
-        return regexFunc(null, /^(\s+)/);
+        return regexFunc(null, /^(\s+)/, null, null);
     };
 
     this.number = func(name) {
-        return regexFunc(name, /^(\-?[0-9]+(\.[0-9]+)?(e\-?[0-9]+)?)/);
+        return regexFunc(name, /^(\-?[0-9]+(\.[0-9]+)?(e\-?[0-9]+)?)/, null, null);
     };
 
     this.delimited = func(name, start, end) {
@@ -173,10 +173,10 @@ export prefab = new (func() {
         end     = end || start;
 
         var regex = new RegExp('^(' + regexEscape(start) + '[\\s\\S]*?' + regexEscape(end) + ')');
-        return regexFunc(name, regex);
+        return regexFunc(name, regex, null, null);
     };
 
-    this.regex = func(name, thisRegex, lastRegex, callback) {
+    this.regex = func(name, thisRegex, lastRegex = null, callback = null) {
 
         return regexFunc(name, thisRegex, lastRegex, callback);
     };
@@ -205,7 +205,7 @@ export prefab = new (func() {
 
         var regex = new RegExp('^(' + escaped.join('|') + ')');
 
-        return regexFunc(name, regex);
+        return regexFunc(name, regex, null, null);
     };
 
     this.group = func(name, matches) {
@@ -218,11 +218,11 @@ export prefab = new (func() {
 
         var regex = new RegExp('^(' + '[' + escaped.join() + ']+)');
 
-        return regexFunc(name, regex);
+        return regexFunc(name, regex, null, null);
     };
 
     this.any = func(name) {
-        return regexFunc(name, /^[^\s]*/);
+        return regexFunc(name, /^[^\s]*/, null, null);
     };
 
 })();

@@ -39,10 +39,10 @@ var Position = proto {
 
 var Token = proto {
 
-    data: '',
-    type: 0,
-    start: 0,
-    pos: null,
+    data    : '',
+    type    : 0,
+    start   : 0,
+    pos     : null,
 
     constructor: func(data, type, start, col, row) {
 
@@ -65,7 +65,7 @@ module Result = proto {
      *
      * @param data the matched string
      * @param type token type id from Type Enum
-     * @param start absolute startposition in the source string
+     * @param start absolute start-position in the source string
      * @param col calculated column
      * @param row calculated row
      */

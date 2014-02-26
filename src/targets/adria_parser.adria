@@ -30,7 +30,7 @@ var definition = require('./adria_definition');
 
 /**
  * LanguageParser subclass defining additional Adria specific .sdt-file
- * entities and setting up blockname to class mappings.
+ * entities and setting up blockname to constructor mappings.
  */
 module AdriaParser = proto(LanguageParser) {
 
@@ -55,7 +55,7 @@ module AdriaParser = proto(LanguageParser) {
      */
     clone: func() {
 
-        var parser = parent->clone();
+        var parser = LanguageParser->clone();
 
         parser.resultData = {
             globals     : new Set(),
@@ -68,14 +68,14 @@ module AdriaParser = proto(LanguageParser) {
     },
 
     /**
-     * preprocesses raw input string, replaces commandline defines {{DEFINE}}
+     * pre-processes raw input string, replaces command-line defines {{DEFINE}}
      *
      * @param string data
      * @return string replaced data
      */
     preprocessRaw: func(data) {
 
-        data = parent->preprocessRaw(data);
+        data = LanguageParser->preprocessRaw(data);
 
         var defines = this.transform.options.defines;
 
@@ -86,7 +86,7 @@ module AdriaParser = proto(LanguageParser) {
 
     /**
      * initialize a tokenizer, load definition files into a trainer and call parent's trainself, which
-     * will use the trainer to genererate the definition for this parser
+     * will use the trainer to generate the definition for this parser
      */
     trainSelf: func() {
 
