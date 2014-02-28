@@ -53,7 +53,7 @@ export Catch = proto (Node) {
         var result = this.csn();
         result.add(' catch (' + this.exceptionName + ') {' + this.nl(1));
 
-        this.each(func(node, first, last) {
+        this.each(func(Node node, boolean first, boolean last) {
 
             // handle non-first catch all and catch-specific
 

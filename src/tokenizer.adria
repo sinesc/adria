@@ -21,27 +21,26 @@
  * IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
+var Set = require('astd/set');
 var Enum = require('./util').Enum;
 
-export Result = require('./tokenizer/result');
+export DefinitionItem = require('./tokenizer/definition_item');
+export Token = require('./tokenizer/token');
+export Match = require('./tokenizer/match');
+export prefabs = require('./tokenizer/prefabs');
 
 /**
  * Splits strings into configurable types of tokens
- *
- * @param definition array of parser functions to use for token identification
- * @param extra array of additional token types to register with Type enum
  */
 module Tokenizer = proto {
 
     /**
      * constructor
      *
-     * @param definition array of parser functions to use for token identification
-     * @param extra array of additional token types to register with Type enum
+     * @param Array definition array of parser functions to use for token identification
+     * @param Array? extra array of additional token types to register with Type enum
      */
-    constructor: func(definition, extra) {
-
-        this.definition = definition;
+    constructor: func(Array definition, Array? extra = null) {
 
         // build type legend
 
@@ -57,25 +56,25 @@ module Tokenizer = proto {
             }
         }
 
+        this.definition = definition;
         this.Type = Enum(legend);
     },
 
     /**
      * process a string to an array of tokens
      *
-     * @param data input string
-     * @param filename used in error output
+     * @param string data input string
+     * @param string filename used in error output
      * @return array of tokens
      */
-    process: func(data, filename = 'unnamed') {
+    process: func(string data, string filename = 'unnamed') {
 
-        var startPos = 0;
-        var result = new Result(this);
-        var col = 1;
-        var row = 1;
-        var definition = this.definition;
+        var startPos    = 0;
+        var result      = [];
+        var col         = 1;
+        var row         = 1;
+        var lastMatch   = null;
         var match, found;
-        var lastMatch = null;
 
         // tokenize string
 
@@ -85,14 +84,14 @@ module Tokenizer = proto {
 
             // try each parser until one matches
 
-            for (var id, processor in this.definition) {
+            for (var _, processor in this.definition) {
 
-                match = processor.func(data, startPos, lastMatch);
+                match = processor.match(data, startPos, lastMatch);
 
                 if (match !== null) {
 
                     if (match.data !== null && match.name !== null) {
-                        result.add(match.data, this.Type[match.name], startPos, col, row);
+                        result.push(new Token(match.data, this.Type[match.name], startPos, col, row));
                         lastMatch = match.data;
                     }
 
@@ -114,115 +113,3 @@ module Tokenizer = proto {
         return result;
     },
 };
-
-/**
- * represents a single token match
- */
-func Match(name, data, endPosition, containedRows, lastRowLen) {
-    this.name = name;
-    this.data = data;
-    this.endPosition = endPosition;
-    this.containedRows = containedRows;
-    this.lastRowLen = lastRowLen;
-}
-
-/*
- * predefined tokenizer functions
- */
-export prefab = new (func() {
-    var regexFunc = func(name, regex, lastRegex, callback) {
-        return {
-            name: name,
-            func: func(data, start, lastMatch) {
-                var result = regex.exec(data.substr(start));
-
-                if (result !== null && (lastRegex === null || lastRegex.exec(lastMatch) !== null)) {
-                    var rows = result[0].occurances('\n');
-                    var lastBreak = result[0].lastIndexOf('\n');
-                    var lastRowLen = result[0].length - (lastBreak + 1);
-
-                    var match = new Match(this.name, result[0], start + result[0].length, rows, lastRowLen);
-
-                    if (typeof callback === 'function') {
-                        return callback(match);
-                    } else {
-                        return match;
-                    }
-                }
-
-                return null;
-            }
-        };
-    };
-
-    var regexEscape = func(regexString) {
-        return RegExp.escape(regexString).replace('/', '\\/');
-    };
-
-    this.breaker = func() {
-        return regexFunc(null, /^(\s+)/, null, null);
-    };
-
-    this.number = func(name) {
-        return regexFunc(name, /^(\-?[0-9]+(\.[0-9]+)?(e\-?[0-9]+)?)/, null, null);
-    };
-
-    this.delimited = func(name, start, end) {
-
-        start   = start || '"';
-        end     = end || start;
-
-        var regex = new RegExp('^(' + regexEscape(start) + '[\\s\\S]*?' + regexEscape(end) + ')');
-        return regexFunc(name, regex, null, null);
-    };
-
-    this.regex = func(name, thisRegex, lastRegex = null, callback = null) {
-
-        return regexFunc(name, thisRegex, lastRegex, callback);
-    };
-
-    var excludeFunc = func(match) {
-
-        if (this.indexOf(match.data) !== -1) {
-            return null;
-        }
-
-        return match;
-    };
-
-    this.exclude = func(name, regex, excluded) {
-
-        return regexFunc(name, regex, null, excludeFunc.bind(excluded));
-    };
-
-    this.set = func(name, matches) {
-
-        var escaped = [ ];
-
-        for (var id in matches) {
-            escaped.push(regexEscape(matches[id]));
-        }
-
-        var regex = new RegExp('^(' + escaped.join('|') + ')');
-
-        return regexFunc(name, regex, null, null);
-    };
-
-    this.group = func(name, matches) {
-
-        var escaped = [ ];
-
-        for (var id in matches) {
-            escaped.push(regexEscape(matches[id]));
-        }
-
-        var regex = new RegExp('^(' + '[' + escaped.join() + ']+)');
-
-        return regexFunc(name, regex, null, null);
-    };
-
-    this.any = func(name) {
-        return regexFunc(name, /^[^\s]*/, null, null);
-    };
-
-})();

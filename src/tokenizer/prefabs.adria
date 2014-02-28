@@ -1,0 +1,169 @@
+/*
+ * Adria transcompiler
+ *
+ * Copyright (C) 2014 Dennis Möhlmann <mail@dennismoehlmann.de>
+ * Licensed under the MIT license.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of
+ * this software and associated documentation files (the "Software"), to deal in
+ * the Software without restriction, including without limitation the rights to
+ * use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of
+ * the Software, and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+ * FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+ * COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
+ * IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+ * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ */
+
+var Match = require('./match');
+var DefinitionItem = require('./definition_item');
+
+/**
+ * returns a DefinitonItem to match via regular expression
+ *
+ * @param string? type name for produced tokens
+ * @param RegExp regex used to find match
+ * @param RegExp lastRegex if specified, secondary regex that has to match previous token
+ * @param func? callback optional callback to pass result through
+ * @return DefinitionItem
+ */
+export regex = func(string? name, RegExp thisRegex, RegExp? lastRegex = null, func? callback = null) {
+
+    return regexFunc(name, thisRegex, lastRegex, callback);
+};
+
+/**
+ * returns a DefinitonItem to match white-spaces and discard them
+ *
+ * @return DefinitionItem
+ */
+export breaker = func() {
+    return regexFunc(null, /^(\s+)/, null, null);
+};
+
+/**
+ * returns a DefinitonItem to match numbers
+ *
+ * @param string? type name for produced tokens
+ * @return DefinitionItem
+ */
+export number = func(string? name) {
+    return regexFunc(name, /^(\-?[0-9]+(\.[0-9]+)?(e\-?[0-9]+)?)/, null, null);
+};
+
+/**
+ * returns a DefinitonItem to match text between delimiters, i.e. quotes
+ *
+ * @param string? type name for produced tokens
+ * @param string start opening delimiter
+ * @param string end closing delimiter
+ * @return DefinitionItem
+ */
+export delimited = func(string? name, string start = '"', string end = start) {
+
+    var regex = new RegExp('^(' + regexEscape(start) + '[\\s\\S]*?' + regexEscape(end) + ')');
+    return regexFunc(name, regex, null, null);
+};
+
+/**
+ * returns a DefinitonItem to match via regular expression and exclude a set of strings
+ *
+ * @param string? type name for produced tokens
+ * @param RegExp regex used to find match
+ * @param Set excluded strings to exclude from matches
+ */
+export exclude = func(string? name, RegExp regex, Set excluded) {
+
+    return regexFunc(name, regex, null, excludeFunc.bind(excluded));
+};
+
+/**
+ * returns a DefinitonItem to match strings from given array
+ *
+ * @param string? type name for produced tokens
+ * @param Array matches strings to match
+ */
+export set = func(string? name, Array matches) {
+
+    var escaped = [ ];
+
+    for (var id in matches) {
+        escaped.push(regexEscape(matches[id]));
+    }
+
+    var regex = new RegExp('^(' + escaped.join('|') + ')');
+
+    return regexFunc(name, regex, null, null);
+};
+
+/**
+ * returns a DefinitonItem to match strings composed of given items
+ *
+ * @param string? type name for produced tokens
+ * @param Array matches strings to match
+ */
+export group = func(string? name, Array matches) {
+
+    var escaped = [ ];
+
+    for (var id in matches) {
+        escaped.push(regexEscape(matches[id]));
+    }
+
+    var regex = new RegExp('^([' + escaped.join() + ']+)');
+
+    return regexFunc(name, regex, null, null);
+};
+
+/**
+ * returns a DefinitonItem to match everything up to the next white-space
+ *
+ * @param string? type name for produced tokens
+ */
+export any = func(string? name) {
+    return regexFunc(name, /^[^\s]*/, null, null);
+};
+
+
+var regexFunc = func(string? name, RegExp regex, RegExp? lastRegex, func? callback) {
+    return new DefinitionItem(
+        name,
+        func(data, start, lastMatch) {
+            var result = regex.exec(data.substr(start));
+
+            if (result !== null && (lastRegex === null || lastRegex.exec(lastMatch) !== null)) {
+                var rows = result[0].occurances('\n');
+                var lastBreak = result[0].lastIndexOf('\n');
+                var lastRowLen = result[0].length - (lastBreak + 1);
+
+                var match = new Match(this.name, result[0], start + result[0].length, rows, lastRowLen);
+
+                if (callback !== null) {
+                    return callback(match);
+                } else {
+                    return match;
+                }
+            }
+
+            return null;
+        }
+    );
+};
+
+var regexEscape = func(string regexString) {
+    return RegExp.escape(regexString).replace('/', '\\/');
+};
+
+var excludeFunc = func(Match match) {
+    if (this.has(match.data)) {
+        return null;
+    }
+    return match;
+};

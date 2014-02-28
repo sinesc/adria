@@ -27,7 +27,7 @@ var crypto = require('crypto');
 /**
  * enum type
  */
-var Enumeration = func(options) {
+var Enumeration = func(Array options) {
 
     var bit = 0;
 
@@ -44,7 +44,7 @@ var Enumeration = func(options) {
     return Object.freeze(this);
 };
 
-export Enum = func(options) {
+export Enum = func(Array options) {
     return new Enumeration(options);
 };
 
@@ -52,16 +52,12 @@ export Enum = func(options) {
 /**
  * output an object with given recursion depth
  *
- * @param obj the object to output
- * @param depth recursion depth
+ * @param any subject the variable to output
+ * @param number depth recursion depth
  * @param showHidden also show hidden properties
  */
-export dump = func(obj, depth, showHidden) {
-
-    depth = (depth === undefined ? 2 : depth);
-    showHidden = (showHidden === undefined ? false : showHidden);
-
-    console.log(sysutil.inspect(obj, showHidden, depth));
+export dump = func(subject, number depth = 2, boolean showHidden = false) {
+    console.log(sysutil.inspect(subject, showHidden, depth));
 };
 
 /**
@@ -76,11 +72,11 @@ export home = func() {
 /**
  * appends defaultExtension to fullname unless fullname already has a file extension
  *
- * @param fullname
- * @param defaultExtension
+ * @param string fullname
+ * @param string defaultExtension
  * @return string
  */
-export normalizeExtension = func(fullname, defaultExtension) {
+export normalizeExtension = func(string fullname, string defaultExtension) {
 
     var slash = fullname.lastIndexOf('/');
     var baseName = slash > 0 ? fullname.slice(slash) : fullname;
@@ -94,7 +90,7 @@ export normalizeExtension = func(fullname, defaultExtension) {
  * @param string input
  * @return string
  */
-export md5 = func(input) {
+export md5 = func(string input) {
 
     var md5sum = crypto.createHash('md5');
     md5sum.update(input);

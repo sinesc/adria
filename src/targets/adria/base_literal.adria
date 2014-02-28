@@ -25,7 +25,7 @@ var Node = require('./base/node');
 
 module BaseLiteral = proto (Node) {
 
-    scan: func(state) {
+    scan: func(object state) {
 
         Node->scan(state);
 

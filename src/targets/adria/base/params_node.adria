@@ -34,7 +34,7 @@ module ParamsNode = proto (Node) {
     /**
      * returns number of optional parameters in current test-configuration
      *
-     * @return int
+     * @return number
      */
     countActiveOptionals: func() {
 

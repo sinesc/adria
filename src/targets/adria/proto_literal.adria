@@ -32,7 +32,7 @@ module ProtoLiteral = proto (FunctionNode) {
     provideParent: false,
     name: '',
 
-    constructor: func(key, value) {
+    constructor: func(string key, string value) {
 
         this.constructorArgs = [ ];
         this.constructorDefaults = [ ];

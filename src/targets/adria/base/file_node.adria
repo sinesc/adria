@@ -28,31 +28,43 @@ var Node = require('./node');
 module FileNode = proto (Node) {
 
     /**
-     * relative nodejs paths have to be prefixed with ./ or ../
+     * relative paths have to be prefixed with ./ or ../
      *
-     * @param filename
-     * @param boolean true if path is a relative nodejs path
+     * @param string filename
+     * @param boolean true if path is a relative path
      */
-    isRelativePath: func(filename) {
+    isRelativePath: func(string filename) {
         return filename.slice(0, 2) === './' || filename.slice(0, 3) === '../';
     },
 
-    makeBaseRelative: func(filename, parser) {
+    /**
+     * make name relative to base path
+     *
+     * @param string filename
+     * @param Parser parser
+     */
+    makeBaseRelative: func(string filename, object parser) {
 
         var absName = path.dirname(parser.file) + '/' + filename;
         return path.relative(parser.transform.options['basePath'], absName);
     },
 
-    resolvePath: func(fileName, parser) {
+    /**
+     * resolve file-relative path or include path to full path relative to base
+     *
+     * @param string filename
+     * @param Parser parser
+     */
+    resolvePath: func(string filename, object parser) {
 
         var options = parser.transform.options;
         var relname;
 
-        if (this.isRelativePath(fileName)) {
+        if (this.isRelativePath(filename)) {
 
             // check project base
 
-            relname = this.makeBaseRelative(fileName, parser);
+            relname = this.makeBaseRelative(filename, parser);
 
             if (fs.existsSync(options['basePath'] + relname)) {
                 return path.normalize(relname);
@@ -64,7 +76,7 @@ module FileNode = proto (Node) {
 
             for (var id, includePath in options['paths']) {
 
-                relname = includePath + fileName;
+                relname = includePath + filename;
 
                 if (fs.existsSync(options['basePath'] + relname)) {
                     return path.normalize(relname);

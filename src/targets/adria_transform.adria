@@ -57,9 +57,9 @@ module AdriaTransform = proto (Transform) {
         'async.adria': resource('../../templates/adria/async.tpl'),
     },
 
-    constructor: func(piped) {
+    constructor: func(string? stdin) {
 
-        Transform->constructor(piped);
+        Transform->constructor(stdin);
 
         this.globals        = new Set();
         this.implicits      = new Set();
@@ -182,17 +182,17 @@ module AdriaTransform = proto (Transform) {
      * build a module and its dependencies recursively and push the
      * result onto AdriaTransform::modules
      *
-     * @param moduleName name of the module
-     * @param data module source code
+     * @param string moduleName name of the module
+     * @param string? data module source code
      */
-    buildModule: func(moduleName, data) {
+    buildModule: func(string moduleName, string? data = null) {
 
         // create parser from proto-parser
 
         var parser = this.protoParser.clone();
         parser.moduleName = moduleName;
 
-        if (data === undefined) {
+        if (data === null) {
             parser.loadSource(this.options['basePath'] + moduleName, this.cacheModifier);
         } else {
             parser.setSource(moduleName, data, this.cacheModifier);
@@ -249,7 +249,7 @@ module AdriaTransform = proto (Transform) {
         tpl.assign('enableApplication', options['application']);
         tpl.assign('platform', options['platform']);
 
-        // wrap in shellscript
+        // wrap in shell-script
 
         if (options['shellwrap']) {
             node.add([ '#!/bin/sh\n', '\':\' //; exec "`command -v nodejs || command -v node`" --harmony "$0" "$@"\n' ]);
@@ -287,7 +287,7 @@ module AdriaTransform = proto (Transform) {
             tmpNode.setSourceContent(fileName, contents);
         }
 
-        // merge builtins
+        // merge built-ins
 
         var usedBuiltins = this.usedBuiltins.toArray();
 
@@ -323,6 +323,9 @@ module AdriaTransform = proto (Transform) {
         return node;
     },
 
+    /**
+     * runs scan on the tree (used by some nodes to check variable declarations etc)
+     */
     scan: func() {
 
         for (var id, currentModule in this.modules) {
@@ -346,10 +349,10 @@ module AdriaTransform = proto (Transform) {
             this.startTime = Date.now();
         }
 
-        // process piped data and initial files
+        // process data from stdin and initial files
 
-        if (this.piped !== undefined) {
-            this.buildModule('main' + this.options['extension'], this.piped);
+        if (this.stdin !== null) {
+            this.buildModule('main' + this.options['extension'], this.stdin);
         }
 
         var files = this.options['files'];

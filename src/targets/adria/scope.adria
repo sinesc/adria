@@ -34,13 +34,13 @@ module Scope = proto (Node) {
     locals      : null,
     implicits   : null,
 
-    constructor: func(key, value) {
+    constructor: func(string key, string value) {
         this.locals = new Map();
         this.implicits = new Map();
         Node->constructor(key, value);
     },
 
-    addLocal: func(name) {
+    addLocal: func(string name) {
 
         if (this.getOwnRef(name)) {
             throw new ASTException('Reference "' + name + '" already defined in local scope', this);
@@ -51,7 +51,7 @@ module Scope = proto (Node) {
         return localName;
     },
 
-    addImplicit: func(name, ignore = false) {
+    addImplicit: func(string name, boolean ignore = false) {
 
         // implicits may not be defined in any parent scope
 
@@ -63,7 +63,7 @@ module Scope = proto (Node) {
         return name;
     },
 
-    getOwnRef: func(name) {
+    getOwnRef: func(string name) {
 
         assert(this.locals instanceof Map);
         assert(this.implicits instanceof Map);
@@ -77,7 +77,7 @@ module Scope = proto (Node) {
         return null;
     },
 
-    findRef: func(name) {
+    findRef: func(string name) {
 
         var scope, refName;
 
@@ -108,7 +108,7 @@ module Scope = proto (Node) {
 
 Node::Scope = Scope;
 
-var findRefScope = func(name) {
+var findRefScope = func(string name) {
 
     var scope = this;
 
@@ -121,7 +121,7 @@ var findRefScope = func(name) {
     return scope;
 };
 
-var createLocalName = func(name) {
+var createLocalName = func(string name) {
 
     var scope = findRefScope.call(this, name);
 

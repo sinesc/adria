@@ -22,6 +22,7 @@
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 var GeneratorLiteral = require('./generator_literal');
+var SourceNode = require('../../source_node');
 
 module AsyncLiteral = proto (GeneratorLiteral) {
 
@@ -33,19 +34,19 @@ module AsyncLiteral = proto (GeneratorLiteral) {
         return '___cbh' + this.thisId;
     },
 
-    addLocalName: func(result, nameSN) {
+    addLocalName: func(SourceNode result, SourceNode nameSN) {
 
         // don't name async functions as any recursion attempts need to refer to the outer function
     },
 
-    preBody: func(result) {
+    preBody: func(SourceNode result) {
 
         if (this.useCallback) {
             result.add('try {' + this.nl(1));
         }
     },
 
-    postBody: func(result, body) {
+    postBody: func(SourceNode result, SourceNode body) {
 
         if (this.useCallback) {
             result.add([ body, this.nl(0, body) + this.storeCallback() + '(null, undefined);', this.nl(-1) + '}' ]);

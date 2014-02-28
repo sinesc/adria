@@ -109,8 +109,13 @@ function_literal {
  * function parameter lists
  */
 
+function_annotation {
+    entry -> name:annotation -> "?":annotation_mod -> return
+    name:annotation -> return
+}
+
 function_param {
-    entry -> ident:annotation -> ident:name
+    entry -> function_annotation -> ident:name
     entry -> ident:name -> return
 }
 
@@ -121,7 +126,7 @@ function_params {
 }
 
 function_param_default {
-    entry -> ident:annotation -> ident:name
+    entry -> function_annotation -> ident:name
     entry -> ident:name -> "=" -> expression:value -> return
 }
 

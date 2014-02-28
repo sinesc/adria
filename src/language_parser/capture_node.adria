@@ -40,10 +40,10 @@ module CaptureNode = proto {
     /**
      * construct new capture node for given key/value
      *
-     * @param key
-     * @param value
+     * @param string key
+     * @param string value
      */
-    constructor: func(key, value) {
+    constructor: func(string key, string value) {
         this.key    = key;
         this.value  = value;
     },
@@ -75,15 +75,19 @@ module CaptureNode = proto {
     },
 
     /**
-     * static, create from JSON, restores parent
+     * prototype method, create from JSON, restores parent
+     *
+     * @param object decoded JSON
+     * @param object parentNode initial parent, the parser for non-recursive call
+     * @param func typeMapper
      */
-    fromJSON: func(json, parentNode, typeMapper) {
+    fromJSON: func(object json, object parentNode, func typeMapper) {
 
         var Type = typeMapper(null, json._);
 
         var result = new Type(json.k, json.v);
         result.parent = parentNode;
-        result.tpl = json.t;
+        result.tpl = json.t;    //!todo did I test this? that doesn't recreate a Template instance. also check if templating can be removed from nodes
         result.row = json.r;
         result.col = json.c;
         result.children = [ ];
@@ -101,116 +105,63 @@ module CaptureNode = proto {
     /**
      * static, converts parser results to syntax tree structure
      *
-     * @param results array of GeneratorState
+     * @param Array results array of GeneratorState
+     * @param object parentNode root node parent, the parser
      * @return CaptureNode root node of the capture tree
      */
-    fromResults: (func() {
+    fromResults: func(Array results, object parentNode, typeMapper) {
 
-        /**
-         * compares two stacks and returns number of parent-acends and list of capture desends to get from
-         * lastStack to stack
-         *
-         * @param stack current stack
-         * @param lastStack stack at last processed token
-         * @param minStackLen the minimum size the stack had between the tokens for stack and lastStack
-         */
-        var stackDiff = func(stack, lastStack, minStackLen) {
+        var root = new CaptureNode('', '');
+        var current = root;
+        var lastStack = [];
+        var result, stack, diff, node;
 
-            // find deepest capture node that is present in both current and last stack
+        // set parent parser for root node
 
-            var deepestCommonCapture = -1;
-            var minLen = Math.min(stack.length, lastStack.length, minStackLen);
+        root.parent = parentNode;
 
-            for (var i = 0; i < minLen; i++) {
-                if (stack[i].node === lastStack[i].node) {
-                    if (stack[i].node.capture !== '') {
-                        deepestCommonCapture = i;
-                    }
-                } else {
-                    break;
-                }
+        // process each result
+
+        for (var resultId in results) {
+            result = results[resultId];
+            stack = result.stack;
+
+            // diff stack against previous stack
+
+            diff = stackDiff(stack, lastStack, result.minStack);
+
+            // ascend as far as required
+
+            while (diff.ascend--) {
+                current = current.parent;
             }
 
-            // find number of captures between deepest common capture and deepest previous capture
-            // this is the number of nodes fromResults() needs to ascend before attaching new capture nodes
+            // attach new nodes
 
-            var numCaptures = 0;
-            var lastLen = lastStack.length;
-
-            for (var i = deepestCommonCapture + 1; i < lastLen; i++) {
-                if (lastStack[i].node.capture !== '') {
-                    numCaptures++;
-                }
+            for (var nodeId in diff.create) {
+                node = diff.create[nodeId];
+                current = current.addNew(node.capture, node.name, typeMapper(node.capture, node.name));
+                current.row = result.token.pos.row;
+                current.col = result.token.pos.col;
             }
 
-            // find all capture nodes below the deepest common capture
-            // fromResults() will have to create capture nodes for these
+            // attach the actual match
 
-            var captures = [];
-            var len = stack.length;
+            node = result.node;
 
-            for (var i = deepestCommonCapture + 1; i < len; i++) {
-                if (stack[i].node.capture !== '') {
-                    captures.push(stack[i].node);
-                }
+            if (node.capture !== '') {
+                var match = current.addNew(node.capture, result.token.data, typeMapper(node.capture, node.name));
+                match.row = result.token.pos.row;
+                match.col = result.token.pos.col;
             }
 
-            return { ascend: numCaptures, create: captures };
-        };
+            // lastStack for the next token
 
-        /**
-         * the actual conversion function
-         */
-        return func fromResults(results, typeMapper) {
+            lastStack = stack;
+        }
 
-            var root = new CaptureNode();
-            var current = root;
-            var lastStack = [];
-            var result, stack, diff, node;
-
-            // process each result
-
-            for (var resultId in results) {
-                result = results[resultId];
-                stack = result.stack;
-
-                // diff stack against previous stack
-
-                diff = stackDiff(stack, lastStack, result.minStack);
-
-                // ascend as far as required
-
-                while (diff.ascend--) {
-                    current = current.parent;
-                }
-
-                // attach new nodes
-
-                for (var nodeId in diff.create) {
-                    node = diff.create[nodeId];
-                    current = current.addNew(node.capture, node.name, typeMapper(node.capture, node.name));
-                    current.row = result.token.pos.row;
-                    current.col = result.token.pos.col;
-                }
-
-                // attach the actual match
-
-                node = result.node;
-
-                if (node.capture !== '') {
-                    var match = current.addNew(node.capture, result.token.data, typeMapper(node.capture, node.name));
-                    match.row = result.token.pos.row;
-                    match.col = result.token.pos.col;
-                }
-
-                // lastStack for the next token
-
-                lastStack = stack;
-            }
-
-            return root;
-        };
-    })(),
+        return root;
+    },
 
     isNode: func() {
         return this.col !== -1;
@@ -235,7 +186,7 @@ module CaptureNode = proto {
     /**
      * returns number of parents above node
      *
-     * @return int depth
+     * @return integer depth
      */
     depth: func() {
 
@@ -290,13 +241,13 @@ module CaptureNode = proto {
     /**
      * finds given constructor in ancestors
      *
-     * @param function Constructor prototype constructor to find
-     * @param function StopConstructor prototype constructor to stop searching at
+     * @param func Constructor prototype constructor to find
+     * @param func StopConstructor prototype constructor to stop searching at
      * @param boolean fromParent default true, will also check this if false
      * @param any dummy result when constructor is not found
      * @return CaptureNode/dummy
      */
-    findProto: func(Constructor, StopConstructor = null, fromParent = true, dummy = this.dummy) {
+    findProto: func(func Constructor, func? StopConstructor = null, boolean fromParent = true, dummy = this.dummy) {
 
         var current = fromParent ? this.parent : this;
 
@@ -330,7 +281,7 @@ module CaptureNode = proto {
      * @param CaptureNode child new node to add
      * @return CaptureNode given CaptureNode
      */
-    add: func(child) {
+    add: func(CaptureNode child) {
 
         if (this.children == null) {
             this.children = [ ];
@@ -344,11 +295,11 @@ module CaptureNode = proto {
      * get the <index>th node that matches key with index = 0 being the first node
      *
      * @param string key node key to find
-     * @param int index which of multiple key-matching nodes
+     * @param number index which of multiple key-matching nodes
      * @param any dummy result when ancestor is not found
      * @return CaptureNode/dummy
      */
-    get: func(key, index = 0, dummy = this.dummy) {
+    get: func(string key, number index = 0, dummy = this.dummy) {
 
         if (this.children instanceof Array) {
 
@@ -370,7 +321,7 @@ module CaptureNode = proto {
      * @param string key node key to find
      * @return boolean
      */
-    has: func(key) {
+    has: func(string key) {
 
         if (this.children instanceof Array) {
 
@@ -393,7 +344,7 @@ module CaptureNode = proto {
      * @param any dummy result when ancestor is not found
      * @return CaptureNode/dummy
      */
-    path: func(pathString, dummy = this.dummy) {
+    path: func(string pathString, dummy = this.dummy) {
 
         var step;
         var current = this;
@@ -420,14 +371,14 @@ module CaptureNode = proto {
     /**
      * creates and adds a node of given subclass to this node
      *
-     * @param string? key node key
-     * @param string? value node value
-     * @param Type node_type type of the newly created and added node. must be subtype of StringNode
-     * @return StringNode the newly created StringNode
+     * @param string key node key
+     * @param string value node value
+     * @param func Constructor constructor to use for the new node
+     * @return CaptureNode
      */
-    addNew: func(key, value, Type) {
+    addNew: func(string key, string value, func Constructor) {
 
-        var child = new Type(key, value);
+        var child = new Constructor(key, value);
 
         assert(child != null);
 
@@ -439,10 +390,10 @@ module CaptureNode = proto {
     /**
       * extracts a set of this node's children and returns them
       *
-      * @param from start inclusive child index
-      * @param to end inclusive child index
+      * @param finite from start inclusive child index
+      * @param finite to end inclusive child index
       */
-    extract: func(from, to) {
+    extract: func(finite from, finite to) {
 
         return this.children.splice(from, to - from + 1);
     },
@@ -450,11 +401,11 @@ module CaptureNode = proto {
     /**
       * moves a set of this node's children into a single child node and places it where the set used to be
       *
-      * @param from inclusive start child index
-      * @param to inclusive end child index
+      * @param finite from inclusive start child index
+      * @param finite to inclusive end child index
       * @param Constructor optional constructor for the new node, defaults to parent type
       */
-    nest: func(from, to, Constructor = this.constructor) {
+    nest: func(finite from, finite to, Constructor = this.constructor) {
 
         var node = new Constructor(this.key, this.value);
 
@@ -472,10 +423,10 @@ module CaptureNode = proto {
     /**
      * returns a newline and optionally increases or decreases indentation for the following lines
      *
-     * @param integer indent change in indentation
-     * @param CaptureNode node optionally a (previous) node to trim
+     * @param finite indent change in indentation
+     * @param SourceNode node optionally a (previous) node to trim
      */
-    nl: func(indent = 0, node = null) {
+    nl: func(finite indent = 0, SourceNode? node = null) {
 
         var parser = this.parser();
         parser.indent += indent;
@@ -490,7 +441,7 @@ module CaptureNode = proto {
     /**
      * creates and returns a new SourceNode based on CaptureNode's position and given code
      *
-     * @param code
+     * @param any code SourceNode or string
      */
     csn: func(code) {
 
@@ -539,7 +490,7 @@ module CaptureNode = proto {
     /**
      * recursively calls children for scanning purposes
      *
-     * @param mixed state user-defined scan state object passed to every child
+     * @param any state user-defined scan state object passed to every child
      */
     scan: func(state) {
 
@@ -553,7 +504,7 @@ module CaptureNode = proto {
     /**
      * recursively calls children for preprocessing purposes
      *
-     * @param mixed state user-defined preprocessing state object passed to every child
+     * @param any state user-defined preprocessing state object passed to every child
      */
     preprocess: func(state) {
 
@@ -567,9 +518,9 @@ module CaptureNode = proto {
     /**
      * iterate over all child-nodes
      *
-     * @param NodeCallback func(node, first, last)
+     * @param func callback function, func(Node node, boolean first, boolean last)
      */
-    each: func(fn) {
+    each: func(func fn) {
 
         var children = this.children;
 
@@ -584,12 +535,14 @@ module CaptureNode = proto {
     },
 
     /**
-     * iterate over all child-nodes with given key
+     * iterate over all child-nodes with given key. can also iterate over nested
+     * child nodes by passing a . separated path, i.e. function.parameter_list.item
+     * for iterate over all item-nodes
      *
-     * @param string key node key
-     * @param NodeCallback func(node, first, last)
+     * @param string key node key or . separated path
+     * @param func callback function, func(node, first, last)
      */
-    eachKey: func(key, fn) {
+    eachKey: func(string key, func fn) {
 
         var part = key.split('.');
 
@@ -635,7 +588,7 @@ module CaptureNode = proto {
      *
      * @param string fileName
      */
-    setTemplate: func(fileName) {
+    setTemplate: func(string fileName) {
 
         this.tpl = new Template();
         this.tpl.debug = this.parser().transform.options['debug'];
@@ -657,12 +610,12 @@ module CaptureNode = proto {
     /**
      * assigns a value to the current template
      *
-     * @param string uri qualified variable name
+     * @param string name variable name
      * @param any value
      */
-    assign: func(uri, value) {
+    assign: func(string name, value) {
 
-        this.tpl.assign(uri, value);
+        this.tpl.assign(name, value);
     },
 };
 
@@ -672,3 +625,55 @@ module CaptureNode = proto {
 CaptureNode::dummy = new CaptureNode('', '');
 CaptureNode::dummy.row = -1;
 CaptureNode::dummy.col = -1;
+
+/**
+ * compares two stacks and returns number of parent-acends and list of capture desends to get from
+ * lastStack to stack. internally used by fromResults
+ *
+ * @param Array stack current stack
+ * @param Array lastStack stack at last processed token
+ * @param finite minStackLen the minimum size the stack had between the tokens for stack and lastStack
+ */
+var stackDiff = func(Array stack, Array lastStack, finite minStackLen) {
+
+    // find deepest capture node that is present in both current and last stack
+
+    var deepestCommonCapture = -1;
+    var minLen = Math.min(stack.length, lastStack.length, minStackLen);
+
+    for (var i = 0; i < minLen; i++) {
+        if (stack[i].node === lastStack[i].node) {
+            if (stack[i].node.capture !== '') {
+                deepestCommonCapture = i;
+            }
+        } else {
+            break;
+        }
+    }
+
+    // find number of captures between deepest common capture and deepest previous capture
+    // this is the number of nodes fromResults() needs to ascend before attaching new capture nodes
+
+    var numCaptures = 0;
+    var lastLen = lastStack.length;
+
+    for (var i = deepestCommonCapture + 1; i < lastLen; i++) {
+        if (lastStack[i].node.capture !== '') {
+            numCaptures++;
+        }
+    }
+
+    // find all capture nodes below the deepest common capture
+    // fromResults() will have to create capture nodes for these
+
+    var captures = [];
+    var len = stack.length;
+
+    for (var i = deepestCommonCapture + 1; i < len; i++) {
+        if (stack[i].node.capture !== '') {
+            captures.push(stack[i].node);
+        }
+    }
+
+    return { ascend: numCaptures, create: captures };
+};

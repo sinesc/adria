@@ -21,30 +21,23 @@
  * IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-
-var Position = proto {
-
-    col: 0,
-    row: 0,
-
-    constructor: func(col, row) {
-        this.col = col;
-        this.row = row;
-    },
-
-    toString: func() {
-        return 'line ' + this.row + ', column ' + this.col;
-    },
-};
-
-var Token = proto {
+module Token = proto {
 
     data    : '',
     type    : 0,
     start   : 0,
     pos     : null,
 
-    constructor: func(data, type, start, col, row) {
+    /**
+     * construct a new token
+     *
+     * @param string data the matched string
+     * @param finite type token type id from Type Enum
+     * @param finite start absolute start-position in the source string
+     * @param finite col calculated column
+     * @param finite row calculated row
+     */
+    constructor: func(string data, finite type, finite start, finite col, finite row) {
 
         this.data = data;
         this.type = type;
@@ -53,43 +46,17 @@ var Token = proto {
     },
 };
 
-module Result = proto {
+export Position = proto {
 
-    constructor: func(tokenizer) {
-        this.tokenizer = tokenizer;
-        this.tokens = [ ];
+    col: 0,
+    row: 0,
+
+    constructor: func(finite col, finite row) {
+        this.col = col;
+        this.row = row;
     },
 
-    /**
-     * add a token to the result
-     *
-     * @param data the matched string
-     * @param type token type id from Type Enum
-     * @param start absolute start-position in the source string
-     * @param col calculated column
-     * @param row calculated row
-     */
-    add: func(data, type, start, col, row) {
-        this.tokens.push(new Token(data, type, start, col, row));
+    toString: func() {
+        return 'line ' + this.row + ', column ' + this.col;
     },
-
-    /**
-     * retrieve a token from the result
-     *
-     * @param id token id to retrieve
-     * @return token object or undefined
-     */
-    get: func(tokenId) {
-        return this.tokens[tokenId];
-    },
-
-    /**
-     * return number of tokens in result
-     */
-    length: prop {
-        get: func() {
-            return this.tokens.length;
-        }
-    },
-
 };

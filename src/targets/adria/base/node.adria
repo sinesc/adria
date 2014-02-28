@@ -38,7 +38,7 @@ module Node = proto (CaptureNode) {
      * @param boolean fromParent default false, if true start looking at parent instead of this
      * @return scope node/null
      */
-    findScope: func(fromParent = false) {
+    findScope: func(boolean fromParent = false) {
         return this.findProto(Node::Scope, null, fromParent, null);
     },
 
@@ -47,7 +47,7 @@ module Node = proto (CaptureNode) {
      *
      * @param string name
      */
-    checkDefined: func(name) {
+    checkDefined: func(string name) {
 
         var parser = this.parser();
 
@@ -78,7 +78,7 @@ module Node = proto (CaptureNode) {
 
             if (nameNode.isNode()) {
 
-                // fetch from declaration, protoliteral item's left side or expression
+                // fetch from declaration, proto-literal item's left side or expression
 
                 if (nameNode.value === 'dec_def' || nameNode.value === 'module_statement' || nameNode.value === 'export_statement') {
 
@@ -95,6 +95,7 @@ module Node = proto (CaptureNode) {
             }
 
         } else {
+
             result = nameNode.toSourceNode();
         }
 

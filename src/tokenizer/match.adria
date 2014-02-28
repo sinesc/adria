@@ -1,7 +1,7 @@
 /*
  * Adria transcompiler
  *
- * Copyright (C) 2014 Dennis MÃ¶hlmann <mail@dennismoehlmann.de>
+ * Copyright (C) 2014 Dennis Möhlmann <mail@dennismoehlmann.de>
  * Licensed under the MIT license.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -21,39 +21,32 @@
  * IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-var Node = require('./base/node');
 
 /**
- * handles an async-wrap-operation. note: wrapping happens in Expression, this
- * is just the operation where "(..., #)" is the operator.
+ * represents a single token match
  */
-module AsyncWrapOperation = proto (Node) {
+module Match = proto {
 
-    params: null,
+    name            : null,
+    data            : '',
+    endPosition     : -1,
+    containedRows   : -1,
+    lastRowLen      : -1,
 
-    toSourceNode: func() {
-
-        var id = 0;
-        var result = this.csn();
-        this.params = [];
-        result.add('(');
-
-        this.each(func(Node node, boolean first) {
-
-            if (first === false) {
-                result.add(', ');
-            }
-
-            if (node.value === '#') {
-                result.add('___callback');
-            } else {
-                result.add('___' + id++);
-                this.params.push(node.toSourceNode().toString());
-            }
-        });
-
-        result.add(')');
-
-        return result;
+    /**
+     * constructor
+     *
+     * @param string name match name or null to ignore
+     * @param string data matched string
+     * @param number endPosition end of match
+     * @param number containedRows number of newlines contained in the match, used to compute line number
+     * @param number lastRowLen length of the part behind the last \n
+     */
+    constructor: func(string? name, string data, number endPosition, number containedRows, number lastRowLen) {
+        this.name           = name;
+        this.data           = data;
+        this.endPosition    = endPosition;
+        this.containedRows  = containedRows;
+        this.lastRowLen     = lastRowLen;
     },
 };

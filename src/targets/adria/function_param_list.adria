@@ -26,14 +26,19 @@ var Set = require('astd/set');
 var ParamsNode = require('./base/params_node');
 var FunctionLiteral = require('./function_literal');
 var ASTException = require('../../language_parser/ast_exception');
+var Scope = require('./scope');
+var SourceNode = require('../../source_node');
+var Node = require('./base/node');
 
 module FunctionParamList = proto (ParamsNode) {
 
-    numParams           : 0,
-    optionalPermutations: null,
-    optionalGroups      : null,
+    numParams               : 0,
+    optionalPermutations    : null,
+    optionalGroups          : null,
 
-    toSourceNode: func(declare = true) {
+    types: new Set([ 'boolean', 'number', 'finite', 'string', 'func', 'object' ]),
+
+    toSourceNode: func(boolean declare = true) {
 
         var result = this.csn();
         var functionNode = this.findProto(FunctionLiteral);
@@ -58,23 +63,23 @@ module FunctionParamList = proto (ParamsNode) {
      * @param SourceNode result
      * @param CaptureNode node parameter
      */
-    handle: func(declare, functionNode, scope, result, node) {
+    handle: func(boolean declare, FunctionLiteral functionNode, Scope scope, SourceNode result, Node node) {
 
         if (node.key === 'item') {
 
-            var name = node.get('name').toSourceNode();
+            var nameSN = node.get('name').toSourceNode();
 
             // don't add to formal parameter list when using advanced optionals, add to locals instead
 
             if (this.optionalPermutations === null) {
-                result.add(name);
+                result.add(nameSN);
             }
 
             if (declare) {
                 if (this.optionalPermutations === null) {
-                    scope.addImplicit(name.toString(), true);
+                    scope.addImplicit(nameSN.toString(), true);
                 } else {
-                    scope.addLocal(name.toString());
+                    scope.addLocal(nameSN.toString());
                 }
             }
 
@@ -84,9 +89,13 @@ module FunctionParamList = proto (ParamsNode) {
 
             if (valueNode.isNode() && this.optionalPermutations === null) {
 
-                var defaultArg = this.csn([ name, ' = (arguments.length > ' + this.numParams + ' ? ', name, ' : (', valueNode.toSourceNode(), '));' ]);
+                var defaultArg = this.csn([ nameSN, ' = (arguments.length > ' + this.numParams + ' ? ', nameSN, ' : (', valueNode.toSourceNode(), '));' ]);
                 functionNode.specialArgs.push(defaultArg);
             }
+
+            // check expected type if assertions are enabled
+
+            this.checkAnnotation(node, functionNode);
 
             // count required by rest params
 
@@ -140,11 +149,39 @@ module FunctionParamList = proto (ParamsNode) {
     },
 
     /**
+     * generates type annotation check and adds it to the functionNode's specialArgs property
+     *
+     * @param Node node
+     * @param FunctionLiteral functionNode
+     */
+    checkAnnotation: func(Node node, FunctionLiteral functionNode) {
+
+        var annotationNode = node.get('annotation');
+
+        if (annotationNode.isDummy() || this.parser().transform.options['assert'] === false) {
+            return;
+        }
+
+        var type        = annotationNode.toString();
+        var allowNull   = node.get('annotation_mod').value === '?';
+        var name        = node.get('name').toString();
+        var argId       = this.numParams + 1;
+
+        if (this.types.has(type)) {
+            var check = "'$0', $1, $2, 'argument $3 ($2)'".format(type, allowNull ? 'true' : 'false', name, argId);
+            functionNode.specialArgs.push(this.csn([ 'assert.type(', check , ');' ]));
+        } else {
+            var check = "$0, $1, $2, 'argument $3 ($2)', '$0'".format(type, allowNull ? 'true' : 'false', name, argId);
+            functionNode.specialArgs.push(this.csn([ 'assert.instance(', check , ');' ]));
+        }
+    },
+
+    /**
      * generates source code for the advanced optionals syntax
      *
      * @param FunctionLiteral functionNode
      */
-    generatePermutationSwitch: func(functionNode) {
+    generatePermutationSwitch: func(FunctionLiteral functionNode) {
 
         var FunctionParamsOptional = require('./function_params_optional');
         var parameters = this.indexParameters();
@@ -194,9 +231,10 @@ module FunctionParamList = proto (ParamsNode) {
     /**
      * finds valid optional combinations and returns map of bit-string => used parameters
      *
+     * @param Array optionals array of optional parameters as returned by indexOptionals
      * @return Map
      */
-    findValidOptionalPermutations: func(optionals) {
+    findValidOptionalPermutations: func(Array optionals) {
 
         var bits = optionals.length;
         var permutations = Math.pow(2, bits);
@@ -208,7 +246,7 @@ module FunctionParamList = proto (ParamsNode) {
 
             var pattern = '';
 
-            // try to set bitpattern to optionals and get actual pattern allowed by nested optionals
+            // try to set bit-pattern to optionals and get actual pattern allowed by nested optionals
 
             for (var bit = 0; bit < bits; bit++) {
                 var actuallySet = optionals[bit].setOptionalActive((permutation & (1 << bit)) > 0);
@@ -231,7 +269,7 @@ module FunctionParamList = proto (ParamsNode) {
      * @param string permutation as produced by findValidOptionalPermutations
      * @param Array optionals as indexed by indexOptionals
      */
-    applyOptionalPermutation: func(permutation, optionals) {
+    applyOptionalPermutation: func(string permutation, Array optionals) {
 
         for (var id = 0; id < permutation.length; id++) {
             optionals[id].optionalIsActive = (permutation.slice(id, id + 1) === '1');

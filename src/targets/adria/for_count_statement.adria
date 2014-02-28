@@ -22,6 +22,7 @@
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 var Scope = require('./scope');
+var Node = require('./base/node');
 
 module ForCountStatement = proto (Scope) {
 
@@ -35,7 +36,7 @@ module ForCountStatement = proto (Scope) {
             var varDefs = this.csn();
             var ownScope = this;
 
-            initNode.eachKey('item', func(node) {
+            initNode.eachKey('item', func(Node node) {
 
                 var valueNode = node.get('value');
                 var nameNode = node.get('name');

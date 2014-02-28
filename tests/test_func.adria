@@ -23,8 +23,14 @@
  */
 var test = require('./test');
 
+var testOptionals = func(a, [ b = 2, c = 3, [ d = 4 ] ]) {
+    return [ a, b, c, d ];
+};
+
 test.group('test_func');
 
-test('no tests defined', func() {
-    test.fail('!todo function tests');
+test('advanced optionals', func() {
+
+    var r = testOptionals(1);
+    assert(r[0] === 1 && r[1] === 2 && r[2] === 3 && r[3] === 4);
 });

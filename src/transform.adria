@@ -28,8 +28,6 @@ var Cache = require('./cache');
 /**
  * Base for language transformation file handling. Transforms a set of input
  * files into one or more output files using given options.
- *
- * @param String piped piped data, if any
  */
 module Transform = proto {
 
@@ -41,7 +39,7 @@ module Transform = proto {
     /**
      * data received via stdin
      */
-    piped: null,
+    stdin: null,
 
     /**
      * output cache
@@ -51,11 +49,11 @@ module Transform = proto {
     /**
      * constructor
      *
-     * @param piped data received via stdin
+     * @param string data received via stdin
      */
-    constructor: func(piped) {
+    constructor: func(string? stdin = null) {
 
-        this.piped = piped;
+        this.stdin = stdin;
 
         this.initOptions();
         this.processOptions();

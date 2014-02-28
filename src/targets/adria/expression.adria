@@ -31,7 +31,7 @@ module Expression = proto (Node) {
         'call', 'pcall', 'item'
     ]),
 
-    preprocess: func(state) {
+    preprocess: func(object state) {
 
         Node->preprocess(state);
 
@@ -53,11 +53,11 @@ module Expression = proto (Node) {
         }
     },
 
-    scan: func(state) {
+    scan: func(object state) {
 
         Node->scan(state);
 
-        this.eachKey('ident', func(child) {
+        this.eachKey('ident', func(Node child) {
             this.checkDefined(child.value);
         });
     },

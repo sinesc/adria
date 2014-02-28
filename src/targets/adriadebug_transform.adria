@@ -34,9 +34,9 @@ var AdriaDebugParser = require('./adriadebug_parser');
  */
 module AdriaDebugTransform = proto(AdriaTransform) {
 
-    constructor: func(piped) {
+    constructor: func(string? stdin) {
 
-        AdriaTransform->constructor(piped);
+        AdriaTransform->constructor(stdin);
 
         this.options['cache'] = false;
         this.options['scan'] = false;
@@ -51,10 +51,10 @@ module AdriaDebugTransform = proto(AdriaTransform) {
         this.protoParser = new AdriaDebugParser(this);
         this.protoParser.trainSelf();
 
-        // process piped data and initial files
+        // process data from stdin and initial files
 
-        if (this.piped !== undefined) {
-            this.buildModule('main' + options['extension'], this.piped);
+        if (this.stdin !== null) {
+            this.buildModule('main' + options['extension'], this.stdin);
         }
 
         var files = options['files'];

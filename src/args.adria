@@ -35,11 +35,11 @@ var parser = new argparse.ArgumentParser({
 /**
  * add a new argument
  *
- * @param array flags
+ * @param Array flags
  * @param object options
- * @param function callback
+ * @param func? callback
  */
-export add = func(flags, options, callback = null) {
+export add = func(Array flags, object options, func? callback = null) {
 
     parser.addArgument(flags, options);
 
@@ -68,7 +68,7 @@ export add = func(flags, options, callback = null) {
  * @param string help
  * @param boolean defaultState
  */
-export addSwitch = func(name, help, defaultState = false) {
+export addSwitch = func(string name, string help, boolean defaultState = false) {
 
     var defaultText = ' (' + (defaultState ? 'true' : 'false') + ')';
 

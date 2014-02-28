@@ -33,7 +33,7 @@ module InvokeOperation = proto (Node) {
             result.add('(');
         }
 
-        this.each(func(node, first) {
+        this.each(func(Node node, boolean first) {
 
             if (first === false) {
                 result.add(', ');

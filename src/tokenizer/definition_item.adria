@@ -1,7 +1,7 @@
 /*
  * Adria transcompiler
  *
- * Copyright (C) 2014 Dennis MÃ¶hlmann <mail@dennismoehlmann.de>
+ * Copyright (C) 2014 Dennis Möhlmann <mail@dennismoehlmann.de>
  * Licensed under the MIT license.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -21,39 +21,23 @@
  * IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-var Node = require('./base/node');
 
 /**
- * handles an async-wrap-operation. note: wrapping happens in Expression, this
- * is just the operation where "(..., #)" is the operator.
+ * tokenizer definition item
  */
-module AsyncWrapOperation = proto (Node) {
+module DefinitionItem = proto  {
 
-    params: null,
+    name: null,
+    match: null,
 
-    toSourceNode: func() {
-
-        var id = 0;
-        var result = this.csn();
-        this.params = [];
-        result.add('(');
-
-        this.each(func(Node node, boolean first) {
-
-            if (first === false) {
-                result.add(', ');
-            }
-
-            if (node.value === '#') {
-                result.add('___callback');
-            } else {
-                result.add('___' + id++);
-                this.params.push(node.toSourceNode().toString());
-            }
-        });
-
-        result.add(')');
-
-        return result;
+    /**
+     * constructor
+     *
+     * @param string? type name of matched tokens, null to discard matches
+     * @param func match function uses to perform matches, receives input string, start position and last matched token
+     */
+    constructor: func(string? name, func match) {
+        this.name = name;
+        this.match = match;
     },
 };

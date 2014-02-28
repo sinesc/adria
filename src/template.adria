@@ -28,15 +28,15 @@ module Template = proto (ASTDTemplate) {
 
     basePath: 'templates/',
 
-    fetch: func(source) {
+    fetch: func(string source) {
 
         // remove empty lines
 
         return parent->fetch(source).replace(/\n[\ \n]*\n/g, '\n');
     },
 
-    fetchFile: func(file) {
-    
+    fetchFile: func(string file) {
+
         return this.fetch(fs.readFileSync(this.basePath + file, 'UTF-8'));
     },
 };

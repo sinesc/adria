@@ -22,6 +22,7 @@
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 var FunctionNode = require('./base/function_node');
+var SourceNode = require('../../source_node');
 var Scope = require('./scope');
 
 var thisId = 1;
@@ -29,12 +30,13 @@ var thisId = 1;
 module FunctionLiteral = proto (FunctionNode) {
 
     thisId              : 0,
-    name                : null, //!todo seems to be a sourcenode!
+    name                : '',
     provideContext      : false,
     registerWithParent  : false,
     specialArgs         : null,
 
-    constructor: func(key, value) {
+    constructor: func(string key, string value) {
+
         this.specialArgs = [ ];
         Scope->constructor(key, value);
         this.thisId = thisId++;
@@ -50,18 +52,18 @@ module FunctionLiteral = proto (FunctionNode) {
         return this.csn('function');
     },
 
-    addLocalName: func(result, nameSN) {
+    addLocalName: func(SourceNode result, SourceNode nameSN) {
 
         this.addImplicit(nameSN.toString(), true);
         result.add([ ' ', this.name ]);
     },
 
-    preBody: func(result) {
+    preBody: func(SourceNode result) {
 
         // nothing to do here
     },
 
-    postBody: func(result, body) {
+    postBody: func(SourceNode result, SourceNode body) {
 
         result.add(this.nl(0, result));
         result.add(body);
@@ -82,8 +84,8 @@ module FunctionLiteral = proto (FunctionNode) {
         var nameSN = this.findName();
 
         if (nameSN !== null && nameSN.toString().match(/^([\'\"]).*\1$/) === null) {
-            this.name = nameSN;
-            this.addLocalName(result, this.name);
+            this.name = nameSN.toString();
+            this.addLocalName(result, nameSN);
         } else {
             this.name = null;
         }
@@ -91,7 +93,7 @@ module FunctionLiteral = proto (FunctionNode) {
         // check if name needs to be registered with parent scope
 
         if (this.registerWithParent) {
-            this.parent.findScope().addImplicit(this.name.toString());
+            this.parent.findScope().addImplicit(this.name);
         }
 
         // handle parameters

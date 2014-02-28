@@ -25,7 +25,7 @@ require('astd/prototype/string').extend();
 require('astd/prototype/regexp').extend();
 require('astd/prototype/object').extend();
 
-global log = require('./log'); 
+global log = require('./log');
 
 // process base command line
 
@@ -50,29 +50,29 @@ var options = args.parseKnown();
 
 // transformation performer
 
-var handle = func(pipeData) {
+var handle = func(stdin) {
 
     var transform;
 
     if (options['mode'] === 'adria') {
-    
+
         var AdriaTransform = require('./targets/adria_transform');
-        transform = new AdriaTransform(pipeData);
-        
+        transform = new AdriaTransform(stdin);
+
     } else if (options['mode'] === 'adriadebug') {
-    
+
         var AdriaDebugTransform = require('./targets/adriadebug_transform');
-        transform = new AdriaDebugTransform(pipeData);
-        
+        transform = new AdriaDebugTransform(stdin);
+
     } else {
-    
+
         throw new Error('Unsupported mode "' + options['mode']+ '".');
     }
 
     transform.run();
 };
 
-var run = func(pipeData) {
+var run = func(stdin = null) {
 
     if (options['debug']) {
 
@@ -80,13 +80,15 @@ var run = func(pipeData) {
         // enabling "break on any exception" earlier will introduce you to node exception hell
 
         debugger;
-        handle(pipeData);
+        handle(stdin);
 
     } else {
 
+        var ASTException = require('./language_parser/ast_exception');
+
         try {
-            handle(pipeData);
-        } catch (e) {
+            handle(stdin);
+        } catch (ASTException e) {
             console.log(e.message);
             process.exit(1);
         }
@@ -97,14 +99,14 @@ var run = func(pipeData) {
 
 if (options['stdin']) {
 
-    var pipeData = '';
+    var data = '';
 
-    process.stdin.on('data', func(data) {
-        pipeData += data.toString();
+    process.stdin.on('data', func(chunk) {
+        data += chunk.toString();
     });
 
     process.stdin.on('end', func() {
-        run(pipeData);
+        run(data);
     });
 
     process.stdin.resume();

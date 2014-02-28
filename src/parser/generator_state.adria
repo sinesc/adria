@@ -21,6 +21,7 @@
  * IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
+var Token = require('../tokenizer/token');
 
 /**
  * contains generator as well as its current result
@@ -49,7 +50,7 @@ module GeneratorState = proto {
     token: null,
 
     /**
-     * minimum stacksize encountered during recursive return-node processing.
+     * minimum stack-size encountered during recursive return-node processing.
      * this information is required to construct a capture tree.
      * i.e.: the stacks of two consecutive generators might look like this:
      *
@@ -74,12 +75,12 @@ module GeneratorState = proto {
     done: false,
 
     /**
-     * sets the generator object for this GeneratorState
+     * (re)sets the generator object for this GeneratorState
      *
-     * @param object generator
-     * @param string token
+     * @param object? generator
+     * @param Token? token
      */
-    setGenerator: func(generator, token) {
+    setGenerator: func(object? generator = null, Token? token = null) {
 
         this.generator = generator;
         this.token = token;
@@ -91,7 +92,7 @@ module GeneratorState = proto {
 
     /**
      * fetches next result from generator and makes it accessible via the node, stack and minStack
-     * properties. if there are no futher results, the done property will be set to true
+     * properties. if there are no further results, the done property will be set to true
      */
     next: func() {
 

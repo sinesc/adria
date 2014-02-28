@@ -35,7 +35,7 @@ module FunctionParamsOptional = proto (ParamsNode) {
      * @param boolean tryStatus new status to attempt to set
      * @return boolean actual status
      */
-    setOptionalActive: func(tryStatus) {
+    setOptionalActive: func(boolean tryStatus) {
 
         // find parent optional, only set own status to true if parent is as well
 

@@ -7,6 +7,21 @@ var Exception{! if (enableAssert): !}, AssertionFailedException{! endif !};
     var resources = { };
     var modules = { };
 
+    Exception = function Exception(message) {
+        this.message = message === undefined ? this.message : message;
+        this.name = this.constructor.name === undefined ? 'Exception' : this.constructor.name;
+        var current = this;
+        var ownTraceSize = 1;
+        while ((current = Object.getPrototypeOf(current)) instanceof Error) {
+            ownTraceSize++;
+        }
+        var stack = Error().stack.split('\n').slice(ownTraceSize);
+        stack[0] = this.name + ': ' + message;
+        this.stack = stack.join('\n');
+    };
+    Exception.prototype = Object.create(Error.prototype);
+    Exception.prototype.constructor = Exception;
+
     var getResource = function(name) {{! if (enableAssert): !}
         if (resources[name] === undefined) {
             throw Error('missing resource ' + name);
@@ -28,22 +43,7 @@ var Exception{! if (enableAssert): !}, AssertionFailedException{! endif !};
     };
     resource = function(name, data) {
         resources[name] = data;
-    };
-
-    Exception = function Exception(message) {
-        this.message = message === undefined ? this.message : message;
-        this.name = this.constructor.name === undefined ? 'Exception' : this.constructor.name;
-        var current = this;
-        var ownTraceSize = 1;
-        while ((current = Object.getPrototypeOf(current)) instanceof Error) {
-            ownTraceSize++;
-        }
-        var stack = Error().stack.split('\n').slice(ownTraceSize);
-        stack[0] = this.name + ': ' + message;
-        this.stack = stack.join('\n');
-    };
-    Exception.prototype = Object.create(Error.prototype);
-    Exception.prototype.constructor = Exception;{! if (enableApplication): !}
+    };{! if (enableApplication): !}
 
     application = function(Constructor /*, params... */) {
         function Application() {
@@ -79,5 +79,49 @@ var Exception{! if (enableAssert): !}, AssertionFailedException{! endif !};
         if (assertion !== true) {
             throw new AssertionFailedException(message);
         }
-    };{! endif !}
+    };
+    
+    assert.instance = function(type, allowNull, value, name, typeName) {
+    
+        if (value === null) {
+            if (allowNull) {
+                return;
+            } else {
+                throw new AssertionFailedException(name + ' expected to be instance of ' + typeName + ', got null instead');
+            }
+        }
+        
+        if (value instanceof type !== true) {
+            var actualName = (typeof value === 'object' && typeof value.constructor === 'function' && typeof value.constructor.name === 'string' ? value.constructor.name : 'type ' + typeof value);
+            throw new AssertionFailedException(name + ' expected to be instance of ' + typeName + ', got ' + actualName + ' instead');
+        }
+    }
+    
+    assert.type = function(type, allowNull, value, name) {
+
+        type = (type !== 'func' ? type : 'function');
+
+        if (value === null) {
+            if (allowNull) {
+                return;
+            } else {
+                throw new AssertionFailedException(name + ' expected to be of type ' + type + ', got null instead');
+            }
+        }
+
+        var actualType = typeof value;
+
+        if (type === 'finite' || type === 'number') {
+            if (actualType !== 'number') {
+                throw new AssertionFailedException(name + ' expected to be of type number, got ' + actualType + ' instead');
+            }
+            if (type === 'finite' && isFinite(value) === false) {
+                throw new AssertionFailedException(name + ' expected to be finite number, got ' + value + ' instead');
+            }
+
+        } else if (type !== actualType) {
+            throw new AssertionFailedException(name + ' expected to be of type ' + type + ', got ' + actualType + ' instead');
+        }
+    };
+    {! endif !}
 })();

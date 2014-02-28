@@ -31,6 +31,20 @@ var Exception;
 (function() {
     var resources = { };
     var modules = { };
+    Exception = function Exception(message) {
+        this.message = message === undefined ? this.message : message;
+        this.name = this.constructor.name === undefined ? 'Exception' : this.constructor.name;
+        var current = this;
+        var ownTraceSize = 1;
+        while ((current = Object.getPrototypeOf(current)) instanceof Error) {
+            ownTraceSize++;
+        }
+        var stack = Error().stack.split('\n').slice(ownTraceSize);
+        stack[0] = this.name + ': ' + message;
+        this.stack = stack.join('\n');
+    };
+    Exception.prototype = Object.create(Error.prototype);
+    Exception.prototype.constructor = Exception;
     var getResource = function(name) {
         return resources[name];
     };
@@ -47,20 +61,6 @@ var Exception;
     resource = function(name, data) {
         resources[name] = data;
     };
-    Exception = function Exception(message) {
-        this.message = message === undefined ? this.message : message;
-        this.name = this.constructor.name === undefined ? 'Exception' : this.constructor.name;
-        var current = this;
-        var ownTraceSize = 1;
-        while ((current = Object.getPrototypeOf(current)) instanceof Error) {
-            ownTraceSize++;
-        }
-        var stack = Error().stack.split('\n').slice(ownTraceSize);
-        stack[0] = this.name + ': ' + message;
-        this.stack = stack.join('\n');
-    };
-    Exception.prototype = Object.create(Error.prototype);
-    Exception.prototype.constructor = Exception;
     require = function(file) {
         var module = modules[file];
         if (typeof module.func === 'function') {
@@ -567,8 +567,13 @@ function_literal {\n\
  * function parameter lists\n\
  */\n\
 \n\
+function_annotation {\n\
+    entry -> name:annotation -> "?":annotation_mod -> return\n\
+    name:annotation -> return\n\
+}\n\
+\n\
 function_param {\n\
-    entry -> ident:annotation -> ident:name\n\
+    entry -> function_annotation -> ident:name\n\
     entry -> ident:name -> return\n\
 }\n\
 \n\
@@ -579,7 +584,7 @@ function_params {\n\
 }\n\
 \n\
 function_param_default {\n\
-    entry -> ident:annotation -> ident:name\n\
+    entry -> function_annotation -> ident:name\n\
     entry -> ident:name -> "=" -> expression:value -> return\n\
 }\n\
 \n\
@@ -1167,6 +1172,21 @@ var Exception{! if (enableAssert): !}, AssertionFailedException{! endif !};\n\
     var resources = { };\n\
     var modules = { };\n\
 \n\
+    Exception = function Exception(message) {\n\
+        this.message = message === undefined ? this.message : message;\n\
+        this.name = this.constructor.name === undefined ? \'Exception\' : this.constructor.name;\n\
+        var current = this;\n\
+        var ownTraceSize = 1;\n\
+        while ((current = Object.getPrototypeOf(current)) instanceof Error) {\n\
+            ownTraceSize++;\n\
+        }\n\
+        var stack = Error().stack.split(\'\\n\').slice(ownTraceSize);\n\
+        stack[0] = this.name + \': \' + message;\n\
+        this.stack = stack.join(\'\\n\');\n\
+    };\n\
+    Exception.prototype = Object.create(Error.prototype);\n\
+    Exception.prototype.constructor = Exception;\n\
+\n\
     var getResource = function(name) {{! if (enableAssert): !}\n\
         if (resources[name] === undefined) {\n\
             throw Error(\'missing resource \' + name);\n\
@@ -1188,22 +1208,7 @@ var Exception{! if (enableAssert): !}, AssertionFailedException{! endif !};\n\
     };\n\
     resource = function(name, data) {\n\
         resources[name] = data;\n\
-    };\n\
-\n\
-    Exception = function Exception(message) {\n\
-        this.message = message === undefined ? this.message : message;\n\
-        this.name = this.constructor.name === undefined ? \'Exception\' : this.constructor.name;\n\
-        var current = this;\n\
-        var ownTraceSize = 1;\n\
-        while ((current = Object.getPrototypeOf(current)) instanceof Error) {\n\
-            ownTraceSize++;\n\
-        }\n\
-        var stack = Error().stack.split(\'\\n\').slice(ownTraceSize);\n\
-        stack[0] = this.name + \': \' + message;\n\
-        this.stack = stack.join(\'\\n\');\n\
-    };\n\
-    Exception.prototype = Object.create(Error.prototype);\n\
-    Exception.prototype.constructor = Exception;{! if (enableApplication): !}\n\
+    };{! if (enableApplication): !}\n\
 \n\
     application = function(Constructor /*, params... */) {\n\
         function Application() {\n\
@@ -1239,7 +1244,51 @@ var Exception{! if (enableAssert): !}, AssertionFailedException{! endif !};\n\
         if (assertion !== true) {\n\
             throw new AssertionFailedException(message);\n\
         }\n\
-    };{! endif !}\n\
+    };\n\
+    \n\
+    assert.instance = function(type, allowNull, value, name, typeName) {\n\
+    \n\
+        if (value === null) {\n\
+            if (allowNull) {\n\
+                return;\n\
+            } else {\n\
+                throw new AssertionFailedException(name + \' expected to be instance of \' + typeName + \', got null instead\');\n\
+            }\n\
+        }\n\
+        \n\
+        if (value instanceof type !== true) {\n\
+            var actualName = (typeof value === \'object\' && typeof value.constructor === \'function\' && typeof value.constructor.name === \'string\' ? value.constructor.name : \'type \' + typeof value);\n\
+            throw new AssertionFailedException(name + \' expected to be instance of \' + typeName + \', got \' + actualName + \' instead\');\n\
+        }\n\
+    }\n\
+    \n\
+    assert.type = function(type, allowNull, value, name) {\n\
+\n\
+        type = (type !== \'func\' ? type : \'function\');\n\
+\n\
+        if (value === null) {\n\
+            if (allowNull) {\n\
+                return;\n\
+            } else {\n\
+                throw new AssertionFailedException(name + \' expected to be of type \' + type + \', got null instead\');\n\
+            }\n\
+        }\n\
+\n\
+        var actualType = typeof value;\n\
+\n\
+        if (type === \'finite\' || type === \'number\') {\n\
+            if (actualType !== \'number\') {\n\
+                throw new AssertionFailedException(name + \' expected to be of type number, got \' + actualType + \' instead\');\n\
+            }\n\
+            if (type === \'finite\' && isFinite(value) === false) {\n\
+                throw new AssertionFailedException(name + \' expected to be finite number, got \' + value + \' instead\');\n\
+            }\n\
+\n\
+        } else if (type !== actualType) {\n\
+            throw new AssertionFailedException(name + \' expected to be of type \' + type + \', got \' + actualType + \' instead\');\n\
+        }\n\
+    };\n\
+    {! endif !}\n\
 })();\n\
 ');
 module('../../astdlib/astd/prototype/merge.adria', function(module, resource) {
@@ -1631,10 +1680,10 @@ module('util.adria', function(module, resource) {
     Enum = function Enum(options) {
         return new Enumeration(options);
     };
-    dump = function dump(obj, depth, showHidden) {
-        depth = (depth === undefined ? 2 : depth);
-        showHidden = (showHidden === undefined ? false : showHidden);
-        console.log(sysutil.inspect(obj, showHidden, depth));
+    dump = function dump(subject, depth, showHidden) {
+        depth = (arguments.length > 1 ? depth : (2));
+        showHidden = (arguments.length > 2 ? showHidden : (false));
+        console.log(sysutil.inspect(subject, showHidden, depth));
     };
     home = function home() {
         return process.env[process.platform == 'win32' ? 'USERPROFILE' : 'HOME'];
@@ -2061,8 +2110,9 @@ module('transform.adria', function(module, resource) {
     args = require('args.adria');
     Cache = require('cache.adria');
     Transform = (function() {
-        var ___self = function Transform(piped) {
-            this.piped = piped;
+        var ___self = function Transform(stdin) {
+            stdin = (arguments.length > 0 ? stdin : (null));
+            this.stdin = stdin;
             this.initOptions();
             this.processOptions();
             if (this.options['cache']) {
@@ -2074,7 +2124,7 @@ module('transform.adria', function(module, resource) {
         };
         var Transform = ___self;
         ___self.prototype.options = null;
-        ___self.prototype.piped = null;
+        ___self.prototype.stdin = null;
         ___self.prototype.cache = null;
         ___self.prototype.initOptions = function initOptions() {
             args.addSwitch('cache', 'Cache generated code', true);
@@ -2088,8 +2138,41 @@ module('transform.adria', function(module, resource) {
     })();
     module.exports = Transform;
 });
+module('tokenizer/token.adria', function(module, resource) {
+    var Token, Position;
+    Token = (function() {
+        var ___self = function Token(data, type, start, col, row) {
+            this.data = data;
+            this.type = type;
+            this.start = start;
+            this.pos = new Position(col, row);
+        };
+        var Token = ___self;
+        ___self.prototype.data = '';
+        ___self.prototype.type = 0;
+        ___self.prototype.start = 0;
+        ___self.prototype.pos = null;
+        return ___self;
+    })();
+    Position = (function() {
+        var ___self = function Position(col, row) {
+            this.col = col;
+            this.row = row;
+        };
+        var Position = ___self;
+        ___self.prototype.col = 0;
+        ___self.prototype.row = 0;
+        ___self.prototype.toString = function toString() {
+            return 'line ' + this.row + ', column ' + this.col;
+        };
+        return ___self;
+    })();
+    module.exports = Token;
+    module.exports.Position = Position;
+});
 module('parser/generator_state.adria', function(module, resource) {
-    var GeneratorState;
+    var Token, GeneratorState;
+    Token = require('tokenizer/token.adria');
     GeneratorState = (function() {
         var ___self = function GeneratorState() {}
         var GeneratorState = ___self;
@@ -2100,6 +2183,8 @@ module('parser/generator_state.adria', function(module, resource) {
         ___self.prototype.minStack = 0;
         ___self.prototype.done = false;
         ___self.prototype.setGenerator = function setGenerator(generator, token) {
+            generator = (arguments.length > 0 ? generator : (null));
+            token = (arguments.length > 1 ? token : (null));
             this.generator = generator;
             this.token = token;
             this.node = null;
@@ -2127,19 +2212,9 @@ module('parser/generator_state.adria', function(module, resource) {
     module.exports = GeneratorState;
 });
 module('parser/definition/node.adria', function(module, resource) {
-    var Enum, Type, StackItem, Node;
+    var Enum, Token, Node, Type, StackItem;
     Enum = require('util.adria').Enum;
-    Type = Enum([ 'NONE', 'BLOCK', 'JUMP', 'RETURN' ]);
-    StackItem = (function() {
-        var ___self = function StackItem(node, token) {
-            this.node = node;
-            this.token = token;
-        };
-        var StackItem = ___self;
-        ___self.prototype.node = null;
-        ___self.prototype.token = null;
-        return ___self;
-    })();
+    Token = require('tokenizer/token.adria');
     Node = (function() {
         var ___self = function Node() {
             this.children = [  ];
@@ -2191,11 +2266,13 @@ module('parser/definition/node.adria', function(module, resource) {
         };
         ___self.prototype.createAndAdd = function createAndAdd(tokenType, match, capture, description) {
             var node;
+            capture = (arguments.length > 2 ? capture : (''));
+            description = (arguments.length > 3 ? description : (''));
             node = new Node();
             node.capture = capture;
             node.tokenType = tokenType;
             node.match = match;
-            node.description = (description !== undefined ? description : (capture !== undefined ? capture : match));
+            node.description = (description !== '' ? description : (capture !== '' ? capture : match));
             return this.add(node);
         };
         ___self.prototype.matches = function matches(token) {
@@ -2241,7 +2318,7 @@ module('parser/definition/node.adria', function(module, resource) {
                 } else if (child.type === Type.BLOCK) {
                     child.matchingTokens(definition, stack, result);
                 } else {
-                    result[child.description != '' ? '<' + child.description + '>' : (child.capture != '' ? child.capture : '"' + child.match + '"')] = true;
+                    result[child.description != '' ? child.description : (child.capture != '' ? child.capture : '"' + child.match + '"')] = true;
                 }
             }
             return result;
@@ -2289,6 +2366,17 @@ module('parser/definition/node.adria', function(module, resource) {
         };
         return ___self;
     })();
+    Type = Enum([ 'NONE', 'BLOCK', 'JUMP', 'RETURN' ]);
+    StackItem = (function() {
+        var ___self = function StackItem(node, token) {
+            this.node = node;
+            this.token = token;
+        };
+        var StackItem = ___self;
+        ___self.prototype.node = null;
+        ___self.prototype.token = null;
+        return ___self;
+    })();
     module.exports = Node;
     module.exports.Type = Type;
     module.exports.StackItem = StackItem;
@@ -2298,12 +2386,13 @@ module('parser/definition.adria', function(module, resource) {
     Node = require('parser/definition/node.adria');
     Definition = (function() {
         var ___self = function Definition(initialBlock) {
+            initialBlock = (arguments.length > 0 ? initialBlock : ('root'));
             this.blockRoot = {  };
-            this.initialBlock = (initialBlock === undefined ? 'root' : initialBlock);
+            this.initialBlock = initialBlock;
         };
         var Definition = ___self;
-        ___self.prototype.createBlock = function createBlock(name, rootNode) {
-            name = (name === null ? this.initialBlock : name);
+        ___self.prototype.createBlock = function createBlock(rootNode, name) {
+            name = (arguments.length > 1 ? name : (this.initialBlock));
             rootNode.match = 'block_' + name;
             this.blockRoot[name] = rootNode;
             return rootNode;
@@ -2328,11 +2417,13 @@ module('parser/definition.adria', function(module, resource) {
     module.exports.Node = Node;
 });
 module('parser.adria', function(module, resource) {
-    var path, util, GeneratorState, Definition, Parser;
+    var path, util, GeneratorState, Token, Definition, Node, Parser;
     path = ___require('path');
     util = require('util.adria');
     GeneratorState = require('parser/generator_state.adria');
+    Token = require('tokenizer/token.adria');
     Definition = require('parser/definition.adria');
+    Node = Definition.Node;
     Parser = (function() {
         var ___self = function Parser() {
             this.definition = new Definition('root');
@@ -2424,7 +2515,7 @@ module('parser.adria', function(module, resource) {
             do {
                 result = results[tokenId];
                 if (result.generator === null) {
-                    token = tokens.get(tokenId);
+                    token = tokens[tokenId];
                     result.setGenerator(node.filter(this, token, stack), token);
                 }
                 try {
@@ -2438,7 +2529,7 @@ module('parser.adria', function(module, resource) {
                     }
                 }
                 if (result.done) {
-                    result.setGenerator(null);
+                    result.setGenerator();
                     tokenId--;
                 } else if (tokenId === len - 1) {
                     if (result.node.reachesExit(result.stack)) {
@@ -2462,7 +2553,7 @@ module('parser.adria', function(module, resource) {
                 if (maxId + 1 === len) {
                     throw new Exception(path.normalize(this.file) + ': Unexpected end of file.');
                 } else {
-                    throw new Exception(this.errorMessage(tokens.get(maxId + 1), maxNode, maxStack));
+                    throw new Exception(this.errorMessage(tokens[maxId + 1], maxNode, maxStack));
                 }
             }
             return results;
@@ -2472,64 +2563,137 @@ module('parser.adria', function(module, resource) {
     module.exports = Parser;
     module.exports.Definition = Definition;
 });
-module('tokenizer/result.adria', function(module, resource) {
-    var Position, Token, Result;
-    Position = (function() {
-        var ___self = function Position(col, row) {
-            this.col = col;
-            this.row = row;
+module('tokenizer/definition_item.adria', function(module, resource) {
+    var DefinitionItem;
+    DefinitionItem = (function() {
+        var ___self = function DefinitionItem(name, match) {
+            this.name = name;
+            this.match = match;
         };
-        var Position = ___self;
-        ___self.prototype.col = 0;
-        ___self.prototype.row = 0;
-        ___self.prototype.toString = function toString() {
-            return 'line ' + this.row + ', column ' + this.col;
-        };
+        var DefinitionItem = ___self;
+        ___self.prototype.name = null;
+        ___self.prototype.match = null;
         return ___self;
     })();
-    Token = (function() {
-        var ___self = function Token(data, type, start, col, row) {
+    module.exports = DefinitionItem;
+});
+module('tokenizer/match.adria', function(module, resource) {
+    var Match;
+    Match = (function() {
+        var ___self = function Match(name, data, endPosition, containedRows, lastRowLen) {
+            this.name = name;
             this.data = data;
-            this.type = type;
-            this.start = start;
-            this.pos = new Position(col, row);
+            this.endPosition = endPosition;
+            this.containedRows = containedRows;
+            this.lastRowLen = lastRowLen;
         };
-        var Token = ___self;
+        var Match = ___self;
+        ___self.prototype.name = null;
         ___self.prototype.data = '';
-        ___self.prototype.type = 0;
-        ___self.prototype.start = 0;
-        ___self.prototype.pos = null;
+        ___self.prototype.endPosition = -1;
+        ___self.prototype.containedRows = -1;
+        ___self.prototype.lastRowLen = -1;
         return ___self;
     })();
-    Result = (function() {
-        var ___self = function Result(tokenizer) {
-            this.tokenizer = tokenizer;
-            this.tokens = [  ];
-        };
-        var Result = ___self;
-        ___self.prototype.add = function add(data, type, start, col, row) {
-            this.tokens.push(new Token(data, type, start, col, row));
-        };
-        ___self.prototype.get = function get(tokenId) {
-            return this.tokens[tokenId];
-        };
-        Object.defineProperty(___self.prototype, "length", {
-            get: function length() {
-                return this.tokens.length;
+    module.exports = Match;
+});
+module('tokenizer/prefabs.adria', function(module, resource) {
+    var Match, DefinitionItem, regex, breaker, number, delimited, exclude, set, group, any, regexFunc, regexEscape, excludeFunc;
+    Match = require('tokenizer/match.adria');
+    DefinitionItem = require('tokenizer/definition_item.adria');
+    regex = function regex(name, thisRegex, lastRegex, callback) {
+        lastRegex = (arguments.length > 2 ? lastRegex : (null));
+        callback = (arguments.length > 3 ? callback : (null));
+        return regexFunc(name, thisRegex, lastRegex, callback);
+    };
+    breaker = function breaker() {
+        return regexFunc(null, /^(\s+)/, null, null);
+    };
+    number = function number(name) {
+        return regexFunc(name, /^(\-?[0-9]+(\.[0-9]+)?(e\-?[0-9]+)?)/, null, null);
+    };
+    delimited = function delimited(name, start, end) {
+        var ___regex_scp2;
+        start = (arguments.length > 1 ? start : ('"'));
+        end = (arguments.length > 2 ? end : (start));
+        ___regex_scp2 = new RegExp('^(' + regexEscape(start) + '[\\s\\S]*?' + regexEscape(end) + ')');
+        return regexFunc(name, ___regex_scp2, null, null);
+    };
+    exclude = function exclude(name, regex, excluded) {
+        return regexFunc(name, regex, null, excludeFunc.bind(excluded));
+    };
+    set = function set(name, matches) {
+        var escaped, ___regex_scp3;
+        escaped = [  ];
+        var id;
+        for (id in matches) {
+            escaped.push(regexEscape(matches[id]));
+        }
+        ___regex_scp3 = new RegExp('^(' + escaped.join('|') + ')');
+        return regexFunc(name, ___regex_scp3, null, null);
+    };
+    group = function group(name, matches) {
+        var escaped, ___regex_scp4;
+        escaped = [  ];
+        var id;
+        for (id in matches) {
+            escaped.push(regexEscape(matches[id]));
+        }
+        ___regex_scp4 = new RegExp('^([' + escaped.join() + ']+)');
+        return regexFunc(name, ___regex_scp4, null, null);
+    };
+    any = function any(name) {
+        return regexFunc(name, /^[^\s]*/, null, null);
+    };
+    regexFunc = function regexFunc(name, regex, lastRegex, callback) {
+        return new DefinitionItem(name, function(data, start, lastMatch) {
+            var result;
+            result = regex.exec(data.substr(start));
+            if (result !== null && (lastRegex === null || lastRegex.exec(lastMatch) !== null)) {
+                var rows, lastBreak, lastRowLen, match;
+                rows = result[0].occurances('\n');
+                lastBreak = result[0].lastIndexOf('\n');
+                lastRowLen = result[0].length - (lastBreak + 1);
+                match = new Match(this.name, result[0], start + result[0].length, rows, lastRowLen);
+                if (callback !== null) {
+                    return callback(match);
+                } else {
+                    return match;
+                }
             }
+            return null;
         });
-        return ___self;
-    })();
-    module.exports = Result;
+    };
+    regexEscape = function regexEscape(regexString) {
+        return RegExp.escape(regexString).replace('/', '\\/');
+    };
+    excludeFunc = function excludeFunc(match) {
+        if (this.has(match.data)) {
+            return null;
+        }
+        return match;
+    };
+    module.exports.regex = regex;
+    module.exports.breaker = breaker;
+    module.exports.number = number;
+    module.exports.delimited = delimited;
+    module.exports.exclude = exclude;
+    module.exports.set = set;
+    module.exports.group = group;
+    module.exports.any = any;
 });
 module('tokenizer.adria', function(module, resource) {
-    var Enum, Result, Tokenizer, prefab;
+    var Set, Enum, DefinitionItem, Token, Match, prefabs, Tokenizer;
+    Set = require('../../astdlib/astd/set.adria');
     Enum = require('util.adria').Enum;
-    Result = require('tokenizer/result.adria');
+    DefinitionItem = require('tokenizer/definition_item.adria');
+    Token = require('tokenizer/token.adria');
+    Match = require('tokenizer/match.adria');
+    prefabs = require('tokenizer/prefabs.adria');
     Tokenizer = (function() {
         var ___self = function Tokenizer(definition, extra) {
+            extra = (arguments.length > 1 ? extra : (null));
             var legend;
-            this.definition = definition;
             legend = [  ];
             var id;
             for (id in definition) {
@@ -2541,27 +2705,27 @@ module('tokenizer.adria', function(module, resource) {
                     legend.push(extra);
                 }
             }
+            this.definition = definition;
             this.Type = Enum(legend);
         };
         var Tokenizer = ___self;
         ___self.prototype.process = function process(data, filename) {
-            var startPos, result, col, row, definition, match, found, lastMatch;
+            var startPos, result, col, row, lastMatch, match, found;
             filename = (arguments.length > 1 ? filename : ('unnamed'));
             startPos = 0;
-            result = new Result(this);
+            result = [  ];
             col = 1;
             row = 1;
-            definition = this.definition;
             lastMatch = null;
             while (startPos < data.length) {
                 found = false;
-                var id, processor;
-                for (id in this.definition) {
-                    processor = this.definition[id];
-                    match = processor.func(data, startPos, lastMatch);
+                var _, processor;
+                for (_ in this.definition) {
+                    processor = this.definition[_];
+                    match = processor.match(data, startPos, lastMatch);
                     if (match !== null) {
                         if (match.data !== null && match.name !== null) {
-                            result.add(match.data, this.Type[match.name], startPos, col, row);
+                            result.push(new Token(match.data, this.Type[match.name], startPos, col, row));
                             lastMatch = match.data;
                         }
                         row += match.containedRows;
@@ -2579,94 +2743,11 @@ module('tokenizer.adria', function(module, resource) {
         };
         return ___self;
     })();
-    function Match(name, data, endPosition, containedRows, lastRowLen) {
-        this.name = name;
-        this.data = data;
-        this.endPosition = endPosition;
-        this.containedRows = containedRows;
-        this.lastRowLen = lastRowLen;
-    }
-    prefab = new (function() {
-        var regexFunc, regexEscape, excludeFunc;
-        regexFunc = function regexFunc(name, regex, lastRegex, callback) {
-            return {
-                name: name,
-                func: function(data, start, lastMatch) {
-                    var result;
-                    result = regex.exec(data.substr(start));
-                    if (result !== null && (lastRegex === null || lastRegex.exec(lastMatch) !== null)) {
-                        var rows, lastBreak, lastRowLen, match;
-                        rows = result[0].occurances('\n');
-                        lastBreak = result[0].lastIndexOf('\n');
-                        lastRowLen = result[0].length - (lastBreak + 1);
-                        match = new Match(this.name, result[0], start + result[0].length, rows, lastRowLen);
-                        if (typeof callback === 'function') {
-                            return callback(match);
-                        } else {
-                            return match;
-                        }
-                    }
-                    return null;
-                }
-            };
-        };
-        regexEscape = function regexEscape(regexString) {
-            return RegExp.escape(regexString).replace('/', '\\/');
-        };
-        this.breaker = function breaker() {
-            return regexFunc(null, /^(\s+)/, null, null);
-        };
-        this.number = function number(name) {
-            return regexFunc(name, /^(\-?[0-9]+(\.[0-9]+)?(e\-?[0-9]+)?)/, null, null);
-        };
-        this.delimited = function delimited(name, start, end) {
-            var regex;
-            start = start || '"';
-            end = end || start;
-            regex = new RegExp('^(' + regexEscape(start) + '[\\s\\S]*?' + regexEscape(end) + ')');
-            return regexFunc(name, regex, null, null);
-        };
-        this.regex = function regex(name, thisRegex, lastRegex, callback) {
-            lastRegex = (arguments.length > 2 ? lastRegex : (null));
-            callback = (arguments.length > 3 ? callback : (null));
-            return regexFunc(name, thisRegex, lastRegex, callback);
-        };
-        excludeFunc = function excludeFunc(match) {
-            if (this.indexOf(match.data) !== -1) {
-                return null;
-            }
-            return match;
-        };
-        this.exclude = function exclude(name, regex, excluded) {
-            return regexFunc(name, regex, null, excludeFunc.bind(excluded));
-        };
-        this.set = function set(name, matches) {
-            var escaped, regex;
-            escaped = [  ];
-            var id;
-            for (id in matches) {
-                escaped.push(regexEscape(matches[id]));
-            }
-            regex = new RegExp('^(' + escaped.join('|') + ')');
-            return regexFunc(name, regex, null, null);
-        };
-        this.group = function group(name, matches) {
-            var escaped, regex;
-            escaped = [  ];
-            var id;
-            for (id in matches) {
-                escaped.push(regexEscape(matches[id]));
-            }
-            regex = new RegExp('^(' + '[' + escaped.join() + ']+)');
-            return regexFunc(name, regex, null, null);
-        };
-        this.any = function any(name) {
-            return regexFunc(name, /^[^\s]*/, null, null);
-        };
-    })();
     module.exports = Tokenizer;
-    module.exports.Result = Result;
-    module.exports.prefab = prefab;
+    module.exports.DefinitionItem = DefinitionItem;
+    module.exports.Token = Token;
+    module.exports.Match = Match;
+    module.exports.prefabs = prefabs;
 });
 module('definition_parser/path.adria', function(module, resource) {
     var Path, PathElement;
@@ -2724,13 +2805,13 @@ module('definition_parser.adria', function(module, resource) {
         var ___self = function DefinitionParser() {
             Parser.prototype.constructor.call(this);
             this.tokenizer = new Tokenizer([
-                Tokenizer.prefab.delimited(null, '/*', '*/'),
-                Tokenizer.prefab.regex(null, /^\/\/.*/),
-                Tokenizer.prefab.breaker(),
-                Tokenizer.prefab.regex('WORD', /^[a-z_]+/i),
-                Tokenizer.prefab.set('DELIM', [ '->', '.', ':', '[', ']', '{', '}', '?' ]),
-                Tokenizer.prefab.regex('STRING', /^(["'])(?:(?=(\\?))\2[\s\S])*?\1/),
-                Tokenizer.prefab.number('NUMERIC')
+                Tokenizer.prefabs.delimited(null, '/*', '*/'),
+                Tokenizer.prefabs.regex(null, /^\/\/.*/),
+                Tokenizer.prefabs.breaker(),
+                Tokenizer.prefabs.regex('WORD', /^[a-z_]+/i),
+                Tokenizer.prefabs.set('DELIM', [ '->', '.', ':', '[', ']', '{', '}', '?' ]),
+                Tokenizer.prefabs.regex('STRING', /^(["'])(?:(?=(\\?))\2[\s\S])*?\1/),
+                Tokenizer.prefabs.number('NUMERIC')
             ]);
             this.trainSelf();
             this.pathBlocks = {  };
@@ -2790,36 +2871,36 @@ module('definition_parser.adria', function(module, resource) {
         ___self.prototype.trainOther = function trainOther(parser) {
             var parts;
             parts = [ 'source', 'target' ];
-            var block_name, block_paths, node_map, node_pair;
-            for (block_name in this.pathBlocks) {
-                block_paths = this.pathBlocks[block_name];
-                node_map = {  };
-                node_pair = [  ];
-                var id, path;
-                for (id in block_paths) {
-                    path = block_paths[id];
+            var blockName, blockPaths, nodeMap, nodePair;
+            for (blockName in this.pathBlocks) {
+                blockPaths = this.pathBlocks[blockName];
+                nodeMap = {  };
+                nodePair = [  ];
+                var _, path;
+                for (_ in blockPaths) {
+                    path = blockPaths[_];
                     var i, part, hash;
                     for (i in parts) {
                         part = parts[i];
                         hash = path[part].name + ':' + path[part].capture + ':' + path[part].label;
-                        node_pair[i] = node_map[hash];
-                        if (node_pair[i] === undefined) {
+                        nodePair[i] = nodeMap[hash];
+                        if (nodePair[i] === undefined) {
                             var node;
                             node = parser.createNode(path[part].name, path[part].capture, path[part].label, path[part].condition);
-                            node_map[hash] = node;
-                            node_pair[i] = node;
+                            nodeMap[hash] = node;
+                            nodePair[i] = node;
                         }
                     }
-                    parser.integrateNodePair(node_pair, block_name);
+                    parser.integrateNodePair(nodePair, blockName);
                 }
             }
         };
         ___self.prototype.trainSelf = function trainSelf() {
-            var Type, block_root, blockname, body, node1a, node1b, node1c, node1d, node1e, node1f, node1g, node1h, path1a, node2a, node2b, node2c, node2d, node2e, node2f, node2g, node2h, bodyend, exit;
+            var Type, blockRoot, blockname, body, node1a, node1b, node1c, node1d, node1e, node1f, node1g, node1h, path1a, node2a, node2b, node2c, node2d, node2e, node2f, node2g, node2h, bodyend, exit;
             Type = this.tokenizer.Type;
-            block_root = new Parser.Definition.Node();
-            this.definition.createBlock(null, block_root);
-            blockname = block_root.createAndAdd(Type.WORD, /[\S\s]+/, 'block_name');
+            blockRoot = new Parser.Definition.Node();
+            this.definition.createBlock(blockRoot);
+            blockname = blockRoot.createAndAdd(Type.WORD, /[\S\s]+/, 'block_name');
             body = blockname.createAndAdd(Type.DELIM, '{', '', '{');
             node1a = body.createAndAdd(Type.WORD | Type.STRING, /[\S\s]+/, 'source_name');
             node1b = node1a.createAndAdd(Type.DELIM, ':', '', ':');
@@ -2868,7 +2949,7 @@ module('definition_parser.adria', function(module, resource) {
     module.exports = DefinitionParser;
 });
 module('language_parser/capture_node.adria', function(module, resource) {
-    var SourceNode, Template, CaptureNode;
+    var SourceNode, Template, CaptureNode, stackDiff;
     SourceNode = require('source_node.adria');
     Template = require('template.adria');
     CaptureNode = (function() {
@@ -2918,72 +2999,38 @@ module('language_parser/capture_node.adria', function(module, resource) {
             }
             return result;
         };
-        ___self.prototype.fromResults = (function() {
-            var stackDiff;
-            stackDiff = function stackDiff(stack, lastStack, minStackLen) {
-                var deepestCommonCapture, minLen, numCaptures, lastLen, captures, len;
-                deepestCommonCapture = -1;
-                minLen = Math.min(stack.length, lastStack.length, minStackLen);
-                var i;
-                for (i = 0; i < minLen;i++) {
-                    if (stack[i].node === lastStack[i].node) {
-                        if (stack[i].node.capture !== '') {
-                            deepestCommonCapture = i;
-                        }
-                    } else {
-                        break ;
-                    }
+        ___self.prototype.fromResults = function fromResults(results, parentNode, typeMapper) {
+            var root, current, lastStack, result, stack, diff, node;
+            root = new CaptureNode('', '');
+            current = root;
+            lastStack = [  ];
+            root.parent = parentNode;
+            var resultId;
+            for (resultId in results) {
+                result = results[resultId];
+                stack = result.stack;
+                diff = stackDiff(stack, lastStack, result.minStack);
+                while (diff.ascend--) {
+                    current = current.parent;
                 }
-                numCaptures = 0;
-                lastLen = lastStack.length;
-                var i;
-                for (i = deepestCommonCapture + 1; i < lastLen;i++) {
-                    if (lastStack[i].node.capture !== '') {
-                        numCaptures++;
-                    }
+                var nodeId;
+                for (nodeId in diff.create) {
+                    node = diff.create[nodeId];
+                    current = current.addNew(node.capture, node.name, typeMapper(node.capture, node.name));
+                    current.row = result.token.pos.row;
+                    current.col = result.token.pos.col;
                 }
-                captures = [  ];
-                len = stack.length;
-                var i;
-                for (i = deepestCommonCapture + 1; i < len;i++) {
-                    if (stack[i].node.capture !== '') {
-                        captures.push(stack[i].node);
-                    }
+                node = result.node;
+                if (node.capture !== '') {
+                    var match;
+                    match = current.addNew(node.capture, result.token.data, typeMapper(node.capture, node.name));
+                    match.row = result.token.pos.row;
+                    match.col = result.token.pos.col;
                 }
-                return { ascend: numCaptures, create: captures };
-            };
-            return function fromResults(results, typeMapper) {
-                var root, current, lastStack, result, stack, diff, node;
-                root = new CaptureNode();
-                current = root;
-                lastStack = [  ];
-                var resultId;
-                for (resultId in results) {
-                    result = results[resultId];
-                    stack = result.stack;
-                    diff = stackDiff(stack, lastStack, result.minStack);
-                    while (diff.ascend--) {
-                        current = current.parent;
-                    }
-                    var nodeId;
-                    for (nodeId in diff.create) {
-                        node = diff.create[nodeId];
-                        current = current.addNew(node.capture, node.name, typeMapper(node.capture, node.name));
-                        current.row = result.token.pos.row;
-                        current.col = result.token.pos.col;
-                    }
-                    node = result.node;
-                    if (node.capture !== '') {
-                        var match;
-                        match = current.addNew(node.capture, result.token.data, typeMapper(node.capture, node.name));
-                        match.row = result.token.pos.row;
-                        match.col = result.token.pos.col;
-                    }
-                    lastStack = stack;
-                }
-                return root;
-            };
-        })();
+                lastStack = stack;
+            }
+            return root;
+        };
         ___self.prototype.isNode = function isNode() {
             return this.col !== -1;
         };
@@ -3107,9 +3154,9 @@ module('language_parser/capture_node.adria', function(module, resource) {
             }
             return current;
         };
-        ___self.prototype.addNew = function addNew(key, value, Type) {
+        ___self.prototype.addNew = function addNew(key, value, Constructor) {
             var child;
-            child = new Type(key, value);
+            child = new Constructor(key, value);
             child.parent = this;
             return this.add(child);
         };
@@ -3237,14 +3284,46 @@ module('language_parser/capture_node.adria', function(module, resource) {
         ___self.prototype.processTemplate = function processTemplate() {
             return this.tpl.fetchFile(this.tplFile);
         };
-        ___self.prototype.assign = function assign(uri, value) {
-            this.tpl.assign(uri, value);
+        ___self.prototype.assign = function assign(name, value) {
+            this.tpl.assign(name, value);
         };
         return ___self;
     })();
     CaptureNode.prototype.dummy = new CaptureNode('', '');
     CaptureNode.prototype.dummy.row = -1;
     CaptureNode.prototype.dummy.col = -1;
+    stackDiff = function stackDiff(stack, lastStack, minStackLen) {
+        var deepestCommonCapture, minLen, numCaptures, lastLen, captures, len;
+        deepestCommonCapture = -1;
+        minLen = Math.min(stack.length, lastStack.length, minStackLen);
+        var i;
+        for (i = 0; i < minLen;i++) {
+            if (stack[i].node === lastStack[i].node) {
+                if (stack[i].node.capture !== '') {
+                    deepestCommonCapture = i;
+                }
+            } else {
+                break ;
+            }
+        }
+        numCaptures = 0;
+        lastLen = lastStack.length;
+        var i;
+        for (i = deepestCommonCapture + 1; i < lastLen;i++) {
+            if (lastStack[i].node.capture !== '') {
+                numCaptures++;
+            }
+        }
+        captures = [  ];
+        len = stack.length;
+        var i;
+        for (i = deepestCommonCapture + 1; i < len;i++) {
+            if (stack[i].node.capture !== '') {
+                captures.push(stack[i].node);
+            }
+        }
+        return { ascend: numCaptures, create: captures };
+    };
     module.exports = CaptureNode;
 });
 module('language_parser/ast_exception.adria', function(module, resource) {
@@ -3268,11 +3347,12 @@ module('language_parser/ast_exception.adria', function(module, resource) {
     module.exports = ASTException;
 });
 module('language_parser.adria', function(module, resource) {
-    var fs, util, Parser, DefinitionParser, CaptureNode, ASTException, LanguageParser;
+    var fs, util, Parser, DefinitionParser, Transform, CaptureNode, ASTException, LanguageParser;
     fs = ___require('fs');
     util = require('util.adria');
     Parser = require('parser.adria');
     DefinitionParser = require('definition_parser.adria');
+    Transform = require('transform.adria');
     CaptureNode = require('language_parser/capture_node.adria');
     ASTException = require('language_parser/ast_exception.adria');
     LanguageParser = (function(___parent) {
@@ -3335,7 +3415,7 @@ module('language_parser.adria', function(module, resource) {
             fileContents = fs.readFileSync(filename, 'UTF-8');
             this.setDefinition(fileContents, filename);
         };
-        ___self.prototype.mapType = function mapType(capture_name, block_name) {
+        ___self.prototype.mapType = function mapType(captureName, blockName) {
             return CaptureNode;
         };
         ___self.prototype.createNode = function createNode(name, capture, label, condition) {
@@ -3352,31 +3432,31 @@ module('language_parser.adria', function(module, resource) {
                     node.match = '';
                     node.tokenType = -1;
                     node.type = (name == 'entry' ? Node.Type.BLOCK : Node.Type.RETURN);
-                    node.description = name;
+                    node.description = '<Please file a bug-report if you ever see this message (' + name + ')>';
                     break ;
                 case 'string':
                     node.match = '';
                     node.tokenType = this.tokenizer.Type.STRING;
-                    node.type = 0;
-                    node.description = 'string';
+                    node.type = Node.Type.NONE;
+                    node.description = '<string literal>';
                     break ;
                 case 'numeric':
                     node.match = '';
                     node.tokenType = this.tokenizer.Type.NUMERIC;
-                    node.type = 0;
-                    node.description = 'numerical';
+                    node.type = Node.Type.NONE;
+                    node.description = '<numeric literal>';
                     break ;
                 default:
                     numChars = name.length;
                     if (name[0] == '\"') {
                         node.match = new RegExp('^' + RegExp.escape(name.slice(1, numChars - 1)) + '$');
                         node.tokenType = -1;
-                        node.type = 0;
+                        node.type = Node.Type.NONE;
                         node.description = name.slice(1, numChars - 1);
                     } else if (name[0] == '\'') {
                         node.match = new RegExp(name.slice(1, numChars - 1));
                         node.tokenType = -1;
-                        node.type = 0;
+                        node.type = Node.Type.NONE;
                         node.description = name.slice(1, numChars - 1);
                     } else {
                         node.match = name;
@@ -3391,7 +3471,7 @@ module('language_parser.adria', function(module, resource) {
         ___self.prototype.integrateNodePair = function integrateNodePair(pair, blockName) {
             pair[0].add(pair[1], Parser.Definition.Node.Type.RETURN & pair[1].type);
             if (pair[0].type == Parser.Definition.Node.Type.BLOCK && this.definition.haveBlock(blockName) == false) {
-                this.definition.createBlock(blockName, pair[0]);
+                this.definition.createBlock(pair[0], blockName);
             }
         };
         ___self.prototype.setSource = function setSource(filename, data, cacheModifier) {
@@ -3404,8 +3484,7 @@ module('language_parser.adria', function(module, resource) {
             log('LanguageParser', 'processing source ' + filename, 2);
             captures = this.parse(this.sourceCode);
             log('LanguageParser', 'done', -2);
-            this.captureTree = CaptureNode.prototype.fromResults(captures, this.mapType.bind(this));
-            this.captureTree.parent = this;
+            this.captureTree = CaptureNode.prototype.fromResults(captures, this, this.mapType.bind(this));
         };
         ___self.prototype.preprocessRaw = function preprocessRaw(data) {
             return data.replace('\r\n', '\n');
@@ -3900,11 +3979,11 @@ module('targets/adria/base/file_node.adria', function(module, resource) {
             absName = path.dirname(parser.file) + '/' + filename;
             return path.relative(parser.transform.options['basePath'], absName);
         };
-        ___self.prototype.resolvePath = function resolvePath(fileName, parser) {
+        ___self.prototype.resolvePath = function resolvePath(filename, parser) {
             var options, relname;
             options = parser.transform.options;
-            if (this.isRelativePath(fileName)) {
-                relname = this.makeBaseRelative(fileName, parser);
+            if (this.isRelativePath(filename)) {
+                relname = this.makeBaseRelative(filename, parser);
                 if (fs.existsSync(options['basePath'] + relname)) {
                     return path.normalize(relname);
                 }
@@ -3912,7 +3991,7 @@ module('targets/adria/base/file_node.adria', function(module, resource) {
                 var id, includePath;
                 for (id in options['paths']) {
                     includePath = options['paths'][id];
-                    relname = includePath + fileName;
+                    relname = includePath + filename;
                     if (fs.existsSync(options['basePath'] + relname)) {
                         return path.normalize(relname);
                     }
@@ -4005,8 +4084,9 @@ module('targets/adria/resource_literal.adria', function(module, resource) {
     module.exports = ResourceLiteral;
 });
 module('targets/adria/base/function_node.adria', function(module, resource) {
-    var Scope, FunctionNode;
+    var Scope, SourceNode, FunctionNode;
     Scope = require('targets/adria/scope.adria');
+    SourceNode = require('source_node.adria');
     FunctionNode = (function(___parent) {
         var ___self = function FunctionNode() {
             ___parent.apply(this, arguments);
@@ -4039,8 +4119,9 @@ module('targets/adria/base/function_node.adria', function(module, resource) {
     module.exports = FunctionNode;
 });
 module('targets/adria/function_literal.adria', function(module, resource) {
-    var FunctionNode, Scope, thisId, FunctionLiteral;
+    var FunctionNode, SourceNode, Scope, thisId, FunctionLiteral;
     FunctionNode = require('targets/adria/base/function_node.adria');
+    SourceNode = require('source_node.adria');
     Scope = require('targets/adria/scope.adria');
     thisId = 1;
     FunctionLiteral = (function(___parent) {
@@ -4053,7 +4134,7 @@ module('targets/adria/function_literal.adria', function(module, resource) {
         ___self.prototype.constructor = ___self;
         var FunctionLiteral = ___self;
         ___self.prototype.thisId = 0;
-        ___self.prototype.name = null;
+        ___self.prototype.name = '';
         ___self.prototype.provideContext = false;
         ___self.prototype.registerWithParent = false;
         ___self.prototype.specialArgs = null;
@@ -4080,13 +4161,13 @@ module('targets/adria/function_literal.adria', function(module, resource) {
             result = this.begin();
             nameSN = this.findName();
             if (nameSN !== null && nameSN.toString().match(/^([\'\"]).*\1$/) === null) {
-                this.name = nameSN;
-                this.addLocalName(result, this.name);
+                this.name = nameSN.toString();
+                this.addLocalName(result, nameSN);
             } else {
                 this.name = null;
             }
             if (this.registerWithParent) {
-                this.parent.findScope().addImplicit(this.name.toString());
+                this.parent.findScope().addImplicit(this.name);
             }
             result.add([ '(', this.get('param_list').toSourceNode(), ') {' + this.nl() ]);
             this.preBody(result);
@@ -4128,8 +4209,9 @@ module('targets/adria/generator_literal.adria', function(module, resource) {
     module.exports = GeneratorLiteral;
 });
 module('targets/adria/async_literal.adria', function(module, resource) {
-    var GeneratorLiteral, AsyncLiteral;
+    var GeneratorLiteral, SourceNode, AsyncLiteral;
     GeneratorLiteral = require('targets/adria/generator_literal.adria');
+    SourceNode = require('source_node.adria');
     AsyncLiteral = (function(___parent) {
         var ___self = function AsyncLiteral() {
             ___parent.apply(this, arguments);
@@ -4265,12 +4347,15 @@ module('targets/adria/base/params_node.adria', function(module, resource) {
     module.exports = ParamsNode;
 });
 module('targets/adria/function_param_list.adria', function(module, resource) {
-    var Map, Set, ParamsNode, FunctionLiteral, ASTException, FunctionParamList;
+    var Map, Set, ParamsNode, FunctionLiteral, ASTException, Scope, SourceNode, Node, FunctionParamList;
     Map = require('../../astdlib/astd/map.adria');
     Set = require('../../astdlib/astd/set.adria');
     ParamsNode = require('targets/adria/base/params_node.adria');
     FunctionLiteral = require('targets/adria/function_literal.adria');
     ASTException = require('language_parser/ast_exception.adria');
+    Scope = require('targets/adria/scope.adria');
+    SourceNode = require('source_node.adria');
+    Node = require('targets/adria/base/node.adria');
     FunctionParamList = (function(___parent) {
         var ___self = function FunctionParamList() {
             ___parent.apply(this, arguments);
@@ -4281,6 +4366,7 @@ module('targets/adria/function_param_list.adria', function(module, resource) {
         ___self.prototype.numParams = 0;
         ___self.prototype.optionalPermutations = null;
         ___self.prototype.optionalGroups = null;
+        ___self.prototype.types = new Set([ 'boolean', 'number', 'finite', 'string', 'func', 'object' ]);
         ___self.prototype.toSourceNode = function toSourceNode(declare) {
             var result, functionNode, scope;
             declare = (arguments.length > 0 ? declare : (true));
@@ -4296,31 +4382,32 @@ module('targets/adria/function_param_list.adria', function(module, resource) {
         };
         ___self.prototype.handle = function handle(declare, functionNode, scope, result, node) {
             if (node.key === 'item') {
-                var name, valueNode;
-                name = node.get('name').toSourceNode();
+                var nameSN, valueNode;
+                nameSN = node.get('name').toSourceNode();
                 if (this.optionalPermutations === null) {
-                    result.add(name);
+                    result.add(nameSN);
                 }
                 if (declare) {
                     if (this.optionalPermutations === null) {
-                        scope.addImplicit(name.toString(), true);
+                        scope.addImplicit(nameSN.toString(), true);
                     } else {
-                        scope.addLocal(name.toString());
+                        scope.addLocal(nameSN.toString());
                     }
                 }
                 valueNode = node.get('value');
                 if (valueNode.isNode() && this.optionalPermutations === null) {
                     var defaultArg;
                     defaultArg = this.csn([
-                        name,
+                        nameSN,
                         ' = (arguments.length > ' + this.numParams + ' ? ',
-                        name,
+                        nameSN,
                         ' : (',
                         valueNode.toSourceNode(),
                         '));'
                     ]);
                     functionNode.specialArgs.push(defaultArg);
                 }
+                this.checkAnnotation(node, functionNode);
                 this.numParams++;
                 return true;
             } else if (node.key === 'opt_items') {
@@ -4356,6 +4443,26 @@ module('targets/adria/function_param_list.adria', function(module, resource) {
             }
             this.optionalGroups = optionals;
             this.optionalPermutations = permutations.data;
+        };
+        ___self.prototype.checkAnnotation = function checkAnnotation(node, functionNode) {
+            var annotationNode, type, allowNull, name, argId;
+            annotationNode = node.get('annotation');
+            if (annotationNode.isDummy() || this.parser().transform.options['assert'] === false) {
+                return ;
+            }
+            type = annotationNode.toString();
+            allowNull = node.get('annotation_mod').value === '?';
+            name = node.get('name').toString();
+            argId = this.numParams + 1;
+            if (this.types.has(type)) {
+                var check;
+                check = "'$0', $1, $2, 'argument $3 ($2)'".format(type, allowNull ? 'true' : 'false', name, argId);
+                functionNode.specialArgs.push(this.csn([ 'assert.type(', check, ');' ]));
+            } else {
+                var check;
+                check = "$0, $1, $2, 'argument $3 ($2)', '$0'".format(type, allowNull ? 'true' : 'false', name, argId);
+                functionNode.specialArgs.push(this.csn([ 'assert.instance(', check, ');' ]));
+            }
         };
         ___self.prototype.generatePermutationSwitch = function generatePermutationSwitch(functionNode) {
             var FunctionParamsOptional, parameters, parameterGroups, numUngrouped, result;
@@ -4459,8 +4566,12 @@ module('targets/adria/function_params_optional.adria', function(module, resource
     module.exports = FunctionParamsOptional;
 });
 module('targets/adria/async_param_list.adria', function(module, resource) {
-    var FunctionParamList, AsyncParamList;
+    var AsyncLiteral, FunctionParamList, Scope, SourceNode, Node, AsyncParamList;
+    AsyncLiteral = require('targets/adria/async_literal.adria');
     FunctionParamList = require('targets/adria/function_param_list.adria');
+    Scope = require('targets/adria/scope.adria');
+    SourceNode = require('source_node.adria');
+    Node = require('targets/adria/base/node.adria');
     AsyncParamList = (function(___parent) {
         var ___self = function AsyncParamList() {
             ___parent.apply(this, arguments);
@@ -4669,9 +4780,10 @@ module('targets/adria/object_literal.adria', function(module, resource) {
     module.exports = ObjectLiteral;
 });
 module('targets/adria/property_literal.adria', function(module, resource) {
-    var ObjectLiteral, ASTException, storageId, PropertyLiteral;
+    var ObjectLiteral, ASTException, SourceNode, storageId, PropertyLiteral;
     ObjectLiteral = require('targets/adria/object_literal.adria');
     ASTException = require('language_parser/ast_exception.adria');
+    SourceNode = require('source_node.adria');
     storageId = 1;
     PropertyLiteral = (function(___parent) {
         var ___self = function PropertyLiteral() {
@@ -4708,8 +4820,12 @@ module('targets/adria/property_literal.adria', function(module, resource) {
         };
         ___self.prototype.getLookupCode = function getLookupCode(result, type) {
             result.add('(function() {' + this.nl(1));
-            result.add('var descriptor, level = ' + this.target + ';' + this.nl());
-            result.add('while ((level = Object.getPrototypeOf(level)) !== null && (descriptor = Object.getOwnPropertyDescriptor(level, ' + this.name + ')) === undefined);' + this.nl());
+            result.add([ 'var descriptor, level = ', this.target, ';' + this.nl() ]);
+            result.add([
+                'while ((level = Object.getPrototypeOf(level)) !== null && (descriptor = Object.getOwnPropertyDescriptor(level, ',
+                this.name,
+                ')) === undefined);' + this.nl()
+            ]);
             result.add('return descriptor.' + type + ';' + this.nl(-1));
             result.add('})()');
         };
@@ -5033,8 +5149,9 @@ module('targets/adria/try_statement.adria', function(module, resource) {
     module.exports.Finally = Finally;
 });
 module('targets/adria/for_count_statement.adria', function(module, resource) {
-    var Scope, ForCountStatement;
+    var Scope, Node, ForCountStatement;
     Scope = require('targets/adria/scope.adria');
+    Node = require('targets/adria/base/node.adria');
     ForCountStatement = (function(___parent) {
         var ___self = function ForCountStatement() {
             ___parent.apply(this, arguments);
@@ -6082,12 +6199,13 @@ module('targets/adria_definition.adria', function(module, resource) {
     module.exports.FlowStatement = FlowStatement;
 });
 module('targets/adria_parser.adria', function(module, resource) {
-    var fs, util, Set, LanguageParser, Tokenizer, definition, AdriaParser;
+    var fs, util, Set, LanguageParser, Tokenizer, Match, definition, AdriaParser;
     fs = ___require('fs');
     util = require('util.adria');
     Set = require('../../astdlib/astd/set.adria');
     LanguageParser = require('language_parser.adria');
     Tokenizer = require('tokenizer.adria');
+    Match = require('tokenizer/match.adria');
     definition = require('targets/adria_definition.adria');
     AdriaParser = (function(___parent) {
         var ___self = function AdriaParser(transform) {
@@ -6170,15 +6288,15 @@ module('targets/adria_parser.adria', function(module, resource) {
                 return match;
             };
             this.tokenizer = new Tokenizer([
-                Tokenizer.prefab.delimited(null, '/*', '*/'),
-                Tokenizer.prefab.regex(null, /^\/\/.*/),
-                Tokenizer.prefab.breaker(),
-                Tokenizer.prefab.regex('REGEXP', /^\/(?:(?=(\\?))\1.)*?\/[a-z]*/, /^(\(|=|==|===|\+|!=|!==|,|;|\:)$/),
-                Tokenizer.prefab.set('DELIM', [ ';', '...', '.', ',', '(', ')', '[', ']', '{', '}', '!==', '!=', '!', '++', '--', '#' ]),
-                Tokenizer.prefab.group('DELIM', [ '=', '&', '|', '<', '>', ':', '?', '+', '-', '*', '/', '%' ]),
-                Tokenizer.prefab.regex('IDENT', /^[a-zA-Z_\$][a-zA-Z0-9_\$]*/, null, matchKeywords),
-                Tokenizer.prefab.number('NUMERIC'),
-                Tokenizer.prefab.regex('STRING', /^(["'])(?:(?=(\\?))\2[\s\S])*?\1/)
+                Tokenizer.prefabs.delimited(null, '/*', '*/'),
+                Tokenizer.prefabs.regex(null, /^\/\/.*/),
+                Tokenizer.prefabs.breaker(),
+                Tokenizer.prefabs.regex('REGEXP', /^\/(?:(?=(\\?))\1.)*?\/[a-z]*/, /^(\(|=|==|===|\+|!=|!==|,|;|\:)$/),
+                Tokenizer.prefabs.set('DELIM', [ ';', '...', '.', ',', '(', ')', '[', ']', '{', '}', '!==', '!=', '!', '++', '--', '#' ]),
+                Tokenizer.prefabs.group('DELIM', [ '=', '&', '|', '<', '>', ':', '?', '+', '-', '*', '/', '%' ]),
+                Tokenizer.prefabs.regex('IDENT', /^[a-zA-Z_\$][a-zA-Z0-9_\$]*/, null, matchKeywords),
+                Tokenizer.prefabs.number('NUMERIC'),
+                Tokenizer.prefabs.regex('STRING', /^(["'])(?:(?=(\\?))\2[\s\S])*?\1/)
             ], [ 'KEYWORD' ]);
             log('AdriaParser', 'trainer processing adria .sdt-files', 2);
             this.setDefinition(resource('../definition/adria/control.sdt'), 'control');
@@ -6206,17 +6324,17 @@ module('targets/adria_parser.adria', function(module, resource) {
                 node.match = '';
                 node.type = 0;
                 node.tokenType = this.tokenizer.Type.IDENT;
-                node.description = 'identifier';
+                node.description = '<identifier>';
             } else if (name === 'name') {
                 node.match = '';
                 node.type = 0;
                 node.tokenType = this.tokenizer.Type.IDENT | this.tokenizer.Type.KEYWORD;
-                node.description = 'name';
+                node.description = '<name>';
             } else if (name === 'regexp') {
                 node.match = '';
                 node.type = 0;
                 node.tokenType = this.tokenizer.Type.REGEXP;
-                node.description = 'regexp';
+                node.description = '<regular expression>';
             }
             return node;
         };
@@ -6244,8 +6362,8 @@ module('targets/adria_transform.adria', function(module, resource) {
     AdriaParser = require('targets/adria_parser.adria');
     ASTException = require('language_parser/ast_exception.adria');
     AdriaTransform = (function(___parent) {
-        var ___self = function AdriaTransform(piped) {
-            Transform.prototype.constructor.call(this, piped);
+        var ___self = function AdriaTransform(stdin) {
+            Transform.prototype.constructor.call(this, stdin);
             this.globals = new Set();
             this.implicits = new Set();
             this.requires = new Set();
@@ -6431,9 +6549,10 @@ module('targets/adria_transform.adria', function(module, resource) {
         };
         ___self.prototype.buildModule = function buildModule(moduleName, data) {
             var parser, result, requires;
+            data = (arguments.length > 1 ? data : (null));
             parser = this.protoParser.clone();
             parser.moduleName = moduleName;
-            if (data === undefined) {
+            if (data === null) {
                 parser.loadSource(this.options['basePath'] + moduleName, this.cacheModifier);
             } else {
                 parser.setSource(moduleName, data, this.cacheModifier);
@@ -6540,8 +6659,8 @@ module('targets/adria_transform.adria', function(module, resource) {
                 console.log('Setup duration: ' + duration + 'ms');
                 this.startTime = Date.now();
             }
-            if (this.piped !== undefined) {
-                this.buildModule('main' + this.options['extension'], this.piped);
+            if (this.stdin !== null) {
+                this.buildModule('main' + this.options['extension'], this.stdin);
             }
             files = this.options['files'];
             var id;
@@ -6621,8 +6740,8 @@ module('targets/adriadebug_transform.adria', function(module, resource) {
     AdriaTransform = require('targets/adria_transform.adria');
     AdriaDebugParser = require('targets/adriadebug_parser.adria');
     AdriaDebugTransform = (function(___parent) {
-        var ___self = function AdriaDebugTransform(piped) {
-            AdriaTransform.prototype.constructor.call(this, piped);
+        var ___self = function AdriaDebugTransform(stdin) {
+            AdriaTransform.prototype.constructor.call(this, stdin);
             this.options['cache'] = false;
             this.options['scan'] = false;
         };
@@ -6634,8 +6753,8 @@ module('targets/adriadebug_transform.adria', function(module, resource) {
             options = this.options;
             this.protoParser = new AdriaDebugParser(this);
             this.protoParser.trainSelf();
-            if (this.piped !== undefined) {
-                this.buildModule('main' + options['extension'], this.piped);
+            if (this.stdin !== null) {
+                this.buildModule('main' + options['extension'], this.stdin);
             }
             files = options['files'];
             var id;
@@ -6674,43 +6793,50 @@ module('main.adria', function(module, resource) {
     args.add([ '--stdin' ], { help: 'Read from stdin (false)', action: 'storeTrue' });
     args.add([ '-d', '--debug' ], { help: 'Enable debug mode (false)', action: 'storeTrue' });
     options = args.parseKnown();
-    handle = function handle(pipeData) {
+    handle = function handle(stdin) {
         var transform;
         if (options['mode'] === 'adria') {
             var AdriaTransform;
             AdriaTransform = require('targets/adria_transform.adria');
-            transform = new AdriaTransform(pipeData);
+            transform = new AdriaTransform(stdin);
         } else if (options['mode'] === 'adriadebug') {
             var AdriaDebugTransform;
             AdriaDebugTransform = require('targets/adriadebug_transform.adria');
-            transform = new AdriaDebugTransform(pipeData);
+            transform = new AdriaDebugTransform(stdin);
         } else {
             throw new Error('Unsupported mode "' + options['mode'] + '".');
         }
         transform.run();
     };
-    run = function run(pipeData) {
+    run = function run(stdin) {
+        stdin = (arguments.length > 0 ? stdin : (null));
         if (options['debug']) {
             debugger;
-            handle(pipeData);
+            handle(stdin);
         } else {
+            var ASTException;
+            ASTException = require('language_parser/ast_exception.adria');
             try {
-                handle(pipeData);
+                handle(stdin);
             } catch (___exc1) {
-                var e = ___exc1;
-                console.log(e.message);
-                process.exit(1);
+                if (___exc1 instanceof ASTException) {
+                    var e = ___exc1;
+                    console.log(e.message);
+                    process.exit(1);
+                } else { 
+                    throw ___exc1;
+                }
             }
         }
     };
     if (options['stdin']) {
-        var pipeData;
-        pipeData = '';
-        process.stdin.on('data', function(data) {
-            pipeData += data.toString();
+        var data;
+        data = '';
+        process.stdin.on('data', function(chunk) {
+            data += chunk.toString();
         });
         process.stdin.on('end', function() {
-            run(pipeData);
+            run(data);
         });
         process.stdin.resume();
     } else {

@@ -32,7 +32,7 @@ module GlobalStatement = proto (Node) {
         var result = this.csn();
         var nl = this.nl();
 
-        this.eachKey('item', func(node, first, last) {
+        this.eachKey('item', func(Node node, boolean first, boolean last) {
             nameNode = node.get('name');
             valueNode = node.get('value');
 

@@ -22,6 +22,7 @@
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 var Scope = require('../scope');
+var SourceNode = require('../../../source_node');
 
 module FunctionNode = proto (Scope) {
 
@@ -57,7 +58,7 @@ module FunctionNode = proto (Scope) {
      * @param string lookupName name of function to look up
      * @param string ownName name of function containing the lookup
      */
-    getParentLookupCode: func(result, lookupName, ownName = lookupName) {
+    getParentLookupCode: func(SourceNode result, string lookupName, string ownName = lookupName) {
 
         // check if in a prototype, don't skip it if we are
 
@@ -82,7 +83,7 @@ module FunctionNode = proto (Scope) {
      * @param SourceNode result where to add the code
      */
      /*
-    getSelfLookupCode: func(result) {
+    getSelfLookupCode: func(SourceNode result) {
 
         result.add('var ___self = (this === this.constructor.prototype ? this : Object.getPrototypeOf(this)).constructor;' + this.nl());
     },

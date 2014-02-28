@@ -31,7 +31,7 @@ module Module = proto (Scope) {
     exports     : null,
     isInterface : false,
 
-    constructor: func(key, value) {
+    constructor: func(string key, string value) {
         this.exports = new Map();
         Scope->constructor(key, value);
     },
@@ -47,7 +47,7 @@ module Module = proto (Scope) {
         this.isInterface = true;
     },
 
-    setModuleExport: func(name) {
+    setModuleExport: func(string name) {
 
         if (this.getOwnRef(name)) {
             throw new ASTException('Reference "' + name + '" already defined in local scope', this);
@@ -58,7 +58,7 @@ module Module = proto (Scope) {
         return name;
     },
 
-    addExport: func(name) {
+    addExport: func(string name) {
 
         if (this.getOwnRef(name)) {
             throw new ASTException('Reference "' + name + '" already defined in local scope', this);
@@ -69,7 +69,7 @@ module Module = proto (Scope) {
         return name;
     },
 
-    getOwnRef: func(name) {
+    getOwnRef: func(string name) {
 
         var refName;
 

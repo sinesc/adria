@@ -65,9 +65,10 @@ module Cache = proto {
     /**
      * returns cache name (md5hash) for given file
      *
-     * @param file
+     * @param string file
+     * @param string? modifier optional cache modifier to identify different versions of the same file (i.e. different compilation flags)
      */
-    cacheName: func(file, modifier = null) {
+    cacheName: func(string file, string? modifier = null) {
 
         var absPath = path.resolve(process.cwd(), file);
         return this.baseDir + util.md5(absPath + ' -- ' + modifier + ' -- ' + this.version);
@@ -77,11 +78,11 @@ module Cache = proto {
      * fetches data for given file from cache
      *
      * @param string file
-     * @param array variants variants to fetch as well
-     * @param string modifier optional cache modifier to identify different versions of the same file (i.e. different compilation flags)
+     * @param Array variants variants to fetch as well
+     * @param string? modifier optional cache modifier to identify different versions of the same file (i.e. different compilation flags)
      * @result Object cache result variants
      */
-    fetch: func(file, variants, modifier = null) {
+    fetch: func(string file, Array variants, string? modifier = null) {
 
         var cacheFile = this.cacheName(file, modifier);
 
@@ -122,10 +123,10 @@ module Cache = proto {
      * writes data for given file to cache
      *
      * @param string file
-     * @param array variants object of cached variants
-     * @param string modifier optional cache modifier to identify different versions of the same file (i.e. different compilation flags)
+     * @param Array variants object of cached variants
+     * @param string? modifier optional cache modifier to identify different versions of the same file (i.e. different compilation flags)
      */
-    insert: func(file, variants, modifier = null) {
+    insert: func(string file, Array variants, string? modifier = null) {
 
         assert(fs.existsSync(file));
 

@@ -21,11 +21,15 @@
  * IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
+var AsyncLiteral = require('./async_literal');
 var FunctionParamList = require('./function_param_list');
+var Scope = require('./scope');
+var SourceNode = require('../../source_node');
+var Node = require('./base/node');
 
 module AsyncParamList = proto (FunctionParamList) {
 
-    handle: func(declare, functionNode, scope, result, node) {
+    handle: func(boolean declare, AsyncLiteral functionNode, Scope scope, SourceNode result, Node node) {
 
         if (parent->handle(declare, functionNode, scope, result, node)) {
             return true;

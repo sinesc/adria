@@ -32,7 +32,7 @@ module Path = proto {
     source: null,
     target: null,
 
-    constructor: func(source = new PathElement(), target = new PathElement()) {
+    constructor: func(PathElement source = new PathElement(), PathElement target = new PathElement()) {
 
         this.source = source;
         this.target = target;
@@ -61,7 +61,7 @@ var PathElement = proto (null) {
     label       : '',
     condition   : '',
 
-    constructor: func(name = '', capture = '', label = '', condition = '') {
+    constructor: func(string name = '', string capture = '', string label = '', string condition = '') {
         this.name = name;
         this.capture = capture;
         this.label = label;

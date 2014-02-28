@@ -24,8 +24,10 @@
 var path = require('path');
 var util = require('./util');
 var GeneratorState = require('./parser/generator_state');
+var Token = require('./tokenizer/token');
 
 export Definition = require('./parser/definition');
+var Node = Definition.Node;
 
 /**
  * Abstract parser. The parser uses groups of trees of match-nodes. During parsing, input tokens are tested
@@ -81,11 +83,11 @@ module Parser = proto {
     /**
      * returns debug trace of the definition node stack
      *
-     * @param token
-     * @param node
-     * @param stack
+     * @param Token token
+     * @param Node node
+     * @param Array stack
      */
-    trace: func(token, node, stack) {
+    trace: func(Token token, Node node, Array stack) {
 
         // for output simplicy, add current node to stack
 
@@ -123,12 +125,12 @@ module Parser = proto {
     /**
      * returns an error message based on current token, node and state of the stack
      *
-     * @param token token where the error occured
-     * @param node last node to actually match the token
-     * @param stack stack at the time of the match
+     * @param Token token token where the error occurred
+     * @param Node node last node to actually match the token
+     * @param Array stack stack at the time of the match
      * @return string error
      */
-    errorMessage: func(token, node, stack) {
+    errorMessage: func(Token token, Node node, Array stack) {
 
         var trace;
         var message = '$file: Unexpected token "$tokenData" $position. Expected: $validNodes\n';
@@ -150,10 +152,10 @@ module Parser = proto {
     /**
      * override to implement node match condition checking
      *
-     * @param condition string
-     * @param stack current node stack
+     * @param string condition string
+     * @param Array stack current node stack
      */
-    checkCondition: func(condition, stack) {
+    checkCondition: func(string condition, Array stack) {
 
         throw Exception('NYI: parser::checkCondition');
     },
@@ -163,7 +165,7 @@ module Parser = proto {
      *
      * @param string source input string to process
      */
-    parse: func(source) {
+    parse: func(string source) {
 
         // create tokens from input string
 
@@ -205,7 +207,7 @@ module Parser = proto {
             // on first token visit, generate matching nodes
 
             if (result.generator === null) {
-                token = tokens.get(tokenId);
+                token = tokens[tokenId];
                 result.setGenerator(node.filter(this, token, stack), token);
             }
 
@@ -225,7 +227,7 @@ module Parser = proto {
 
                 // no more matches, discard this generator and go back one token
 
-                result.setGenerator(null);
+                result.setGenerator();
                 tokenId--;
 
             } else if (tokenId === len -1) {
@@ -248,7 +250,7 @@ module Parser = proto {
                     maxStack = result.stack.slice(0);
                     maxNode = result.node;
                 }
-            
+
                 // update node and go to next token
 
                 node = result.node;
@@ -264,7 +266,7 @@ module Parser = proto {
             if (maxId +1 === len) {
                 throw new Exception(path.normalize(this.file) + ': Unexpected end of file.');
             } else {
-                throw new Exception(this.errorMessage(tokens.get(maxId +1), maxNode, maxStack));
+                throw new Exception(this.errorMessage(tokens[maxId +1], maxNode, maxStack));
             }
         }
 
