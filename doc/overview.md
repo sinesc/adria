@@ -156,7 +156,7 @@ var Sub = proto (Base) {
 };
 ```
 
-### properties
+### prop literal
 
 `<object>.<name> = prop <object literal>`
 
@@ -182,7 +182,7 @@ MyProto::loudMessage = prop {
 // !!!! THE MESSAGE !!!!
 ```
 
-#### property inheritance
+#### Property inheritance
 
 It is possible to inherit individual parts of a property from a parent prototype using the `inherit get` or `inherit set` syntax.
 
@@ -212,6 +212,40 @@ var sub = new Sub();
 sub.test = 1;
 console.log(sub.value); // 2
 console.log(sub.test); // 2
+```
+
+#### Property storage
+
+Getter/setter properties often require an additional property to store the associated data. For this purpose, the `storage` keyword was added.
+
+```javascript
+var Test = proto {
+    testProperty: prop {
+        get: func() {
+            return storage;
+        },
+        set: func(value) {
+            storage = value;
+        },
+    },
+};
+```
+
+By default, the use of `storage` results in the creation of an additional, hidden object property with a name dervied from the original property name, in this case _testProperty. The property's object literal's `storage` property can be set to a custom name. Additionally, it is possible to define a default value using the `default` property.
+
+```javascript
+var Test = proto {
+    testProperty: prop {
+        storage: 'hiddenTestStorage',
+        default: null,
+        get: func() {
+            return storage;
+        },
+        set: func(value) {
+            storage = value;
+        },
+    },
+};
 ```
 
 ### prototype-access operator
