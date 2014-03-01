@@ -24,17 +24,27 @@ This is a short overview of the differences between Javascript and Adria
 
 ## Changed syntax
 
-### default parameters
+### Default parameters
 
-`<function> <name>(<parameter> [= <default value>[, <parameter> [= <default value> ...]]])`
+`func <name>(<parameter> [= <default value>[, <parameter> [= <default value> ...]]])`
 
-Default parameters may be provided for parameters not followed by undefaulted parameters.
+Default parameters may be provided for parameters not followed by undefaulted parameters. Example:
 
-### advanced default parameters
+```javascript
+func secretMath(value, increase = 1, multiplier = 1) {
+    return (value + increase) * multiplier;
+}
+```
 
-Adria supports an advanced syntax which allows for arbitrary placement of default parameters. The following code represents a valid function literal (note: args default value is an empty array):
+### Advanced default parameters
 
-`func wait(delay, [ context = this, [ args = [] ] ], callback) { /* ... */ }`
+An advanced syntax allowing for arbitrary placement of default parameters. The following code represents a valid function (note: args default value is an empty array):
+
+```javascript
+func wait(delay, [ context = this, [ args = [] ] ], callback) {
+    /* ... */
+}
+```
 
 The function could be called with the following parameter permutations:
 
@@ -48,17 +58,39 @@ A function definition's parameter-list may have multiple blocks of optional or n
 
 Another, more complex example:
 
-`func insane(a, [ b = 1, c = 2, [ d = 3 ], e = 4 ], f, [ g = 5, h = 6 ]) { /* ... */ }`
+```javascript
+func insane(a, [ b = 1, c = 2, [ d = 3 ], e = 4 ], f, [ g = 5, h = 6 ]) {
+    /* ... */
+}
+```
 
 The above function accepts 2, 4, 5, 6, 7 or 8 arguments.
 
-### new-prototype
+### Parameter-type annotations
 
-`new <constructor>( [<parameter>] ) { <proto body> }`
+`func <name>([<type>[<mod>]] <parameter> [= <default value>[, [<type>[<mod>]] <parameter> [= <default value> ...]]])`
 
-Creates a new prototype inheriting from given constuctor's prototype, extends it with proto body and returns an
-object created from the new prototypes constructor. This syntax is short for
-`new (proto (<constructor>) { <proto body> })( [<parameter>] )`
+Parameter lists may specify the type of individual or all parameters. The following values are supported for type: `boolean`, `number`, `finite` (finite number, i.e. not `NaN`), `string`, `func`, `object` as well as references to constructors, i.e. `RegExp`. The modifier `?` additionally allows passing (exactly) `null`. 
+
+Type annotations compile to no code unless the `--assert` flag is used during compilation, in which case non-matching parameters will throw an `AssertionFailedException`.
+
+```javascript
+func plusOne(number value) {
+    return value +1;
+}
+```
+
+```javascript
+func increment(number value, number increase = 1) {
+    /* ... */
+}
+```
+
+```javascript
+Listenable::on = func(string event, [ object? context = null, [ Array args = [ ] ] ], func callback) {
+    /* ... */
+}
+```
 
 ### for/in statement
 
@@ -70,7 +102,28 @@ Support for an optional value argument was added.
 
 `try { ... } catch (<type> <exception>) { ... } [ catch ([<type>] <exception>) { ... } ... ] [ finally { ... } ]`
 
-Support for catching specific types of exceptions was added. If an exception is "not instanceof" the first catch-blocks type, the exception is passed to the next block until it is caught. If the last catch block is not unconditional and the exception fails that instanceof test as well, it will be rethrown. When mixing unconditional and conditional catch blocks, the unconditional block must come last.
+Support for catching specific types of exceptions was added. If an exception is "not instanceof" the first catch-block's type, the exception is passed to the next block until it is caught. If the last catch block is not unconditional and the exception fails that instanceof test as well, it will be rethrown. When mixing unconditional and conditional catch blocks, the unconditional block must come last. Example:
+```javascript
+try {
+    /* ... */
+} catch (TCPException e) {
+    /* connection failed */
+} catch (IOException e) {
+    /* writing data failed */
+} catch (e) {
+    /* report unknown error */
+} finally {
+    /* close sockets and files */
+}
+```
+
+### new-prototype
+
+`new <constructor>( [<parameter>] ) { <proto body> }`
+
+Creates a new prototype inheriting from given constuctor's prototype, extends it with proto body and returns an
+object created from the new prototypes constructor. This syntax is short for
+`new (proto (<constructor>) { <proto body> })( [<parameter>] )`
 
 ## Added syntax
 
@@ -87,6 +140,21 @@ Like Javascript functions, `proto` also offers a literal notation:
 `<assignable> = proto [<name>] [(<parent>)] <object literal>`
 
 If `name` is not given, Adria will try to infer it from the left side of the assignment. The name, if found, will be used for the constructor function but not become visible outside of `proto`.
+
+```javascript
+var Base = proto {
+    value: 1,
+    constructor: func(value = 4) {
+        this.value = value;
+    },
+};
+
+var Sub = proto (Base) {
+    constructor: func(value = 3) {
+        parent->constructor(value * 2);
+    },
+};
+```
 
 ### properties
 
@@ -178,9 +246,7 @@ proto Sub (Base) {
 
 `parent`
 
-Refers to the parent of the current this-context's constructor.
-*Note that if a method was `call`ed or `apply`ed, `parent` will refer to the parent of that context's constructor.* This is intended behaviour. `this` is not boound in Adria.
-`parent` is available wherever `this` is available. It is **not limited** to `proto`-defined objects.
+Refers to the parent constructor of the constructor whose prototype defines the current function. `parent` is available wherever `this` is available. It is **not limited** to `proto`-defined objects. `parent` operates by traversing the prototype chain, starting at `this`.
 
 ```javascript
 proto Base {
@@ -218,7 +284,7 @@ proto Sub (Base) {
 
 ### self keyword
 
-`self` refers to the constructor of the current this-context.
+Refers to the constructor whose prototype defines the current function. `self` is available wherever `this` is available. It is **not limited** to `proto`-defined objects. `self` operates by traversing the prototype chain, starting at `this`.
 
 ### async function literals and statements
 
