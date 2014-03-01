@@ -1594,7 +1594,7 @@ module('args.adria', function(module, resource) {
     parsed = null;
     callbacks = {  };
     parser = new argparse.ArgumentParser({
-        version: '0.1.11',
+        version: '0.1.12',
         addHelp: false,
         epilog: 'Use --no-... to invert option switches, i.e. --no-strict'
     });
@@ -2024,7 +2024,7 @@ module('cache.adria', function(module, resource) {
             this.checkBaseDir();
         };
         var Cache = ___self;
-        ___self.prototype.version = "0.1.11";
+        ___self.prototype.version = "0.1.12";
         ___self.prototype.baseDir = util.home() + '/.adria/cache/';
         ___self.prototype.checkBaseDir = function checkBaseDir() {
             var parts, ___path_scp1;
@@ -4508,7 +4508,7 @@ module('targets/adria/function_param_list.adria', function(module, resource) {
                 result.add(this.nl(-1, result) + '} else ');
             }
             result.add('{' + this.nl(1) + 'throw new Exception(\'invalid number of arguments\');' + this.nl(-1) + '}');
-            functionNode.specialArgs.push(result);
+            functionNode.specialArgs.unshift(result);
         };
         ___self.prototype.findValidOptionalPermutations = function findValidOptionalPermutations(optionals) {
             var bits, permutations, patterns;

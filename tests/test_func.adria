@@ -23,14 +23,90 @@
  */
 var test = require('./test');
 
-var testOptionals = func(a, [ b = 2, c = 3, [ d = 4 ] ]) {
+var testOptionals = func(number a, [ number b = 2, number c = 3, [ number d = 4 ] ]) {
     return [ a, b, c, d ];
 };
 
+var testDefaults = func(number a, b = 'test', number c = 3) {
+    return [ a, b, c ];
+};
+
+/*
+ * tests
+ */
+
 test.group('test_func');
+
+test('default parameters', func() {
+
+    var r = testDefaults(1);
+    assert(r[0] === 1 && r[1] === 'test' && r[2] === 3);
+
+    var s = testDefaults(1, 'works');
+    assert(s[0] === 1 && s[1] === 'works' && s[2] === 3);
+
+    var t = testDefaults(1, undefined, 4);
+    assert(t[0] === 1 && t[1] === undefined && t[2] === 4);
+});
+
+test('type annotations/default parameters, base param', func() {
+
+    var thrown = null;
+
+    try {
+        testDefaults('invalid type');
+    } catch (e) {
+        thrown = e;
+    }
+
+    assert(thrown instanceof AssertionFailedException);
+});
+
+test('type annotations/default parameters, default param', func() {
+
+    var thrown = null;
+
+    try {
+        testDefaults(123, 'test2', 'invalid type');
+    } catch (e) {
+        thrown = e;
+    }
+
+    assert(thrown instanceof AssertionFailedException);
+});
 
 test('advanced optionals', func() {
 
     var r = testOptionals(1);
     assert(r[0] === 1 && r[1] === 2 && r[2] === 3 && r[3] === 4);
 });
+
+test('type annotations/advanced optionals, base param', func() {
+
+    var thrown = null;
+
+    try {
+        testOptionals('invalid type');
+    } catch (e) {
+        thrown = e;
+    }
+
+    assert(thrown instanceof AssertionFailedException);
+});
+
+test('type annotations/advanced optionals, optional param', func() {
+
+    var thrown = null;
+
+    try {
+        testOptionals(1, 'invalid', 3);
+    } catch (e) {
+        thrown = e;
+    }
+
+    assert(thrown instanceof AssertionFailedException);
+});
+
+if (test.noSummary !== true) {
+    test.summary();
+}

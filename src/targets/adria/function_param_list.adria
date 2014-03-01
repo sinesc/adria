@@ -69,11 +69,13 @@ module FunctionParamList = proto (ParamsNode) {
 
             var nameSN = node.get('name').toSourceNode();
 
-            // don't add to formal parameter list when using advanced optionals, add to locals instead
+            // add to parameter list unless using advanced optionals
 
             if (this.optionalPermutations === null) {
                 result.add(nameSN);
             }
+
+            // add to local scope if variables need to be declared
 
             if (declare) {
                 if (this.optionalPermutations === null) {
@@ -83,7 +85,7 @@ module FunctionParamList = proto (ParamsNode) {
                 }
             }
 
-            // check for default args, push those to FunctionLiteral's specialArgs property
+            // check for basic default args, push those to FunctionLiteral's specialArgs property
 
             var valueNode = node.get('value');
 
@@ -225,7 +227,7 @@ module FunctionParamList = proto (ParamsNode) {
 
         result.add('{' + this.nl(1) + 'throw new Exception(\'invalid number of arguments\');' + this.nl(-1) + '}') ;
 
-        functionNode.specialArgs.push(result);
+        functionNode.specialArgs.unshift(result);
     },
 
     /**
