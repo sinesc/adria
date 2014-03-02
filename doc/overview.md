@@ -13,12 +13,12 @@ This is a short overview of the differences between Javascript and Adria
 
 ## Incompatibilities
 
-- Adria adds the following keywords: `proto`, `property`, `parent`, `self`, `await`, `require`, `resource`, `global` and `assert`
-    Keywords may not be used as identifiers, but they may be used as object property names.
+- Adria adds/reuses the following keywords: `assert`, `await`, `export`, `func`, `global`, `import`, `interface`, `module`, `parent`, `prop`, `proto`, `require`, `resource`, `self`, `storage`
+    Keywords may be used as (property-)names but not as reference identifiers.
 
 - In Adria, the `var` keyword uses block-scope. Redeclaring a variable (using `var`) previously declared in the very same scope results in a compile time error. Using undeclared variables also results in a compile time error.
 
-- With the exception of block-statements, all statements must be semicolon-terminated. Block-statements are statements that end on a block, i.e. `while { }` but not `do { } while ()`. Note: function/proto-literals are not statements in themselves.
+- With the exception of block-statements, all statements must be semicolon-terminated. Block-statements are statements that end on a block, i.e. `while { }` but not `do { } while ()`. Note: An expression ending on i.e. a function literal will still need to be terminated by semicolon.
 
 - Adria tries to infer names for function- and proto-literals from the left side of an assignment or property declaration. The name is valid only in the function scope but may prevent the function from accessing a parent scope object with the same name.
 
