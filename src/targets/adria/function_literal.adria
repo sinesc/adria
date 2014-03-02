@@ -21,17 +21,19 @@
  * IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-var FunctionNode = require('./base/function_node');
 var SourceNode = require('../../source_node');
 var Scope = require('./scope');
+var ASTException = require('../../language_parser/ast_exception');
 
 var thisId = 1;
 
-module FunctionLiteral = proto (FunctionNode) {
+module FunctionLiteral = proto (Scope) {
 
     thisId              : 0,
     name                : '',
     provideContext      : false,
+    provideParent       : false,
+    provideSelf         : false,
     registerWithParent  : false,
     specialArgs         : null,
 
@@ -42,59 +44,16 @@ module FunctionLiteral = proto (FunctionNode) {
         this.thisId = thisId++;
     },
 
-    storeContext: func() {
-
-        this.provideContext = true;
-        return '___ths' + this.thisId;
-    },
-
-    begin: func() {
-        return this.csn('function');
-    },
-
-    addLocalName: func(SourceNode result, SourceNode nameSN) {
-
-        this.addImplicit(nameSN.toString(), true);
-        result.add([ ' ', this.name ]);
-    },
-
-    preBody: func(SourceNode result) {
-
-        // nothing to do here
-    },
-
-    postBody: func(SourceNode result, SourceNode body) {
-
-        result.add(this.nl(0, result));
-        result.add(body);
-    },
-
     toSourceNode: func() {
 
         // indent child content, compensate by not indenting at opening {
 
         this.nl(1);
+        var result = this.csn();
 
-        // construct result string
+        // determine own name, generate code before parameter list
 
-        var result = this.begin();
-
-        // name anonymous functions within their scope,
-
-        var nameSN = this.findName();
-
-        if (nameSN !== null && nameSN.toString().match(/^([\'\"]).*\1$/) === null) {
-            this.name = nameSN.toString();
-            this.addLocalName(result, nameSN);
-        } else {
-            this.name = null;
-        }
-
-        // check if name needs to be registered with parent scope
-
-        if (this.registerWithParent) {
-            this.parent.findScope().addImplicit(this.name);
-        }
+        this.preParamList(result, this.setLocalName());
 
         // handle parameters
 
@@ -125,11 +84,144 @@ module FunctionLiteral = proto (FunctionNode) {
             this.getParentLookupCode(result, this.name);
         }
 
+        result.add(this.nl(0, result));
+        result.add(body);
+
         // finalize body
 
-        this.postBody(result, body);
-        result.add(this.nl(-1, result) + '}');
+        this.postBody(result);
 
         return result;
+    },
+
+    /**
+     * called to generate the part before the parameter list
+     *
+     * @param SourceNode result
+     * @param SourceNode? nameSN
+     */
+    preParamList: func(SourceNode result, SourceNode? nameSN) {
+
+        result.add('function');
+
+        if (nameSN !== null) {
+            result.add([ ' ', nameSN ]);
+        }
+    },
+
+    /**
+     * called to generate the part before the body
+     *
+     * @param SourceNode result
+     */
+    preBody: func(SourceNode result) {
+
+        // nothing to do here
+    },
+
+    /**
+     * called to generate the part after the body
+     *
+     * @param SourceNode result
+     */
+    postBody: func(SourceNode result) {
+
+        result.add(this.nl(-1, result) + '}');
+    },
+
+    /**
+     * causes function node to store this-context
+     *
+     * @return string js reference name to context
+     */
+    storeContext: func() {
+
+        this.provideContext = true;
+        return '___ths' + this.thisId;
+    },
+
+    /**
+     * causes function node to add parent lookup
+     *
+     * @return string js reference name to parent
+     */
+    getParentLookup: func() {
+
+        this.provideParent = true;
+        return '___p';
+    },
+
+    /**
+     * causes function node to add self lookup
+     *
+     * @return string js reference name to self
+     */
+    getSelfLookup: func() {
+
+        this.provideSelf = true;
+        return '___s';
+    },
+
+    /**
+     * adds dynamic parent lookup code to given source-node
+     *
+     * @param SourceNode result
+     * @param string lookupName name of function to look up
+     * @param string ownName name of function containing the lookup
+     */
+    getParentLookupCode: func(SourceNode result, string lookupName, string ownName = lookupName) {
+
+        if (this.name === '') {
+            throw new ASTException('Unable to determine function name required by parent/self lookup', this);
+        }
+
+        // check if in a prototype, don't skip it if we are
+
+        result.add('var ___p, ___s, ___c, ___c0 = ___c = ___s = (this === this.constructor.prototype ? this : Object.getPrototypeOf(this));' + this.nl());
+
+        // find self in proto-chain
+
+        result.add('while (___c !== null && (___c.' + lookupName + ' !== ' + ownName + ' || ___c.hasOwnProperty(\'' + lookupName + '\') === false)) {' + this.nl(1));
+        result.add('___s = ___c,' + this.nl());
+        result.add('___c = Object.getPrototypeOf(___c);' + this.nl(-1));
+        result.add('}' + this.nl());
+
+        // get self and parent prototype
+
+        result.add('___s = ___s.constructor,' + this.nl());
+        result.add('___p = (___c !== null ? Object.getPrototypeOf(___c).constructor : ___c0);' + this.nl());
+    },
+
+    /**
+     * set local function name and return SourceNode of it
+     *
+     * @return SourceNode?
+     */
+    setLocalName: func() {
+
+        var nameSN = this.findName();
+
+        if (nameSN !== null) {
+
+            var name = nameSN.toString();
+
+            if (name.match(/^([\'\"]).*\1$/) === null) {
+                this.name = name;
+                this.addImplicit(name, true);
+            }
+        }
+
+        // check if name needs to be registered with parent scope
+
+        if (this.registerWithParent) {
+
+            if (this.name === '') {
+                throw new ASTException('Unable to determine function name in func statement', this);
+            } else {
+                this.parent.findScope().addImplicit(this.name);
+            }
+        }
+
+        return this.name === '' ? null : nameSN;
     },
 };

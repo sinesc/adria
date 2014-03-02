@@ -34,9 +34,9 @@ module AsyncLiteral = proto (GeneratorLiteral) {
         return '___cbh' + this.thisId;
     },
 
-    addLocalName: func(SourceNode result, SourceNode nameSN) {
+    preParamList: func(SourceNode result, SourceNode? nameSN) {
 
-        // don't name async functions as any recursion attempts need to refer to the outer function
+        result.add('function*');
     },
 
     preBody: func(SourceNode result) {
@@ -46,14 +46,14 @@ module AsyncLiteral = proto (GeneratorLiteral) {
         }
     },
 
-    postBody: func(SourceNode result, SourceNode body) {
+    postBody: func(SourceNode result) {
 
         if (this.useCallback) {
-            result.add([ body, this.nl(0, body) + this.storeCallback() + '(null, undefined);', this.nl(-1) + '}' ]);
+            result.add([ this.storeCallback() + '(null, undefined);', this.nl(-1) + '}' ]);
             result.add([ ' catch (___exc) {' + this.nl(1) + this.storeCallback() + '(___exc, undefined);', this.nl(-1) + '}' ]);
-        } else {
-            parent->postBody(result, body);
         }
+
+        parent->postBody(result);
     },
 
     toSourceNode: func() {

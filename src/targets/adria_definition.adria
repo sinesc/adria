@@ -66,6 +66,7 @@ export PropertyLiteral = require('./adria/property_literal');
 export ProtoLiteral = require('./adria/proto_literal');
 export ProtoStatement = proto (ProtoLiteral) { };
 export ProtoBodyItem = require('./adria/proto_body_item');
+export ProtoBodyConstructor = require('./adria/proto_body_constructor');
 
 var TryStatement = require('./adria/try_statement');
 export Try = TryStatement.Try;

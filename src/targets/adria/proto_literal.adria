@@ -21,21 +21,16 @@
  * IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-var FunctionNode = require('./base/function_node');
+var Node = require('./base/node');
 
-module ProtoLiteral = proto (FunctionNode) {
+module ProtoLiteral = proto (Node) {
 
-    constructorFunc: null,
-    constructorArgs: null,
-    constructorBody: null,
-    constructorDefaults: null,
+    constructorSN: null,
     provideParent: false,
     name: '',
 
     constructor: func(string key, string value) {
 
-        this.constructorArgs = [ ];
-        this.constructorDefaults = [ ];
         parent->constructor(key, value);
     },
 
@@ -69,28 +64,11 @@ module ProtoLiteral = proto (FunctionNode) {
 
         var body = this.get('body').toSourceNode();
 
-        // user- or default-constructor
+        // user-defined or default-constructor
 
-        if (this.constructorBody !== null) {
-//!todo refactor this crap
-            result.add('var ___self = function ' + this.name + '(');
-            result.add(this.constructorArgs);
-            result.add(') {' + this.nl(1));
+        if (this.constructorSN !== null) {
 
-            for (var id in this.constructorDefaults) {
-                result.add([ this.constructorDefaults[id], this.nl() ]);
-            }
-
-            result.add(this.constructorFunc.refsToSourceNode());
-
-            // dynamic parent lookup
-
-            if (this.provideParent) {
-                this.getParentLookupCode(result, 'constructor', '___self');
-            }
-
-            result.add(this.constructorBody);
-            result.add(this.nl(-1, result) + '};' + this.nl());
+            result.add([ this.constructorSN, ';' + this.nl() ]);
 
         } else {
 
@@ -100,7 +78,7 @@ module ProtoLiteral = proto (FunctionNode) {
                 result.add(this.nl(1) + '___parent.apply(this, arguments);' + this.nl(-1));
             }
 
-            result.add('}' + this.nl());
+            result.add('};' + this.nl());
         }
 
         // chain to parent

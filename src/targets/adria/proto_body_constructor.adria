@@ -1,7 +1,7 @@
 /*
  * Adria transcompiler
  *
- * Copyright (C) 2014 Dennis MÃ¶hlmann <mail@dennismoehlmann.de>
+ * Copyright (C) 2014 Dennis Möhlmann <mail@dennismoehlmann.de>
  * Licensed under the MIT license.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -22,16 +22,41 @@
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 var FunctionLiteral = require('./function_literal');
+var ProtoLiteral = require('./proto_literal');
 var SourceNode = require('../../source_node');
 
-module GeneratorLiteral = proto (FunctionLiteral) {
+module ProtoBodyConstructor = proto (FunctionLiteral) {
+
+    /**
+     * set local function name and return SourceNode of it
+     *
+     * @return SourceNode?
+     */
+    setLocalName: func() {
+
+        var name = this.findProto(ProtoLiteral).name;
+
+        if (name !== null) {
+
+            if (name.match(/^([\'\"]).*\1$/) === null) {
+                this.name = name;
+                this.addImplicit(name, true);
+            }
+        }
+
+        return this.name === '' ? null : this.csn(name); //!todo
+    },
 
     preParamList: func(SourceNode result, SourceNode? nameSN) {
 
-        result.add('function*');
+        result.add('var ___self = function');
 
         if (nameSN !== null) {
             result.add([ ' ', nameSN ]);
         }
+    },
+
+    getParentLookupCode: func(SourceNode result, string lookupName, string ownName = lookupName) {
+        parent->getParentLookupCode(result, 'constructor', ownName !== '' ? ownName : '___self');
     },
 };
