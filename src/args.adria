@@ -23,107 +23,114 @@
  */
 var argparse = require('argparse');
 
-var parsed = null;
-var callbacks = { };
+module Args = proto {
 
-var parser = new argparse.ArgumentParser({
-    version : '{{version}}',
-    addHelp : false,
-    epilog  : 'Use --no-... to invert option switches, i.e. --no-strict',
-});
+    parser      : null,
+    parsed      : null,
+    callbacks   : { },
 
-/**
- * add a new argument
- *
- * @param Array flags
- * @param object options
- * @param func? callback
- */
-export add = func(Array flags, object options, func? callback = null) {
+    constructor: func() {
 
-    parser.addArgument(flags, options);
+        this.parser = new argparse.ArgumentParser({
+            version : '{{version}}',
+            addHelp : false,
+            epilog  : 'Use --no-... to invert option switches, i.e. --no-strict',
+        });
+    },
 
-    if (callback !== null) {
+    /**
+     * add a new argument
+     *
+     * @param Array flags
+     * @param object options
+     * @param func? callback
+     */
+    add: func(Array flags, object options, func? callback = null) {
 
-        var name = (options.dest !== undefined ? options.dest : null);
+        this.parser.addArgument(flags, options);
 
-        if (name === null) {
-            for (var id, flag in flags) {
-                if (flag.slice(0, 2) === '--') {
-                    name = flag.slice(2);
+        if (callback !== null) {
+
+            var name = (options.dest !== undefined ? options.dest : null);
+
+            if (name === null) {
+                for (var id, flag in flags) {
+                    if (flag.slice(0, 2) === '--') {
+                        name = flag.slice(2);
+                    }
                 }
             }
+
+            this.callbacks[name] = callback;
         }
 
-        callbacks[name] = callback;
-    }
+        this.parsed = null;
+    },
 
-    parsed = null;
+    /**
+     * add a new on-off switch type argument
+     *
+     * @param string name
+     * @param string help
+     * @param boolean defaultState
+     */
+    addSwitch: func(string name, string help, boolean defaultState = false) {
+
+        var defaultText = ' (' + (defaultState ? 'true' : 'false') + ')';
+
+        this.parser.addArgument([ '--' + name ], { help: help + defaultText, action: 'storeTrue', dest: name });
+        this.parser.addArgument([ '--no-' + name ], { help: argparse.Const.SUPPRESS, action: 'storeFalse', dest: name });
+
+        var defaultValue = { };
+        defaultValue[name] = defaultState;
+        this.parser.setDefaults(defaultValue);
+    },
+
+    /**
+     * returns parsed arguments, ignoring any unknown args
+     *
+     * @return object
+     */
+    parseKnown: func() {
+
+        if (this.parsed === null) {
+            this.parsed = this.parser.parseKnownArgs()[0];
+            applyCallbacks.call(this);
+        }
+
+        return this.parsed;
+    },
+
+    /**
+     * returns parsed arguments, terminating the application on unknown
+     * arguments with helpful error message. also handles help flag.
+     *
+     * @return object
+     */
+    parseAll: func() {
+
+        // only add help on final parse, so that all options are available for help output
+
+        this.parser.addArgument(
+            [ '-h', '--help' ],
+            { action: 'help', defaultValue: argparse.Const.SUPPRESS, help: 'Show this help message and exit.' }
+        );
+
+        this.parsed = this.parser.parseArgs();
+        applyCallbacks.call(this);
+
+        return this.parsed;
+    },
 };
 
 /**
- * add a new on-off switch type argument
- *
- * @param string name
- * @param string help
- * @param boolean defaultState
- */
-export addSwitch = func(string name, string help, boolean defaultState = false) {
-
-    var defaultText = ' (' + (defaultState ? 'true' : 'false') + ')';
-
-    parser.addArgument([ '--' + name ], { help: help + defaultText, action: 'storeTrue', dest: name });
-    parser.addArgument([ '--no-' + name ], { help: argparse.Const.SUPPRESS, action: 'storeFalse', dest: name });
-
-    var defaultValue = { };
-    defaultValue[name] = defaultState;
-    parser.setDefaults(defaultValue);
-};
-
-/**
- * returns parsed arguments, ignoring any unknown args
- *
- * @return object
- */
-export parseKnown = func() {
-
-    if (parsed === null) {
-        parsed = parser.parseKnownArgs()[0];
-        applyCallbacks();
-    }
-
-    return parsed;
-};
-
-/**
- * returns parsed arguments, terminating the application on unknown
-*  arguments with helpful error message. also handles help flag.
- *
- * @return object
- */
-export parseAll = func() {
-
-    // only add help on final parse, so that all options are available for help output
-
-    parser.addArgument(
-        [ '-h', '--help' ],
-        { action: 'help', defaultValue: argparse.Const.SUPPRESS, help: 'Show this help message and exit.' }
-    );
-
-    parsed = parser.parseArgs();
-    applyCallbacks();
-
-    return parsed;
-};
-
-/**
- * apply userdefined callbacks to parsed results (to avoid having to deal with argparse custom actions)
+ * apply user-defined callbacks to parsed results (to avoid having to deal with argparse custom actions)
  */
 var applyCallbacks = func() {
 
-    for (var key, value in parsed) {
-        if (callbacks[key] !== undefined) {
-            parsed[key] = callbacks[key](value);
+    for (var key, value in this.parsed) {
+        if (this.callbacks[key] !== undefined) {
+            this.parsed[key] = this.callbacks[key](value);
         }
     }
 };

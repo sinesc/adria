@@ -40,7 +40,7 @@ module Cache = proto {
     checkBaseDir: func() {
 
         if (this.baseDir.slice(0, 1) !== '/' || this.baseDir.slice(-1) !== '/') {
-            throw new Error('cache.baseDir needs to be an absolute path');
+            throw new Exception('cache.baseDir needs to be an absolute path');
         }
 
         var parts = this.baseDir.slice(1, -1).split('/');
@@ -52,7 +52,7 @@ module Cache = proto {
 
             if (fs.existsSync(path)) {
                 if (fs.statSync(path).isFile()) {
-                    throw new Error(path + ' is a file');
+                    throw new Exception(path + ' is a file');
                 }
             } else {
                 fs.mkdirSync(path, (parseInt(id) === parts.length -1 ? 511 /*0777*/ : 493 /*0755*/));
@@ -97,7 +97,7 @@ module Cache = proto {
 
                 for (var id, variant in variants) {
                     if (variant === 'base') {
-                        log('Cache', 'reading from ' + cacheFile, 0);
+                        application.log('Cache', 'reading from ' + cacheFile, 0);
                         resultData['base'] = JSON.parse(fs.readFileSync(cacheFile, 'UTF-8'));
                     } else {
                         resultData[variant] = JSON.parse(fs.readFileSync(cacheFile + '.' + variant, 'UTF-8'));
@@ -108,12 +108,12 @@ module Cache = proto {
 
             } else {
 
-                log('Cache', 'cache dirty for ' + file, 0);
+                application.log('Cache', 'cache dirty for ' + file, 0);
             }
 
         } else {
 
-            log('Cache', 'cache miss for ' + file, 0);
+            application.log('Cache', 'cache miss for ' + file, 0);
         }
 
         return null;
@@ -138,7 +138,7 @@ module Cache = proto {
         for (var ext, variant in variants) {
 
             if (ext === 'base') {
-                log('Cache', 'writing to ' + cacheFile, 0);
+                application.log('Cache', 'writing to ' + cacheFile, 0);
                 fs.writeFileSync(cacheFile, JSON.stringify(variant));
                 fs.utimesSync(cacheFile, inputStat.atime, inputStat.mtime);
             } else {

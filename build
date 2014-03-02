@@ -2,7 +2,7 @@
 set -e
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 ASTD_PATH="../../astdlib/"
-BASE_PARAMS="--no-application --shellwrap -t node --no-cache --no-map --path $ASTD_PATH -D version=0.1.12"
+BASE_PARAMS="--shellwrap -t node --no-cache --no-map --path $ASTD_PATH -D version=0.1.12"
 BUILD_PARAMS="$@ $BASE_PARAMS --time --base src/ --header ../LICENSE --out ../bin/ngadria.js main.adria"
 TEST_PARAMS="$@ $BASE_PARAMS --base tests/ --assert --out test_all.js test_all.adria";
 
@@ -12,10 +12,10 @@ chmod +x ./bin/adria.js
 
 echo "adria compiling ngadria..."
 ./bin/adria.js $BUILD_PARAMS
+md5sum ./bin/ngadria.js
 
 echo "ngadria compiling ngadria (assertive)..."
 ./bin/ngadria.js $BUILD_PARAMS --assert
-md5sum ./bin/ngadria.js
 
 echo "ok. again..."
 ./bin/ngadria.js $BUILD_PARAMS

@@ -24,7 +24,6 @@
 var fs = require('fs');
 var path = require('path');
 var util = require('../util');
-var args = require('../args');
 var Set = require('astd/set');
 var SourceNode = require('../source_node');
 var Template = require('../template');
@@ -79,6 +78,8 @@ module AdriaTransform = proto (Transform) {
 
         Transform->initOptions(this);
 
+        var args = application.args;
+        
         args.add(
             [ '-b', '--base' ],
             { help: 'Base path, include paths are relative to this', defaultValue: '', dest: 'basePath', metavar: '<path>', required: false }

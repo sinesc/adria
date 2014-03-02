@@ -25,93 +25,9 @@ require('astd/prototype/string').extend();
 require('astd/prototype/regexp').extend();
 require('astd/prototype/object').extend();
 
-global log = require('./log');
+// run the application
 
-// process base command line
+var Application = require('./application');
 
-var args = require('./args');
-
-args.add(
-    [ '-m', '--mode' ],
-    { help: 'Translation mode (adria)', defaultValue: 'adria', choices: [ 'adria', 'adriadebug' ], required: false }
-);
-
-args.add(
-    [ '--stdin' ],
-    { help: 'Read from stdin (false)', action: 'storeTrue' }
-);
-
-args.add(
-    [ '-d', '--debug' ],
-    { help: 'Enable debug mode (false)', action: 'storeTrue' }
-);
-
-var options = args.parseKnown();
-
-// transformation performer
-
-var handle = func(stdin) {
-
-    var transform;
-
-    if (options['mode'] === 'adria') {
-
-        var AdriaTransform = require('./targets/adria_transform');
-        transform = new AdriaTransform(stdin);
-
-    } else if (options['mode'] === 'adriadebug') {
-
-        var AdriaDebugTransform = require('./targets/adriadebug_transform');
-        transform = new AdriaDebugTransform(stdin);
-
-    } else {
-
-        throw new Error('Unsupported mode "' + options['mode']+ '".');
-    }
-
-    transform.run();
-};
-
-var run = func(stdin = null) {
-
-    if (options['debug']) {
-
-        // put a break here. "break on any exception" can be enabled after this statement.
-        // enabling "break on any exception" earlier will introduce you to node exception hell
-
-        debugger;
-        handle(stdin);
-
-    } else {
-
-        var ASTException = require('./language_parser/ast_exception');
-
-        try {
-            handle(stdin);
-        } catch (ASTException e) {
-            console.log(e.message);
-            process.exit(1);
-        }
-    }
-};
-
-// process stdin or run directly
-
-if (options['stdin']) {
-
-    var data = '';
-
-    process.stdin.on('data', func(chunk) {
-        data += chunk.toString();
-    });
-
-    process.stdin.on('end', func() {
-        run(data);
-    });
-
-    process.stdin.resume();
-
-} else {
-
-    run();
-}
+application(Application);
+application.run();
