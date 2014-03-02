@@ -9,36 +9,45 @@ adria
 Commandline options
 -------------------
 
-### General syntax
+Command line help is available via the --help switch. By default this will print the arguments available for mode=adria, use `adria -m <mode> --help` to get help for `<mode>`
 
-`adria [ options ] file1 [ file2 [ file3 ... ] ]`
+```
+usage: adria [-v] [-d] [-m {adria,adriadebug}] [--stdin] [--cache] [-b <path>]
+             [-p <path>] [-o <file>] [--extension <ext>] [-t {node,web}]
+             [--header <file>] [-D <key>=<value>] [--shellwrap] [--map]
+             [--link] [--strict] [--assert] [--scan] [--time] [-h]
+             files [files ...]
 
-### Common options
+Positional arguments:
+  files                 File(s) to compile
 
-Command                 | Description
-------------------------|------------------------------------------------------------
-`--mode <mode>`         | sets the transcompilation mode. currently supported:
-                        | `adria`         compile from adria to javascript, default
-                        | `adriadebug`    compile from adria to an XML-like representation of the AST
-`--stdin`               | read from stdin instead of or in addtition to a file (false)
-`--cache`               | enable compiler cache (true)
-`--debug`               | enable debug output (false)
-`--help`                | commandline help output
+Optional arguments:
+  -v, --version         Show program's version number and exit.
+  -d, --debug           Enable debug mode (false)
+  -m {adria,adriadebug}, --mode {adria,adriadebug}
+                        Translation mode (adria)
+  --stdin               Read from stdin (false)
+  --cache               Cache generated code (true)
+  -b <path>, --base <path>
+                        Base path, include paths are relative to this
+  -p <path>, --path <path>
+                        Additional path to look for includes
+  -o <file>, --out <file>
+                        Output file
+  --extension <ext>     Adria file extension (adria)
+  -t {node,web}, --target {node,web}
+                        Platform to generate code for (node)
+  --header <file>       File to include as commentblock before output
+  -D <key>=<value>, --define <key>=<value>
+                        Define preprocessor value, i.e. version="1.2"
+  --shellwrap           Wrap in shell-script and flag executable (false)
+  --map                 Generate source map (false)
+  --link                Link sourcemap to output (true)
+  --strict              Compile strict Javascript (true)
+  --assert              Add assert() support (false)
+  --scan                Perform basic logic checks (true)
+  --time                Report compilation duration (false)
+  -h, --help            Show this help message and exit.
 
-### Targets adria and adriadebug
-
-Command                     | Description
-----------------------------|------------------------------------------------------------
-`--base <path>`             | sets project root path
-`--path <path>`             | additional include path to look for files. paths are relative to base, for multiple paths, use `--path` each time
-`--out <filename>`          | output filename, relative to base
-`--assert`                  | enables runtime assertions via the `assert` statement. unless enabled, assertions will not be included in the generated source (false)
-`--target <web/node>`       | `node`: required when generated code is to be run in a nodeJS environment, default
-                            | `web`: required when generated code is to be run in a webbrowser environment
-`--closure`                 | wrap entire output in a closure (true)
-`--application`             | include `application` (true)
-`--scan`                    | check for undefined variables (true)
-`--map`                     | write sourcemap (true)
-`--link`                    | link sourcemap to generated Javascript (true)
-`--strict`                  | generate strict-mode code (true)
-`--extension <string>`      | default file extension to use when none is given (adria)
+Use --no-... to invert option switches, i.e. --no-strict
+```
