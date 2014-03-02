@@ -45,18 +45,6 @@ export helloUniverse = func() {
 };
 ```
 
-### global
-
-`global <name>[ = <value>[, ...]];`
-
-Declares one or more variables in the application scope, making them available to all modules.
-
-### import
-
-`import <name>[, <name>[, ...]];`
-
-Imports one or more symbols from the environment. The statement does not compile to any code but informs the compiler about symbols declared outside of the application being compiled.
-
 ### module
 
 `module <name> = <expression>;`
@@ -130,6 +118,24 @@ module Items = proto {
     },
 };
 ```
+
+### global
+
+`global <name>[ = <value>[, ...]];`
+
+Declares one or more variables in the application scope, making them available to all modules.
+
+### import
+
+`import <name>[, <name>[, ...]];`
+
+Imports one or more symbols from the environment. The statement does not compile to any code but informs the compiler about symbols declared outside of the application being compiled.
+
+### interface
+
+`interface;`
+
+The interface statement marks a module as the application's CommonJS interface-module. If a `module` is set, it will be exported as CommonJS's `module.exports` object. Any `export`s the module might have will become properties of this object.
 
 ### application (optional framework feature)
 
