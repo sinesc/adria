@@ -27,7 +27,11 @@ module ApplicationStatement = proto (Node) {
 
     toSourceNode: func() {
 
-        this.parser().transform.addApplication = true;
+        // check if application was user-defined. if it is not, enable application support
+
+        if (this.findScope().findRef('application') === null) {
+            this.parser().transform.addApplication = true;
+        }
 
         return this.csn([ 'application(', this.get('application_constructor').toSourceNode(), ');' + this.nl() ]);
     },

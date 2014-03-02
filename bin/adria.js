@@ -5336,7 +5336,9 @@ module('targets/adria/application_statement.adria', function(module, resource) {
         ApplicationStatement.prototype = Object.create(___parent.prototype);
         ApplicationStatement.prototype.constructor = ApplicationStatement;
         ApplicationStatement.prototype.toSourceNode = function toSourceNode() {
-            this.parser().transform.addApplication = true;
+            if (this.findScope().findRef('application') === null) {
+                this.parser().transform.addApplication = true;
+            }
             return this.csn([
                 'application(',
                 this.get('application_constructor').toSourceNode(),
