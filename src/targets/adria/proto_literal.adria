@@ -47,6 +47,8 @@ module ProtoLiteral = proto (Node) {
         var parentNode = this.get('parent');
         var haveParent = parentNode.isNode();
         var blankParent = (haveParent ? parentNode.toString() === 'null' : false);
+        var chainToParent = haveParent && blankParent === false;
+        var refName = this.name !== '' ? this.name : 'Anonymous';
 
         // generate output
 
@@ -60,38 +62,23 @@ module ProtoLiteral = proto (Node) {
             result.add(mangledName + ' = ');
         }
 
-        result.add('(function(' + (haveParent && blankParent === false ? '___parent' : '') + ') {' + this.nl(1));
+        result.add('(function(' + (chainToParent ? '___parent' : '') + ') {' + this.nl(1));
 
         var body = this.get('body').toSourceNode();
 
         // user-defined or default-constructor
 
         if (this.constructorSN !== null) {
-
             result.add([ this.constructorSN, ';' + this.nl() ]);
-
         } else {
-
-            result.add('var ___self = function ' + this.name + '() {');
-
-            if (haveParent && blankParent === false) {
-                result.add(this.nl(1) + '___parent.apply(this, arguments);' + this.nl(-1));
-            }
-
-            result.add('};' + this.nl());
+            this.addDefaultConstructor(result, refName, chainToParent);
         }
 
         // chain to parent
 
         if (haveParent) {
-            result.add('___self.prototype = Object.create(' + (blankParent ? 'null' : '___parent.prototype') + ');' + this.nl());
-            result.add('___self.prototype.constructor = ___self;' + this.nl());
-        }
-
-        // make name available inside proto block
-
-        if (this.name !== '') {
-            result.add('var ' + this.name + ' = ___self;' + this.nl());
+            result.add(refName + '.prototype = Object.create(' + (blankParent ? 'null' : '___parent.prototype') + ');' + this.nl());
+            result.add(refName + '.prototype.constructor = ' + refName + ';' + this.nl());
         }
 
         // body elements
@@ -100,10 +87,10 @@ module ProtoLiteral = proto (Node) {
 
         // close and return
 
-        result.add('return ___self;' + this.nl(-1));
+        result.add('return ' + refName + ';' + this.nl(-1));
         result.add('})(');
 
-        if (haveParent && blankParent === false) {
+        if (chainToParent) {
             result.add(parentNode.toSourceNode());
         }
 
@@ -114,5 +101,16 @@ module ProtoLiteral = proto (Node) {
         }
 
         return result;
+    },
+
+    addDefaultConstructor: func(result, refName, chain) {
+
+        result.add('function ' + refName + '() {');
+
+        if (chain) {
+            result.add(this.nl(1) + '___parent.apply(this, arguments);' + this.nl(-1));
+        }
+
+        result.add('}' + this.nl());
     },
 };

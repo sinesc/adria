@@ -49,14 +49,14 @@ module ProtoBodyConstructor = proto (FunctionLiteral) {
 
     preParamList: func(SourceNode result, SourceNode? nameSN) {
 
-        result.add('var ___self = function');
-
         if (nameSN !== null) {
-            result.add([ ' ', nameSN ]);
+            result.add([ 'function ', nameSN ]);
+        } else {
+            result.add([ 'function Anonymous' ]);
         }
     },
 
     getParentLookupCode: func(SourceNode result, string lookupName, string ownName = lookupName) {
-        parent->getParentLookupCode(result, 'constructor', ownName !== '' ? ownName : '___self');
+        parent->getParentLookupCode(result, 'constructor', ownName !== '' ? ownName : 'Anonymous');
     },
 };

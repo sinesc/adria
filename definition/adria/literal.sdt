@@ -215,7 +215,7 @@ await_literal {
 }
 
 /*
- * interheritance
+ * inheritance
  */
 
 parent_literal {

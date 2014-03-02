@@ -86,6 +86,23 @@ test('object proto', func() {
     assert((p instanceof P) && (p instanceof Object));
 });
 
+test('anonymous proto', func() {
+
+    var X = (func() {
+        return proto {
+            value: 0,
+            constructor: func() {
+                this.value = 123;
+            }
+        };
+    })();
+
+    var x = new X();
+
+    assert(x.value === 123);
+    assert(X.prototype.constructor.name === 'Anonymous');
+});
+
 test('parent keyword', func() {
 
     // provide parameter
