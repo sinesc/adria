@@ -886,6 +886,13 @@ async_statement {\n\
 }\n\
 \n\
 /*\n\
+ * application statement\n\
+ */\n\
+application_statement {\n\
+    entry -> "application" -> "(" -> expression:application_constructor -> ")" -> ";" -> return\n\
+}\n\
+\n\
+/*\n\
  * assert statement\n\
  */\n\
 \n\
@@ -927,6 +934,7 @@ statement {\n\
     entry -> for_count_statement:for_count -> return\n\
     entry -> while_statement:while -> return\n\
     entry -> flow_statement:flow -> return\n\
+    entry -> application_statement:application -> return\n\
 \n\
     entry -> expression:expression -> ";" -> return\n\
 \n\
@@ -5318,6 +5326,27 @@ module('targets/adria/import_statement.adria', function(module, resource) {
     })(Node);
     module.exports = ImportStatement;
 });
+module('targets/adria/application_statement.adria', function(module, resource) {
+    var Node, ApplicationStatement;
+    Node = require('targets/adria/base/node.adria');
+    ApplicationStatement = (function(___parent) {
+        function ApplicationStatement() {
+            ___parent.apply(this, arguments);
+        }
+        ApplicationStatement.prototype = Object.create(___parent.prototype);
+        ApplicationStatement.prototype.constructor = ApplicationStatement;
+        ApplicationStatement.prototype.toSourceNode = function toSourceNode() {
+            this.parser().transform.addApplication = true;
+            return this.csn([
+                'application(',
+                this.get('application_constructor').toSourceNode(),
+                ');' + this.nl()
+            ]);
+        };
+        return ApplicationStatement;
+    })(Node);
+    module.exports = ApplicationStatement;
+});
 module('targets/adria/access_operation_protocall.adria', function(module, resource) {
     var Node, AccessOperationProtocall;
     Node = require('targets/adria/base/node.adria');
@@ -6090,7 +6119,7 @@ module('targets/adria/flow_statement.adria', function(module, resource) {
     module.exports = FlowStatement;
 });
 module('targets/adria_definition.adria', function(module, resource) {
-    var Node, ValueType, Ident, Name, String, Numeric, Scope, Module, RequireLiteral, ResourceLiteral, FunctionLiteral, GeneratorLiteral, AsyncLiteral, FunctionStatement, GeneratorStatement, AsyncStatement, FunctionParamsOptional, FunctionParamList, AsyncParamList, Expression, ObjectLiteral, PropertyLiteral, ProtoLiteral, ProtoStatement, ProtoBodyItem, ProtoBodyConstructor, TryStatement, Try, Catch, CatchAll, CatchSpecific, Finally, ForCountStatement, ImportStatement, AccessOperationProtocall, ConstLiteral, InvokeOperation, AsyncWrapOperation, BaseLiteral, DoWhileStatement, WhileStatement, SwitchStatement, ForInStatement, IfBlock, IfStatement, IfConditional, IfUnconditional, ArrayLiteral, NewProtoLiteral, ReturnStatement, YieldLiteral, AwaitLiteral, ThrowStatement, AssertStatement, Statement, InterfaceStatement, ModuleStatement, ExportStatement, GlobalStatement, VarStatement, StorageLiteral, ParentLiteral, SelfLiteral, FlowStatement;
+    var Node, ValueType, Ident, Name, String, Numeric, Scope, Module, RequireLiteral, ResourceLiteral, FunctionLiteral, GeneratorLiteral, AsyncLiteral, FunctionStatement, GeneratorStatement, AsyncStatement, FunctionParamsOptional, FunctionParamList, AsyncParamList, Expression, ObjectLiteral, PropertyLiteral, ProtoLiteral, ProtoStatement, ProtoBodyItem, ProtoBodyConstructor, TryStatement, Try, Catch, CatchAll, CatchSpecific, Finally, ForCountStatement, ImportStatement, ApplicationStatement, AccessOperationProtocall, ConstLiteral, InvokeOperation, AsyncWrapOperation, BaseLiteral, DoWhileStatement, WhileStatement, SwitchStatement, ForInStatement, IfBlock, IfStatement, IfConditional, IfUnconditional, ArrayLiteral, NewProtoLiteral, ReturnStatement, YieldLiteral, AwaitLiteral, ThrowStatement, AssertStatement, Statement, InterfaceStatement, ModuleStatement, ExportStatement, GlobalStatement, VarStatement, StorageLiteral, ParentLiteral, SelfLiteral, FlowStatement;
     Node = require('targets/adria/base/node.adria');
     ValueType = require('targets/adria/base/value_type.adria');
     Ident = require('targets/adria/ident.adria');
@@ -6170,6 +6199,7 @@ module('targets/adria_definition.adria', function(module, resource) {
     Finally = TryStatement.Finally;
     ForCountStatement = require('targets/adria/for_count_statement.adria');
     ImportStatement = require('targets/adria/import_statement.adria');
+    ApplicationStatement = require('targets/adria/application_statement.adria');
     AccessOperationProtocall = require('targets/adria/access_operation_protocall.adria');
     ConstLiteral = require('targets/adria/const_literal.adria');
     InvokeOperation = require('targets/adria/invoke_operation.adria');
@@ -6232,6 +6262,7 @@ module('targets/adria_definition.adria', function(module, resource) {
     module.exports.Finally = Finally;
     module.exports.ForCountStatement = ForCountStatement;
     module.exports.ImportStatement = ImportStatement;
+    module.exports.ApplicationStatement = ApplicationStatement;
     module.exports.AccessOperationProtocall = AccessOperationProtocall;
     module.exports.ConstLiteral = ConstLiteral;
     module.exports.InvokeOperation = InvokeOperation;
@@ -6450,6 +6481,7 @@ module('targets/adria_transform.adria', function(module, resource) {
         AdriaTransform.prototype.sourceCode = null;
         AdriaTransform.prototype.protoParser = null;
         AdriaTransform.prototype.addInterface = false;
+        AdriaTransform.prototype.addApplication = false;
         AdriaTransform.prototype.builtins = { 'async.adria': resource('../templates/adria/async.tpl') };
         AdriaTransform.prototype.initOptions = function initOptions() {
             var args;
@@ -6514,7 +6546,6 @@ module('targets/adria_transform.adria', function(module, resource) {
             });
             args.add([ 'files' ], { help: 'File(s) to compile', nargs: '+' });
             args.addSwitch('shellwrap', 'Wrap in shell-script and flag executable', false);
-            args.addSwitch('application', 'Generate application global', true);
             args.addSwitch('map', 'Generate source map', false);
             args.addSwitch('link', 'Link sourcemap to output', true);
             args.addSwitch('strict', 'Compile strict Javascript', true);
@@ -6650,7 +6681,7 @@ module('targets/adria_transform.adria', function(module, resource) {
             tpl.assign('globals', this.globals.toArray());
             tpl.assign('builtins', this.usedBuiltins.toArray());
             tpl.assign('enableAssert', options['assert']);
-            tpl.assign('enableApplication', options['application']);
+            tpl.assign('enableApplication', this.addApplication);
             tpl.assign('platform', options['platform']);
             if (options['shellwrap']) {
                 node.add([
@@ -6929,6 +6960,7 @@ module('main.adria', function(module, resource) {
     require('../../astdlib/astd/prototype/object.adria').extend();
     Application = require('application.adria');
     application(Application);
+    
     application.run();
 });
 require('async.adria');

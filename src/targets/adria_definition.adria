@@ -77,6 +77,7 @@ export Finally = TryStatement.Finally;
 
 export ForCountStatement = require('./adria/for_count_statement');
 export ImportStatement = require('./adria/import_statement');
+export ApplicationStatement = require('./adria/application_statement');
 
 export AccessOperationProtocall = require('./adria/access_operation_protocall');
 

@@ -51,6 +51,7 @@ module AdriaTransform = proto (Transform) {
     sourceCode      : null,
     protoParser     : null,
     addInterface    : false,
+    addApplication  : false,
 
     builtins: {
         'async.adria': resource('../../templates/adria/async.tpl'),
@@ -79,7 +80,7 @@ module AdriaTransform = proto (Transform) {
         Transform->initOptions(this);
 
         var args = application.args;
-        
+
         args.add(
             [ '-b', '--base' ],
             { help: 'Base path, include paths are relative to this', defaultValue: '', dest: 'basePath', metavar: '<path>', required: false }
@@ -130,7 +131,6 @@ module AdriaTransform = proto (Transform) {
         );
 
         args.addSwitch('shellwrap', 'Wrap in shell-script and flag executable', false);
-        args.addSwitch('application', 'Generate application global', true);
         args.addSwitch('map', 'Generate source map', false);
         args.addSwitch('link', 'Link sourcemap to output', true);
         args.addSwitch('strict', 'Compile strict Javascript', true);
@@ -247,7 +247,7 @@ module AdriaTransform = proto (Transform) {
         tpl.assign('globals', this.globals.toArray());
         tpl.assign('builtins', this.usedBuiltins.toArray());
         tpl.assign('enableAssert', options['assert']);
-        tpl.assign('enableApplication', options['application']);
+        tpl.assign('enableApplication', this.addApplication);
         tpl.assign('platform', options['platform']);
 
         // wrap in shell-script

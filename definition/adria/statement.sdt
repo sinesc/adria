@@ -57,6 +57,13 @@ async_statement {
 }
 
 /*
+ * application statement
+ */
+application_statement {
+    entry -> "application" -> "(" -> expression:application_constructor -> ")" -> ";" -> return
+}
+
+/*
  * assert statement
  */
 
@@ -98,6 +105,7 @@ statement {
     entry -> for_count_statement:for_count -> return
     entry -> while_statement:while -> return
     entry -> flow_statement:flow -> return
+    entry -> application_statement:application -> return
 
     entry -> expression:expression -> ";" -> return
 
