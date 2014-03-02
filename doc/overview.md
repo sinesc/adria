@@ -26,9 +26,9 @@ This is a short overview of the differences between Javascript and Adria
 
 ### Default parameters
 
-`func <name>(<parameter> [= <default value>[, <parameter> [= <default value> ...]]])`
+`<reference name> [= <default value> ]`
 
-Default parameters may be provided for parameters not followed by undefaulted parameters. Example:
+Default parameters may be provided for parameters not followed by undefaulted parameters. Default parameters may refer to references available in the current scope as well as `this` and previous parameters. Example:
 
 ```javascript
 func secretMath(value, increase = 1, multiplier = 1) {
@@ -38,7 +38,7 @@ func secretMath(value, increase = 1, multiplier = 1) {
 
 ### Advanced default parameters
 
-An advanced syntax allowing for arbitrary placement of default parameters. The following code represents a valid function (note: args default value is an empty array):
+An advanced syntax allows for arbitrary placement of default parameters. The following code represents a valid function (note: args default value is an empty array):
 
 ```javascript
 func wait(delay, [ context = this, [ args = [] ] ], callback) {
@@ -66,11 +66,27 @@ func insane(a, [ b = 1, c = 2, [ d = 3 ], e = 4 ], f, [ g = 5, h = 6 ]) {
 
 The above function accepts 2, 4, 5, 6, 7 or 8 arguments.
 
+### Rest parameter
+
+`...<rest name>`
+
+As last parameter, a rest parameter may follow. Additional parameters passed to the function will be available through the rest parameter array. Example:
+
+```javascript
+func rest(a, b = 1, ...c) {
+    console.log(c);
+}
+
+rest(1, 2, 3, 4, 5); // => [ 3, 4, 5 ]
+```
+
+Rest parameters are not supported after advanced parameter lists.
+
 ### Parameter-type annotations
 
-`func <name>([<type>[<mod>]] <parameter> [= <default value>[, [<type>[<mod>]] <parameter> [= <default value> ...]]])`
+`[<type>[<modifier>]] <parameter> [= <default value> ]`
 
-Parameter lists may specify the type of individual or all parameters. The following values are supported for type: `boolean`, `number`, `finite` (finite number, i.e. not `NaN`), `string`, `func`, `object` as well as references to constructors, i.e. `RegExp`. The modifier `?` additionally allows passing (exactly) `null`. 
+Parameter lists may specify the type of individual or all parameters. The following values are supported for type: `boolean`, `number`, `finite` (finite number, i.e. not `NaN`), `string`, `func`, `object` as well as references to constructors, i.e. `RegExp`. The modifier `?` additionally allows passing (strictly) `null`. 
 
 Type annotations compile to no code unless the `--assert` flag is used during compilation, in which case non-matching parameters will throw an `AssertionFailedException`.
 
@@ -183,6 +199,8 @@ MyProto::loudMessage = prop {
 ```
 
 #### Property inheritance
+
+`inherit get|set`
 
 It is possible to inherit individual parts of a property from a parent prototype using the `inherit get` or `inherit set` syntax.
 
@@ -317,6 +335,8 @@ proto Sub (Base) {
 ```
 
 ### self keyword
+
+`self`
 
 Refers to the constructor whose prototype defines the current function. `self` is available wherever `this` is available. It is **not limited** to `proto`-defined objects. `self` operates by traversing the prototype chain, starting at `this`.
 
