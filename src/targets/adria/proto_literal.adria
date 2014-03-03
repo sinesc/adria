@@ -69,7 +69,7 @@ module ProtoLiteral = proto (Node) {
         // user-defined or default-constructor
 
         if (this.constructorSN !== null) {
-            result.add([ this.constructorSN, ';' + this.nl() ]);
+            result.add([ this.constructorSN, this.nl() ]);
         } else {
             this.addDefaultConstructor(result, refName, chainToParent);
         }

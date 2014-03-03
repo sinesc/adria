@@ -40,6 +40,12 @@ module Scope = proto (Node) {
         Node->constructor(key, value);
     },
 
+    /**
+     * adds a reference to the current scope and returns the possibly mangled name of it
+     *
+     * @param string name input name
+     * @return string actual name
+     */
     addLocal: func(string name) {
 
         if (this.getOwnRef(name)) {
@@ -51,11 +57,19 @@ module Scope = proto (Node) {
         return localName;
     },
 
+    /**
+     * adds an implicit reference to the current scope and returns the possibly mangled name of it
+     * implicits are not included in the declaration returned by refsToSourceNode() (usually parameters)
+     *
+     * @param string name input name
+     * @param boolean unless true, an ASTException will be thrown if the name of an implicit is already taken
+     * @return string actual name
+     */
     addImplicit: func(string name, boolean ignore = false) {
 
         // implicits may not be defined in any parent scope
 
-        if (ignore == false && (this.getOwnRef(name) || findRefScope.call(this, name) !== null)) {
+        if (ignore == false && this.getRef(name) !== null) {
             throw new ASTException('Reference "' + name + '" already defined in local scope', this);
         }
 
@@ -63,6 +77,12 @@ module Scope = proto (Node) {
         return name;
     },
 
+    /**
+     * returns possibly mangled name of given reference from exactly this scope
+     *
+     * @param string name name of the reference
+     * @return string or null if not found in exactly this scope
+     */
     getOwnRef: func(string name) {
 
         assert(this.locals instanceof Map);
@@ -77,23 +97,30 @@ module Scope = proto (Node) {
         return null;
     },
 
-    findRef: func(string name) {
+    /**
+     * returns possibly mangled name of given reference from this or a parent-scope
+     *
+     * @param string name name of the reference
+     * @return string or null if not found
+     */
+    getRef: func(string name) {
 
-        var scope, refName;
+        var refName;
 
         if ((refName = this.getOwnRef(name)) !== null) {
             return refName;
-        } else if ((scope = findRefScope.call(this, name)) !== null) {
-            if ((refName = scope.getOwnRef(name)) !== null) {
-                return refName;
-            } else {
-                assert(true, 'scope claimed to have local but did not');
-            }
+        } else if ((refName = findRef.call(this, name)) !== null) {
+            return refName;
         }
 
         return null;
     },
 
+    /**
+     * returns source-node containing var declarations for this scope's locals
+     *
+     * @return SourceNode
+     */
     refsToSourceNode: func() {
 
         if (this.locals.empty) {
@@ -108,24 +135,34 @@ module Scope = proto (Node) {
 
 Node::Scope = Scope;
 
-var findRefScope = func(string name) {
+var findRef = func(string name) {
 
     var scope = this;
+    var refName = null;
 
-    do {
-        if (scope.getOwnRef(name) !== null) {
-            return scope;
+    while ((scope = scope.findScope(true)) !== null) {
+        if ((refName = scope.getOwnRef(name)) !== null) {
+            return refName;
         }
-    } while ((scope = scope.findScope(true)) !== null);
+    }
 
-    return scope;
+    return null;
 };
 
 var createLocalName = func(string name) {
 
-    var scope = findRefScope.call(this, name);
+    var FunctionLiteral = require('./function_literal');
+    var refName = null;
+    var scope = this;
 
-    if (scope !== null) {
+    do {
+        if ((refName = scope.getOwnRef(name)) !== null) {
+            break;
+        }
+    } while (scope instanceof FunctionLiteral === false && (scope = scope.findProto(Scope, FunctionLiteral, true, null)) !== null);
+
+    if (refName !== null) {
+    console.log('mangled', name);
         return '___' + name + '_scp' + scopeLocalId++;
     }
 

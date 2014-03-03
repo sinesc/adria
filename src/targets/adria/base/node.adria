@@ -55,7 +55,7 @@ module Node = proto (CaptureNode) {
             return;
         }
 
-        if (this.findScope().findRef(name) !== null) {
+        if (this.findScope().getRef(name) !== null) {
             return;
         }
 

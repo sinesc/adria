@@ -98,7 +98,7 @@ module AdriaParser = proto(LanguageParser) {
             'yield', 'await',
             'parent', 'self',
             'func', 'proto', 'prop', 'storage', //!todo TBD 'scope',
-            'require', 'resource', 'module', 'export', 'interface',
+            'require', 'resource', 'module', 'export', 'import', 'interface',
             'delete', 'new', 'instanceof', 'typeof',
             'assert',
         ]);

@@ -242,7 +242,7 @@ module CaptureNode = proto {
      * finds given constructor in ancestors
      *
      * @param func Constructor prototype constructor to find
-     * @param func StopConstructor prototype constructor to stop searching at
+     * @param func StopConstructor prototype constructor to stop searching at (will be returned if also instance of Constructor)
      * @param boolean fromParent default true, will also check this if false
      * @param any dummy result when constructor is not found
      * @return CaptureNode/dummy

@@ -21,8 +21,7 @@
  * IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-var instance = null;
-var enabled = false;
+var singleton = null;
 
 /**
  * log message to console if logging is enabled
@@ -32,30 +31,24 @@ var enabled = false;
  * @param finite indent offset
  */
 module log = func(string source, string message, finite offset = 0) {
-
-    if (enabled !== true) {
-        return;
-    }
-
-    if (instance === null) {
-        instance = new Log();
-    }
-
-    instance.print(source, message, offset);
+    initInstance.call(this);
+    singleton.print(source, message, offset);
 };
 
 /**
  * enables logging
  */
 export enable = func() {
-    enabled = true;
+    initInstance.call(this);
+    singleton.enable();
 };
 
 /**
  * disables logging
  */
 export disable = func() {
-    enabled = false;
+    initInstance.call(this);
+    singleton.disable();
 };
 
 /**
@@ -66,12 +59,20 @@ export Log = proto {
     indent  : 0,
     start   : 0,
     last    : 0,
+    enabled : false,
 
-    constructor: func() {
+    enable: func() {
 
-        this.start  = Date.now();
-        this.last   = this.start;
+        this.start      = Date.now();
+        this.last       = this.start;
+        this.enabled    = true;
         console.log('=============================: Log started');
+    },
+
+    disable: func(string source = 'Log') {
+
+        this.print(source, 'Log stopped');
+        this.enabled = false;
     },
 
     /**
@@ -93,7 +94,7 @@ export Log = proto {
             this.indent += offset;
         }
 
-        if (message !== undefined) {
+        if (message !== undefined && this.enabled) {
             console.log(('+' + diffLast + '/' + diffStart).padLeft(10, ' ') + 'ms: ' + source.padLeft(15) + ': ' + ' '.repeat(this.indent) + message);
         }
 
@@ -101,4 +102,13 @@ export Log = proto {
             this.indent += offset;
         }
     },
+};
+
+/**
+ * ensures the existance of the singleton instance
+ */
+var initInstance= func(initalState = false) {
+    if (singleton === null) {
+        singleton = new Log(initalState);
+    }
 };
