@@ -28,7 +28,7 @@ module GlobalStatement = proto (Node) {
     toSourceNode: func() {
 
         var valueNode, nameNode;
-        var globals = this.parser().resultData.globals;
+        var globals = this.parser.resultData.globals;
         var result = this.csn();
         var nl = this.nl();
 

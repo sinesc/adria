@@ -42,7 +42,7 @@ module Module = proto (Scope) {
             throw new ASTException('Duplicate interface declaration', this);
         }
 
-        var parser = this.parser();
+        var parser = this.parser;
         parser.resultData.isInterface = true;
         this.isInterface = true;
     },
@@ -92,7 +92,7 @@ module Module = proto (Scope) {
 
         this.nl(1);
 
-        var parser = this.parser();
+        var parser = this.parser;
         var code = Scope->toSourceNode();
         var file = parser.file;
 

@@ -49,7 +49,7 @@ module Node = proto (CaptureNode) {
      */
     checkDefined: func(string name) {
 
-        var parser = this.parser();
+        var parser = this.parser;
 
         if (parser.transform.implicits.has(name) || parser.transform.globals.has(name)) {
             return;
@@ -144,6 +144,15 @@ module Node = proto (CaptureNode) {
      */
     toString: func() {
         return this.toSourceNode().toString();
+    },
+
+    /**
+     * when compiling to ES5, this function is used instead of toSourceNode()
+     *
+     * @return SourceNode
+     */
+    toES5SourceNode: func() {
+        return this.toSourceNode();
     },
 
 };

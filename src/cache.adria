@@ -27,7 +27,7 @@ var util = require('./util');
 
 module Cache = proto {
 
-    version: "{{version}}",
+    version: "{{___uniqueId}}",
     baseDir: util.home() + '/.adria/cache/',
 
     constructor: func() {
@@ -123,10 +123,10 @@ module Cache = proto {
      * writes data for given file to cache
      *
      * @param string file
-     * @param Array variants object of cached variants
+     * @param Object variants object of cached variants
      * @param string? modifier optional cache modifier to identify different versions of the same file (i.e. different compilation flags)
      */
-    insert: func(string file, Array variants, string? modifier = null) {
+    insert: func(string file, Object variants, string? modifier = null) {
 
         assert(fs.existsSync(file));
 

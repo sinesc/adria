@@ -31,7 +31,7 @@ var definition = require('./adria_definition');
 
 /**
  * LanguageParser subclass defining additional Adria specific .sdt-file
- * entities and setting up blockname to constructor mappings.
+ * entities and setting up block-name to constructor mappings.
  */
 module AdriaParser = proto(LanguageParser) {
 
@@ -79,8 +79,12 @@ module AdriaParser = proto(LanguageParser) {
         data = LanguageParser->preprocessRaw(data);
 
         var defines = this.transform.options.defines;
+        var that = this;
 
-        return data.replace(/\{\{([a-zA-Z][a-zA-Z_0-9]*)\}\}/g, func(matches, key) {
+        return data.replace(/\{\{([_a-zA-Z][_a-zA-Z_0-9]*)\}\}/g, func(matches, key) {
+            if (key === '___uniqueId') {
+                that.forceNoCache = true;
+            }
             return (defines[key] === undefined ? '' : defines[key]);
         });
     },
@@ -137,10 +141,11 @@ module AdriaParser = proto(LanguageParser) {
     },
 
     /**
-     * maps capture_names to subclasses of CaptureNode
+     * called during capture-list-to-tree-conversion process to select an appropriate node-type,
+     * maps blockName to subclasses of appropriate adria/base/node subclass or base itself
      *
-     * @param string captureName node capture name (unused at the moment)
-     * @param string blockName name of the block containing the node (mapped to classname)
+     * @param string captureName name-part of the capture (<block>:<name>[....)
+     * @param string blockName block-part of the capture (<block>:<name>[....)
      */
     mapType: func(string captureName, string blockName) {
 

@@ -162,7 +162,6 @@ var createLocalName = func(string name) {
     } while (scope instanceof FunctionLiteral === false && (scope = scope.findProto(Scope, FunctionLiteral, true, null)) !== null);
 
     if (refName !== null) {
-    console.log('mangled', name);
         return '___' + name + '_scp' + scopeLocalId++;
     }
 

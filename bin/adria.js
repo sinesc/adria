@@ -1901,8 +1901,445 @@ module('template.adria', function(module, resource) {
     })(ASTDTemplate);
     module.exports = Template;
 });
+module('language_parser/capture_node.adria', function(module, resource) {
+    var SourceNode, Template, CaptureNode, stackDiff;
+    SourceNode = require('source_node.adria');
+    Template = require('template.adria');
+    CaptureNode = (function() {
+        function CaptureNode(key, value) {
+            this.key = key;
+            this.value = value;
+        }
+        CaptureNode.prototype.parser = null;
+        CaptureNode.prototype.parent = null;
+        CaptureNode.prototype.children = null;
+        CaptureNode.prototype.key = '';
+        CaptureNode.prototype.value = '';
+        CaptureNode.prototype.row = 0;
+        CaptureNode.prototype.col = 0;
+        CaptureNode.prototype.toJSON = function toJSON() {
+            var children;
+            children = [  ];
+            var id;
+            for (id in this.children) {
+                children.push(this.children[id].toJSON());
+            }
+            return {
+                _: this.constructor.name,
+                s: children,
+                k: this.key,
+                v: this.value,
+                r: this.row,
+                c: this.col
+            };
+        };
+        CaptureNode.prototype.fromJSON = function fromJSON(json, parentNode, typeMapper) {
+            var Type, result, jsonChildren, resultChildren;
+            Type = typeMapper('', json._);
+            result = new Type(json.k, json.v);
+            result.parser = parentNode instanceof CaptureNode ? parentNode.parser : parentNode;
+            result.parent = parentNode;
+            result.row = json.r;
+            result.col = json.c;
+            result.children = [  ];
+            jsonChildren = json.s;
+            resultChildren = result.children;
+            var id;
+            for (id in jsonChildren) {
+                resultChildren.push(CaptureNode.prototype.fromJSON(jsonChildren[id], result, typeMapper));
+            }
+            return result;
+        };
+        CaptureNode.prototype.fromResults = function fromResults(results, parentNode, typeMapper) {
+            var root, current, lastStack, result, stack, diff, node;
+            root = new CaptureNode('', '');
+            current = root;
+            lastStack = [  ];
+            root.parser = parentNode;
+            root.parent = parentNode;
+            var resultId;
+            for (resultId in results) {
+                result = results[resultId];
+                stack = result.stack;
+                diff = stackDiff(stack, lastStack, result.minStack);
+                while (diff.ascend--) {
+                    current = current.parent;
+                }
+                var nodeId;
+                for (nodeId in diff.create) {
+                    node = diff.create[nodeId];
+                    current = current.addNew(node.capture, node.name, typeMapper(node.capture, node.name));
+                    current.row = result.token.pos.row;
+                    current.col = result.token.pos.col;
+                }
+                node = result.node;
+                if (node.capture !== '') {
+                    var match;
+                    match = current.addNew(node.capture, result.token.data, typeMapper(node.capture, node.name));
+                    match.row = result.token.pos.row;
+                    match.col = result.token.pos.col;
+                }
+                lastStack = stack;
+            }
+            return root;
+        };
+        CaptureNode.prototype.isNode = function isNode() {
+            return this.col !== -1;
+        };
+        CaptureNode.prototype.isDummy = function isDummy() {
+            return this.col === -1;
+        };
+        CaptureNode.prototype.isLeaf = function isLeaf() {
+            return (this.children instanceof Array === false);
+        };
+        CaptureNode.prototype.isBranch = function isBranch() {
+            return (this.children instanceof Array);
+        };
+        CaptureNode.prototype.length = function length() {
+            return (this.children instanceof Array ? this.children.length : 0);
+        };
+        CaptureNode.prototype.depth = function depth() {
+            var result, current;
+            result = 0;
+            current = this;
+            while (current.parent instanceof CaptureNode) {
+                result += 1;
+                current = current.parent;
+            }
+            return result;
+        };
+        CaptureNode.prototype.ancestor = function ancestor(key, value, dummy) {
+            var current;
+            value = (arguments.length > 1 ? value : (null));
+            dummy = (arguments.length > 2 ? dummy : (this.dummy));
+            current = this;
+            key = typeof key === 'string' ? [ key ] : key;
+            value = typeof value === 'string' ? [ value ] : value;
+            if (key !== null && value !== null) {
+                while (current.parent instanceof CaptureNode && key.indexOf(current.parent.key) === -1 && value.indexOf(current.parent.value) === -1) {
+                    current = current.parent;
+                }
+            } else if (key !== null) {
+                while (current.parent instanceof CaptureNode && key.indexOf(current.parent.key) === -1) {
+                    current = current.parent;
+                }
+            } else if (value !== null) {
+                while (current.parent instanceof CaptureNode && value.indexOf(current.parent.value) === -1) {
+                    current = current.parent;
+                }
+            }
+            if (current.parent instanceof CaptureNode) {
+                return current.parent;
+            } else {
+                return dummy;
+            }
+        };
+        CaptureNode.prototype.findProto = function findProto(Constructor, StopConstructor, fromParent, dummy) {
+            var current;
+            StopConstructor = (arguments.length > 1 ? StopConstructor : (null));
+            fromParent = (arguments.length > 2 ? fromParent : (true));
+            dummy = (arguments.length > 3 ? dummy : (this.dummy));
+            current = fromParent ? this.parent : this;
+            while (current instanceof CaptureNode && current instanceof Constructor === false && (StopConstructor === null || current instanceof StopConstructor === false)) {
+                current = current.parent;
+            }
+            return current instanceof Constructor ? current : dummy;
+        };
+        CaptureNode.prototype.add = function add(child) {
+            if (this.children == null) {
+                this.children = [  ];
+            }
+            child.parser = this.parser;
+            child.parent = this;
+            this.children.push(child);
+            return child;
+        };
+        CaptureNode.prototype.addNew = function addNew(key, value, Constructor) {
+            var child;
+            child = new Constructor(key, value);
+            return this.add(child);
+        };
+        CaptureNode.prototype.get = function get(key, index, dummy) {
+            index = (arguments.length > 1 ? index : (0));
+            dummy = (arguments.length > 2 ? dummy : (this.dummy));
+            if (this.children instanceof Array) {
+                var id, child;
+                for (id in this.children) {
+                    child = this.children[id];
+                    if (child.key == key && index-- == 0) {
+                        return child;
+                    }
+                }
+            }
+            return dummy;
+        };
+        CaptureNode.prototype.has = function has(key) {
+            if (this.children instanceof Array) {
+                var id, child;
+                for (id in this.children) {
+                    child = this.children[id];
+                    if (child.key == key) {
+                        return true;
+                    }
+                }
+            }
+            return false;
+        };
+        CaptureNode.prototype.path = function path(pathString, dummy) {
+            var step, current;
+            dummy = (arguments.length > 1 ? dummy : (this.dummy));
+            current = this;
+            pathString = pathString.split('.');
+            var id;
+            for (id in pathString) {
+                step = pathString[id].split('[');
+                if (step.length === 1) {
+                    current = current.get(step[0]);
+                } else {
+                    current = current.get(step[0], parseInt(step[1].slice(0, -1)));
+                }
+                if (current.isDummy()) {
+                    return dummy;
+                }
+            }
+            return current;
+        };
+        CaptureNode.prototype.extract = function extract(from, to) {
+            return this.children.splice(from, to - from + 1);
+        };
+        CaptureNode.prototype.nest = function nest(from, to, Constructor) {
+            var node;
+            Constructor = (arguments.length > 2 ? Constructor : (this.constructor));
+            node = new Constructor(this.key, this.value);
+            node.children = this.children.splice(from, to - from + 1, node);
+            node.parent = this;
+            node.row = node.children[0].row;
+            node.col = node.children[0].col;
+            var id, child;
+            for (id in node.children) {
+                child = node.children[id];
+                child.parent = node;
+            }
+        };
+        CaptureNode.prototype.nl = function nl(indent, node) {
+            indent = (arguments.length > 0 ? indent : (0));
+            node = (arguments.length > 1 ? node : (null));
+            this.parser.indent += indent;
+            if (node !== null) {
+                node.trim();
+            }
+            return '\n' + String.repeat(this.parser.indent * 4, ' ');
+        };
+        CaptureNode.prototype.csn = function csn(code) {
+            return new SourceNode(this.row, this.col - 1, null, code);
+        };
+        CaptureNode.prototype.toString = function toString() {
+            var result;
+            result = '';
+            if (this.children instanceof Array) {
+                var id;
+                for (id in this.children) {
+                    result += this.children[id].toString();
+                }
+            }
+            return result;
+        };
+        CaptureNode.prototype.toSourceNode = function toSourceNode() {
+            var result;
+            result = new SourceNode(null, null);
+            if (this.children instanceof Array) {
+                var id, child;
+                for (id in this.children) {
+                    child = this.children[id].toSourceNode();
+                    if (child !== '') {
+                        result.add(child);
+                    }
+                }
+            }
+            return result;
+        };
+        CaptureNode.prototype.scan = function scan(state) {
+            if (this.children instanceof Array) {
+                var id, child;
+                for (id in this.children) {
+                    child = this.children[id];
+                    child.scan(state);
+                }
+            }
+        };
+        CaptureNode.prototype.preprocess = function preprocess(state) {
+            if (this.children instanceof Array) {
+                var id, child;
+                for (id in this.children) {
+                    child = this.children[id];
+                    child.preprocess(state);
+                }
+            }
+        };
+        CaptureNode.prototype.each = function each(fn) {
+            var children;
+            children = this.children;
+            if (children instanceof Array) {
+                var last;
+                last = children.length - 1;
+                var id;
+                for (id in children) {
+                    fn.call(this, children[id], +id === 0, +id === last);
+                }
+            }
+        };
+        CaptureNode.prototype.eachKey = function eachKey(key, fn) {
+            var part;
+            part = key.split('.');
+            if (this.children instanceof Array) {
+                var children, len, prevChild, first, id;
+                children = this.children;
+                len = children.length;
+                prevChild = null;
+                first = true;
+                var child;
+                for (id = 0; id < len;id++) {
+                    child = children[id];
+                    if (child.key === part[0]) {
+                        if (part.length === 1) {
+                            if (prevChild !== null) {
+                                fn.call(this, prevChild, first, false);
+                                first = false;
+                            }
+                            prevChild = child;
+                        } else if (part.length > 1) {
+                            child.eachKey(part.slice(1).join('.'), fn);
+                        }
+                    }
+                }
+                if (prevChild !== null && prevChild.key === part[0] && part.length === 1) {
+                    fn.call(this, prevChild, first, true);
+                }
+            }
+        };
+        return CaptureNode;
+    })();
+    CaptureNode.prototype.dummy = new CaptureNode('', '');
+    CaptureNode.prototype.dummy.row = -1;
+    CaptureNode.prototype.dummy.col = -1;
+    stackDiff = function stackDiff(stack, lastStack, minStackLen) {
+        var deepestCommonCapture, minLen, numCaptures, lastLen, captures, len;
+        deepestCommonCapture = -1;
+        minLen = Math.min(stack.length, lastStack.length, minStackLen);
+        var i;
+        for (i = 0; i < minLen;i++) {
+            if (stack[i].node === lastStack[i].node) {
+                if (stack[i].node.capture !== '') {
+                    deepestCommonCapture = i;
+                }
+            } else {
+                break ;
+            }
+        }
+        numCaptures = 0;
+        lastLen = lastStack.length;
+        var i;
+        for (i = deepestCommonCapture + 1; i < lastLen;i++) {
+            if (lastStack[i].node.capture !== '') {
+                numCaptures++;
+            }
+        }
+        captures = [  ];
+        len = stack.length;
+        var i;
+        for (i = deepestCommonCapture + 1; i < len;i++) {
+            if (stack[i].node.capture !== '') {
+                captures.push(stack[i].node);
+            }
+        }
+        return { ascend: numCaptures, create: captures };
+    };
+    module.exports = CaptureNode;
+});
+module('language_parser/ast_exception.adria', function(module, resource) {
+    var CaptureNode, ASTException;
+    CaptureNode = require('language_parser/capture_node.adria');
+    ASTException = (function(___parent) {
+        function ASTException(message, node) {
+            this.row = node.row;
+            this.col = node.col;
+            this.file = node.file;
+            Exception.prototype.constructor.call(this, message + ' in ' + node.parser().file + ' line ' + node.row + ', column ' + node.col);
+        }
+        ASTException.prototype = Object.create(___parent.prototype);
+        ASTException.prototype.constructor = ASTException;
+        ASTException.prototype.row = 0;
+        ASTException.prototype.col = 0;
+        ASTException.prototype.file = '';
+        return ASTException;
+    })(Exception);
+    module.exports = ASTException;
+});
+module('log.adria', function(module, resource) {
+    var singleton, log, enable, disable, Log, initInstance;
+    singleton = null;
+    log = function log(source, message, offset) {
+        offset = (arguments.length > 2 ? offset : (0));
+        initInstance.call(this);
+        singleton.print(source, message, offset);
+    };
+    enable = function enable() {
+        initInstance.call(this);
+        singleton.enable();
+    };
+    disable = function disable() {
+        initInstance.call(this);
+        singleton.disable();
+    };
+    Log = (function() {
+        function Log() {}
+        Log.prototype.indent = 0;
+        Log.prototype.start = 0;
+        Log.prototype.last = 0;
+        Log.prototype.enabled = false;
+        Log.prototype.enable = function enable() {
+            this.start = Date.now();
+            this.last = this.start;
+            this.enabled = true;
+            console.log('=============================: Log started');
+        };
+        Log.prototype.disable = function disable(source) {
+            source = (arguments.length > 0 ? source : ('Log'));
+            this.print(source, 'Log stopped');
+            this.enabled = false;
+        };
+        Log.prototype.print = function print(source, message, offset) {
+            var now, diffStart, diffLast;
+            offset = (arguments.length > 2 ? offset : (0));
+            now = Date.now();
+            diffStart = now - this.start;
+            diffLast = now - this.last;
+            this.last = now;
+            if (offset < 0) {
+                this.indent += offset;
+            }
+            if (message !== undefined && this.enabled) {
+                console.log(('+' + diffLast + '/' + diffStart).padLeft(10, ' ') + 'ms: ' + source.padLeft(15) + ': ' + ' '.repeat(this.indent) + message);
+            }
+            if (offset > 0) {
+                this.indent += offset;
+            }
+        };
+        return Log;
+    })();
+    initInstance = function initInstance(initalState) {
+        initalState = (arguments.length > 0 ? initalState : (false));
+        if (singleton === null) {
+            singleton = new Log(initalState);
+        }
+    };
+    module.exports = log;
+    module.exports.enable = enable;
+    module.exports.disable = disable;
+    module.exports.Log = Log;
+});
 module('util.adria', function(module, resource) {
-    var sysutil, crypto, Enumeration, Enum, dump, home, normalizeExtension, md5;
+    var sysutil, crypto, Enumeration, Enum, dump, home, normalizeExtension, uniqueId, md5;
     sysutil = ___require('util');
     crypto = ___require('crypto');
     Enumeration = function Enumeration(options) {
@@ -1937,6 +2374,17 @@ module('util.adria', function(module, resource) {
         baseName = slash > 0 ? fullname.slice(slash) : fullname;
         return (baseName.indexOf('.') > -1 ? fullname : fullname + defaultExtension);
     };
+    uniqueId = function uniqueId() {
+        var result, shift, maxRandom, timeMultiplier;
+        result = '';
+        shift = 10000;
+        maxRandom = 4294967294 / (shift * 2);
+        timeMultiplier = Math.abs(Math.sin(Date.now()) * shift) + 1;
+        while (result.length < 64) {
+            result += Math.floor(Math.random() * maxRandom * timeMultiplier).toString(36).slice(1, -1);
+        }
+        return result.slice(-64);
+    };
     md5 = function md5(input) {
         var md5sum;
         md5sum = crypto.createHash('md5');
@@ -1947,7 +2395,269 @@ module('util.adria', function(module, resource) {
     module.exports.dump = dump;
     module.exports.home = home;
     module.exports.normalizeExtension = normalizeExtension;
+    module.exports.uniqueId = uniqueId;
     module.exports.md5 = md5;
+});
+module('../../astdlib/astd/set.adria', function(module, resource) {
+    var Set;
+    Set = (function() {
+        function Set(value) {
+            this.data = Object.create(null);
+            if (value !== undefined) {
+                this.add(value);
+            }
+        }
+        Set.prototype.merge = function merge() {
+            var result;
+            var sets = Array.prototype.slice.call(arguments, 0);
+            result = new Set();
+            var key;
+            for (key in this.data) {
+                result.data[key] = true;
+            }
+            var _, set;
+            for (_ in sets) {
+                set = sets[_];
+                var key;
+                for (key in set.data) {
+                    result.data[key] = true;
+                }
+            }
+            return result;
+        };
+        Set.prototype.add = function add(value) {
+            var data;
+            data = this.data;
+            if (value instanceof Array) {
+                value.forEach(function(element) {
+                    data[element] = true;
+                });
+            } else if (value instanceof Set) {
+                var element;
+                for (element in value.data) {
+                    data[element] = true;
+                }
+            } else {
+                data[value] = true;
+            }
+            return this;
+        };
+        Set.prototype.remove = function remove(value) {
+            var data;
+            data = this.data;
+            if (value instanceof Array) {
+                value.forEach(function(element) {
+                    delete data[element];
+                });
+            } else if (value instanceof Set) {
+                var element;
+                for (element in value.data) {
+                    delete data[element];
+                }
+            } else {
+                delete data[value];
+            }
+            return this;
+        };
+        Set.prototype.has = function has(value) {
+            var data;
+            data = this.data;
+            if (value instanceof Array) {
+                var _, key;
+                for (_ in value) {
+                    key = value[_];
+                    if (key in data !== true) {
+                        return false;
+                    }
+                }
+                return true;
+            } else if (value instanceof Set) {
+                var other;
+                other = value.data;
+                var key;
+                for (key in other) {
+                    if (key in data !== true) {
+                        return false;
+                    }
+                }
+                return true;
+            } else {
+                return (value in data);
+            }
+        };
+        Set.prototype.lacks = function lacks(value) {
+            return this.has(value) === false;
+        };
+        Set.prototype.missing = function missing(value) {
+            var result, data;
+            result = new Set();
+            data = this.data;
+            if (value instanceof Array) {
+                var _, key;
+                for (_ in value) {
+                    key = value[_];
+                    if (data[key] !== true) {
+                        result.add(key);
+                    }
+                }
+            } else if (value instanceof Set) {
+                var other;
+                other = value.data;
+                var key;
+                for (key in other) {
+                    if (data[key] !== true) {
+                        result.add(key);
+                    }
+                }
+            } else {
+                throw new Error('invalid argument');
+            }
+            return result;
+        };
+        Set.prototype.toArray = function toArray() {
+            return Object.keys(this.data);
+        };
+        Object.defineProperty(Set.prototype, "empty", {
+            get: function empty() {
+                var _;
+                for (_ in this.data) {
+                    return false;
+                }
+                return true;
+            }
+        });
+        Object.defineProperty(Set.prototype, "length", {
+            get: function length() {
+                var len;
+                len = 0;
+                var _;
+                for (_ in this.data) {
+                    len++;
+                }
+                return len;
+            }
+        });
+        return Set;
+    })();
+    module.exports = Set;
+});
+module('cache.adria', function(module, resource) {
+    var fs, path, util, Cache;
+    fs = ___require('fs');
+    path = ___require('path');
+    util = require('util.adria');
+    Cache = (function() {
+        function Cache() {
+            this.checkBaseDir();
+        }
+        Cache.prototype.version = "s88epahvod9r85kd7q4chpy6ujexnkjbgpjsd6abj378owzgxiuvoaw2zqyb4v7z";
+        Cache.prototype.baseDir = util.home() + '/.adria/cache/';
+        Cache.prototype.checkBaseDir = function checkBaseDir() {
+            var parts, path;
+            if (this.baseDir.slice(0, 1) !== '/' || this.baseDir.slice(-1) !== '/') {
+                throw new Exception('cache.baseDir needs to be an absolute path');
+            }
+            parts = this.baseDir.slice(1, -1).split('/');
+            path = '/';
+            var id, part;
+            for (id in parts) {
+                part = parts[id];
+                path += part;
+                if (fs.existsSync(path)) {
+                    if (fs.statSync(path).isFile()) {
+                        throw new Exception(path + ' is a file');
+                    }
+                } else {
+                    fs.mkdirSync(path, (parseInt(id) === parts.length - 1 ? 511 : 493));
+                }
+                path += '/';
+            }
+        };
+        Cache.prototype.cacheName = function cacheName(file, modifier) {
+            var absPath;
+            modifier = (arguments.length > 1 ? modifier : (null));
+            absPath = path.resolve(process.cwd(), file);
+            return this.baseDir + util.md5(absPath + ' -- ' + modifier + ' -- ' + this.version);
+        };
+        Cache.prototype.fetch = function fetch(file, variants, modifier) {
+            var cacheFile;
+            modifier = (arguments.length > 2 ? modifier : (null));
+            cacheFile = this.cacheName(file, modifier);
+            if (fs.existsSync(cacheFile) && fs.existsSync(file)) {
+                var inputStat, cacheStat;
+                inputStat = fs.statSync(file);
+                cacheStat = fs.statSync(cacheFile);
+                if (cacheStat.isFile() && inputStat.mtime.toString() === cacheStat.mtime.toString()) {
+                    var resultData;
+                    resultData = {  };
+                    var id, variant;
+                    for (id in variants) {
+                        variant = variants[id];
+                        if (variant === 'base') {
+                            application.log('Cache', 'reading from ' + cacheFile, 0);
+                            resultData['base'] = JSON.parse(fs.readFileSync(cacheFile, 'UTF-8'));
+                        } else {
+                            resultData[variant] = JSON.parse(fs.readFileSync(cacheFile + '.' + variant, 'UTF-8'));
+                        }
+                    }
+                    return resultData;
+                } else {
+                    application.log('Cache', 'cache dirty for ' + file, 0);
+                }
+            } else {
+                application.log('Cache', 'cache miss for ' + file, 0);
+            }
+            return null;
+        };
+        Cache.prototype.insert = function insert(file, variants, modifier) {
+            var inputStat, cacheFile;
+            modifier = (arguments.length > 2 ? modifier : (null));
+            inputStat = fs.statSync(file);
+            cacheFile = this.cacheName(file, modifier);
+            var ext, variant;
+            for (ext in variants) {
+                variant = variants[ext];
+                if (ext === 'base') {
+                    application.log('Cache', 'writing to ' + cacheFile, 0);
+                    fs.writeFileSync(cacheFile, JSON.stringify(variant));
+                    fs.utimesSync(cacheFile, inputStat.atime, inputStat.mtime);
+                } else {
+                    fs.writeFileSync(cacheFile + '.' + ext, JSON.stringify(variant));
+                }
+            }
+        };
+        return Cache;
+    })();
+    module.exports = Cache;
+});
+module('transform.adria', function(module, resource) {
+    var util, Cache, Transform;
+    util = require('util.adria');
+    Cache = require('cache.adria');
+    Transform = (function() {
+        function Transform(stdin) {
+            stdin = (arguments.length > 0 ? stdin : (null));
+            this.stdin = stdin;
+            this.initOptions();
+            this.processOptions();
+            if (this.options['cache']) {
+                this.cache = new Cache();
+            }
+        }
+        Transform.prototype.options = null;
+        Transform.prototype.stdin = null;
+        Transform.prototype.cache = null;
+        Transform.prototype.initOptions = function initOptions() {
+            application.args.addSwitch('cache', 'Cache generated code', true);
+        };
+        Transform.prototype.processOptions = function processOptions() {
+            this.options = application.args.parseAll();
+        };
+        Transform.prototype.run = function run() {
+        };
+        return Transform;
+    })();
+    module.exports = Transform;
 });
 module('tokenizer/token.adria', function(module, resource) {
     var Token, Position;
@@ -2367,149 +3077,6 @@ module('parser.adria', function(module, resource) {
     module.exports = Parser;
     module.exports.Definition = Definition;
 });
-module('../../astdlib/astd/set.adria', function(module, resource) {
-    var Set;
-    Set = (function() {
-        function Set(value) {
-            this.data = Object.create(null);
-            if (value !== undefined) {
-                this.add(value);
-            }
-        }
-        Set.prototype.merge = function merge() {
-            var result;
-            var sets = Array.prototype.slice.call(arguments, 0);
-            result = new Set();
-            var key;
-            for (key in this.data) {
-                result.data[key] = true;
-            }
-            var _, set;
-            for (_ in sets) {
-                set = sets[_];
-                var key;
-                for (key in set.data) {
-                    result.data[key] = true;
-                }
-            }
-            return result;
-        };
-        Set.prototype.add = function add(value) {
-            var data;
-            data = this.data;
-            if (value instanceof Array) {
-                value.forEach(function(element) {
-                    data[element] = true;
-                });
-            } else if (value instanceof Set) {
-                var element;
-                for (element in value.data) {
-                    data[element] = true;
-                }
-            } else {
-                data[value] = true;
-            }
-            return this;
-        };
-        Set.prototype.remove = function remove(value) {
-            var data;
-            data = this.data;
-            if (value instanceof Array) {
-                value.forEach(function(element) {
-                    delete data[element];
-                });
-            } else if (value instanceof Set) {
-                var element;
-                for (element in value.data) {
-                    delete data[element];
-                }
-            } else {
-                delete data[value];
-            }
-            return this;
-        };
-        Set.prototype.has = function has(value) {
-            var data;
-            data = this.data;
-            if (value instanceof Array) {
-                var _, key;
-                for (_ in value) {
-                    key = value[_];
-                    if (key in data !== true) {
-                        return false;
-                    }
-                }
-                return true;
-            } else if (value instanceof Set) {
-                var other;
-                other = value.data;
-                var key;
-                for (key in other) {
-                    if (key in data !== true) {
-                        return false;
-                    }
-                }
-                return true;
-            } else {
-                return (value in data);
-            }
-        };
-        Set.prototype.lacks = function lacks(value) {
-            return this.has(value) === false;
-        };
-        Set.prototype.missing = function missing(value) {
-            var result, data;
-            result = new Set();
-            data = this.data;
-            if (value instanceof Array) {
-                var _, key;
-                for (_ in value) {
-                    key = value[_];
-                    if (data[key] !== true) {
-                        result.add(key);
-                    }
-                }
-            } else if (value instanceof Set) {
-                var other;
-                other = value.data;
-                var key;
-                for (key in other) {
-                    if (data[key] !== true) {
-                        result.add(key);
-                    }
-                }
-            } else {
-                throw new Error('invalid argument');
-            }
-            return result;
-        };
-        Set.prototype.toArray = function toArray() {
-            return Object.keys(this.data);
-        };
-        Object.defineProperty(Set.prototype, "empty", {
-            get: function empty() {
-                var _;
-                for (_ in this.data) {
-                    return false;
-                }
-                return true;
-            }
-        });
-        Object.defineProperty(Set.prototype, "length", {
-            get: function length() {
-                var len;
-                len = 0;
-                var _;
-                for (_ in this.data) {
-                    len++;
-                }
-                return len;
-            }
-        });
-        return Set;
-    })();
-    module.exports = Set;
-});
 module('tokenizer/definition_item.adria', function(module, resource) {
     var DefinitionItem;
     DefinitionItem = (function() {
@@ -2889,124 +3456,6 @@ module('definition_parser.adria', function(module, resource) {
     })(Parser);
     module.exports = DefinitionParser;
 });
-module('cache.adria', function(module, resource) {
-    var fs, path, util, Cache;
-    fs = ___require('fs');
-    path = ___require('path');
-    util = require('util.adria');
-    Cache = (function() {
-        function Cache() {
-            this.checkBaseDir();
-        }
-        Cache.prototype.version = "0.1.12";
-        Cache.prototype.baseDir = util.home() + '/.adria/cache/';
-        Cache.prototype.checkBaseDir = function checkBaseDir() {
-            var parts, path;
-            if (this.baseDir.slice(0, 1) !== '/' || this.baseDir.slice(-1) !== '/') {
-                throw new Exception('cache.baseDir needs to be an absolute path');
-            }
-            parts = this.baseDir.slice(1, -1).split('/');
-            path = '/';
-            var id, part;
-            for (id in parts) {
-                part = parts[id];
-                path += part;
-                if (fs.existsSync(path)) {
-                    if (fs.statSync(path).isFile()) {
-                        throw new Exception(path + ' is a file');
-                    }
-                } else {
-                    fs.mkdirSync(path, (parseInt(id) === parts.length - 1 ? 511 : 493));
-                }
-                path += '/';
-            }
-        };
-        Cache.prototype.cacheName = function cacheName(file, modifier) {
-            var absPath;
-            modifier = (arguments.length > 1 ? modifier : (null));
-            absPath = path.resolve(process.cwd(), file);
-            return this.baseDir + util.md5(absPath + ' -- ' + modifier + ' -- ' + this.version);
-        };
-        Cache.prototype.fetch = function fetch(file, variants, modifier) {
-            var cacheFile;
-            modifier = (arguments.length > 2 ? modifier : (null));
-            cacheFile = this.cacheName(file, modifier);
-            if (fs.existsSync(cacheFile) && fs.existsSync(file)) {
-                var inputStat, cacheStat;
-                inputStat = fs.statSync(file);
-                cacheStat = fs.statSync(cacheFile);
-                if (cacheStat.isFile() && inputStat.mtime.toString() === cacheStat.mtime.toString()) {
-                    var resultData;
-                    resultData = {  };
-                    var id, variant;
-                    for (id in variants) {
-                        variant = variants[id];
-                        if (variant === 'base') {
-                            application.log('Cache', 'reading from ' + cacheFile, 0);
-                            resultData['base'] = JSON.parse(fs.readFileSync(cacheFile, 'UTF-8'));
-                        } else {
-                            resultData[variant] = JSON.parse(fs.readFileSync(cacheFile + '.' + variant, 'UTF-8'));
-                        }
-                    }
-                    return resultData;
-                } else {
-                    application.log('Cache', 'cache dirty for ' + file, 0);
-                }
-            } else {
-                application.log('Cache', 'cache miss for ' + file, 0);
-            }
-            return null;
-        };
-        Cache.prototype.insert = function insert(file, variants, modifier) {
-            var inputStat, cacheFile;
-            modifier = (arguments.length > 2 ? modifier : (null));
-            inputStat = fs.statSync(file);
-            cacheFile = this.cacheName(file, modifier);
-            var ext, variant;
-            for (ext in variants) {
-                variant = variants[ext];
-                if (ext === 'base') {
-                    application.log('Cache', 'writing to ' + cacheFile, 0);
-                    fs.writeFileSync(cacheFile, JSON.stringify(variant));
-                    fs.utimesSync(cacheFile, inputStat.atime, inputStat.mtime);
-                } else {
-                    fs.writeFileSync(cacheFile + '.' + ext, JSON.stringify(variant));
-                }
-            }
-        };
-        return Cache;
-    })();
-    module.exports = Cache;
-});
-module('transform.adria', function(module, resource) {
-    var util, Cache, Transform;
-    util = require('util.adria');
-    Cache = require('cache.adria');
-    Transform = (function() {
-        function Transform(stdin) {
-            stdin = (arguments.length > 0 ? stdin : (null));
-            this.stdin = stdin;
-            this.initOptions();
-            this.processOptions();
-            if (this.options['cache']) {
-                this.cache = new Cache();
-            }
-        }
-        Transform.prototype.options = null;
-        Transform.prototype.stdin = null;
-        Transform.prototype.cache = null;
-        Transform.prototype.initOptions = function initOptions() {
-            application.args.addSwitch('cache', 'Cache generated code', true);
-        };
-        Transform.prototype.processOptions = function processOptions() {
-            this.options = application.args.parseAll();
-        };
-        Transform.prototype.run = function run() {
-        };
-        return Transform;
-    })();
-    module.exports = Transform;
-});
 module('language_parser.adria', function(module, resource) {
     var fs, util, Parser, DefinitionParser, Transform, CaptureNode, ASTException, LanguageParser;
     fs = ___require('fs');
@@ -3031,6 +3480,7 @@ module('language_parser.adria', function(module, resource) {
         LanguageParser.prototype.resultData = null;
         LanguageParser.prototype.cacheData = null;
         LanguageParser.prototype.cacheModifier = null;
+        LanguageParser.prototype.forceNoCache = false;
         LanguageParser.prototype.transform = null;
         LanguageParser.prototype.outputMethod = 'toSourceNode';
         LanguageParser.prototype.clone = function clone() {
@@ -3049,6 +3499,7 @@ module('language_parser.adria', function(module, resource) {
             parser.resultData = this.resultData;
             parser.cacheData = this.cacheData;
             parser.cacheModifier = this.cacheModifier;
+            parser.forceNoCache = this.forceNoCache;
             parser.transform = this.transform;
             parser.outputMethod = this.outputMethod;
             parser.includeTrace = this.includeTrace;
@@ -3182,7 +3633,11 @@ module('language_parser.adria', function(module, resource) {
             InitialType = this.mapType('', this.definition.initialBlock);
             result = InitialType.prototype[this.outputMethod].call(this.captureTree);
             if (this.transform.options['cache'] && this.cacheData === null && fs.existsSync(this.file)) {
-                this.transform.cache.insert(this.file, { base: this.captureTree.toJSON() }, this.cacheModifier);
+                if (this.forceNoCache) {
+                    application.log('LanguageParser', 'caching of ' + this.file + ' explicitly disabled');
+                } else {
+                    this.transform.cache.insert(this.file, { base: this.captureTree.toJSON() }, this.cacheModifier);
+                }
             }
             return result;
         };
@@ -3191,465 +3646,6 @@ module('language_parser.adria', function(module, resource) {
     module.exports = LanguageParser;
     module.exports.CaptureNode = CaptureNode;
     module.exports.ASTException = ASTException;
-});
-module('language_parser/capture_node.adria', function(module, resource) {
-    var SourceNode, Template, CaptureNode, stackDiff;
-    SourceNode = require('source_node.adria');
-    Template = require('template.adria');
-    CaptureNode = (function() {
-        function CaptureNode(key, value) {
-            this.key = key;
-            this.value = value;
-        }
-        CaptureNode.prototype.parent = null;
-        CaptureNode.prototype.children = null;
-        CaptureNode.prototype.key = '';
-        CaptureNode.prototype.value = '';
-        CaptureNode.prototype.tpl = null;
-        CaptureNode.prototype.row = 0;
-        CaptureNode.prototype.col = 0;
-        CaptureNode.prototype.toJSON = function toJSON() {
-            var children;
-            children = [  ];
-            var id;
-            for (id in this.children) {
-                children.push(this.children[id].toJSON());
-            }
-            return {
-                _: this.constructor.name,
-                s: children,
-                k: this.key,
-                v: this.value,
-                t: this.tpl,
-                r: this.row,
-                c: this.col
-            };
-        };
-        CaptureNode.prototype.fromJSON = function fromJSON(json, parentNode, typeMapper) {
-            var Type, result, jsonChildren, resultChildren;
-            Type = typeMapper(null, json._);
-            result = new Type(json.k, json.v);
-            result.parent = parentNode;
-            result.tpl = json.t;
-            result.row = json.r;
-            result.col = json.c;
-            result.children = [  ];
-            jsonChildren = json.s;
-            resultChildren = result.children;
-            var id;
-            for (id in jsonChildren) {
-                resultChildren.push(CaptureNode.prototype.fromJSON(jsonChildren[id], result, typeMapper));
-            }
-            return result;
-        };
-        CaptureNode.prototype.fromResults = function fromResults(results, parentNode, typeMapper) {
-            var root, current, lastStack, result, stack, diff, node;
-            root = new CaptureNode('', '');
-            current = root;
-            lastStack = [  ];
-            root.parent = parentNode;
-            var resultId;
-            for (resultId in results) {
-                result = results[resultId];
-                stack = result.stack;
-                diff = stackDiff(stack, lastStack, result.minStack);
-                while (diff.ascend--) {
-                    current = current.parent;
-                }
-                var nodeId;
-                for (nodeId in diff.create) {
-                    node = diff.create[nodeId];
-                    current = current.addNew(node.capture, node.name, typeMapper(node.capture, node.name));
-                    current.row = result.token.pos.row;
-                    current.col = result.token.pos.col;
-                }
-                node = result.node;
-                if (node.capture !== '') {
-                    var match;
-                    match = current.addNew(node.capture, result.token.data, typeMapper(node.capture, node.name));
-                    match.row = result.token.pos.row;
-                    match.col = result.token.pos.col;
-                }
-                lastStack = stack;
-            }
-            return root;
-        };
-        CaptureNode.prototype.isNode = function isNode() {
-            return this.col !== -1;
-        };
-        CaptureNode.prototype.isDummy = function isDummy() {
-            return this.col === -1;
-        };
-        CaptureNode.prototype.isLeaf = function isLeaf() {
-            return (this.children instanceof Array === false);
-        };
-        CaptureNode.prototype.isBranch = function isBranch() {
-            return (this.children instanceof Array);
-        };
-        CaptureNode.prototype.length = function length() {
-            return (this.children instanceof Array ? this.children.length : 0);
-        };
-        CaptureNode.prototype.depth = function depth() {
-            var result, current;
-            result = 0;
-            current = this;
-            while (current.parent instanceof CaptureNode) {
-                result += 1;
-                current = current.parent;
-            }
-            return result;
-        };
-        CaptureNode.prototype.ancestor = function ancestor(key, value, dummy) {
-            var current;
-            value = (arguments.length > 1 ? value : (null));
-            dummy = (arguments.length > 2 ? dummy : (this.dummy));
-            current = this;
-            key = typeof key === 'string' ? [ key ] : key;
-            value = typeof value === 'string' ? [ value ] : value;
-            if (key !== null && value !== null) {
-                while (current.parent instanceof CaptureNode && key.indexOf(current.parent.key) === -1 && value.indexOf(current.parent.value) === -1) {
-                    current = current.parent;
-                }
-            } else if (key !== null) {
-                while (current.parent instanceof CaptureNode && key.indexOf(current.parent.key) === -1) {
-                    current = current.parent;
-                }
-            } else if (value !== null) {
-                while (current.parent instanceof CaptureNode && value.indexOf(current.parent.value) === -1) {
-                    current = current.parent;
-                }
-            }
-            if (current.parent instanceof CaptureNode) {
-                return current.parent;
-            } else {
-                return dummy;
-            }
-        };
-        CaptureNode.prototype.findProto = function findProto(Constructor, StopConstructor, fromParent, dummy) {
-            var current;
-            StopConstructor = (arguments.length > 1 ? StopConstructor : (null));
-            fromParent = (arguments.length > 2 ? fromParent : (true));
-            dummy = (arguments.length > 3 ? dummy : (this.dummy));
-            current = fromParent ? this.parent : this;
-            while (current instanceof CaptureNode && current instanceof Constructor === false && (StopConstructor === null || current instanceof StopConstructor === false)) {
-                current = current.parent;
-            }
-            return current instanceof Constructor ? current : dummy;
-        };
-        CaptureNode.prototype.parser = function parser() {
-            var current, LanguageParser;
-            current = this;
-            LanguageParser = require('language_parser.adria');
-            while (current.parent !== null && (current.parent instanceof LanguageParser === false)) {
-                current = current.parent;
-            }
-            return current.parent;
-        };
-        CaptureNode.prototype.add = function add(child) {
-            if (this.children == null) {
-                this.children = [  ];
-            }
-            this.children.push(child);
-            return child;
-        };
-        CaptureNode.prototype.get = function get(key, index, dummy) {
-            index = (arguments.length > 1 ? index : (0));
-            dummy = (arguments.length > 2 ? dummy : (this.dummy));
-            if (this.children instanceof Array) {
-                var id, child;
-                for (id in this.children) {
-                    child = this.children[id];
-                    if (child.key == key && index-- == 0) {
-                        return child;
-                    }
-                }
-            }
-            return dummy;
-        };
-        CaptureNode.prototype.has = function has(key) {
-            if (this.children instanceof Array) {
-                var id, child;
-                for (id in this.children) {
-                    child = this.children[id];
-                    if (child.key == key) {
-                        return true;
-                    }
-                }
-            }
-            return false;
-        };
-        CaptureNode.prototype.path = function path(pathString, dummy) {
-            var step, current;
-            dummy = (arguments.length > 1 ? dummy : (this.dummy));
-            current = this;
-            pathString = pathString.split('.');
-            var id;
-            for (id in pathString) {
-                step = pathString[id].split('[');
-                if (step.length === 1) {
-                    current = current.get(step[0]);
-                } else {
-                    current = current.get(step[0], parseInt(step[1].slice(0, -1)));
-                }
-                if (current.isDummy()) {
-                    return dummy;
-                }
-            }
-            return current;
-        };
-        CaptureNode.prototype.addNew = function addNew(key, value, Constructor) {
-            var child;
-            child = new Constructor(key, value);
-            child.parent = this;
-            return this.add(child);
-        };
-        CaptureNode.prototype.extract = function extract(from, to) {
-            return this.children.splice(from, to - from + 1);
-        };
-        CaptureNode.prototype.nest = function nest(from, to, Constructor) {
-            var node;
-            Constructor = (arguments.length > 2 ? Constructor : (this.constructor));
-            node = new Constructor(this.key, this.value);
-            node.children = this.children.splice(from, to - from + 1, node);
-            node.parent = this;
-            node.tpl = this.tpl;
-            node.row = node.children[0].row;
-            node.col = node.children[0].col;
-            var id, child;
-            for (id in node.children) {
-                child = node.children[id];
-                child.parent = node;
-            }
-        };
-        CaptureNode.prototype.nl = function nl(indent, node) {
-            var parser;
-            indent = (arguments.length > 0 ? indent : (0));
-            node = (arguments.length > 1 ? node : (null));
-            parser = this.parser();
-            parser.indent += indent;
-            if (node !== null) {
-                node.trim();
-            }
-            return '\n' + String.repeat(parser.indent * 4, ' ');
-        };
-        CaptureNode.prototype.csn = function csn(code) {
-            return new SourceNode(this.row, this.col - 1, null, code);
-        };
-        CaptureNode.prototype.toString = function toString() {
-            var result;
-            result = '';
-            if (this.children instanceof Array) {
-                var id;
-                for (id in this.children) {
-                    result += this.children[id].toString();
-                }
-            }
-            return result;
-        };
-        CaptureNode.prototype.toSourceNode = function toSourceNode() {
-            var result;
-            result = new SourceNode(null, null);
-            if (this.children instanceof Array) {
-                var id, child;
-                for (id in this.children) {
-                    child = this.children[id].toSourceNode();
-                    if (child !== '') {
-                        result.add(child);
-                    }
-                }
-            }
-            return result;
-        };
-        CaptureNode.prototype.scan = function scan(state) {
-            if (this.children instanceof Array) {
-                var id, child;
-                for (id in this.children) {
-                    child = this.children[id];
-                    child.scan(state);
-                }
-            }
-        };
-        CaptureNode.prototype.preprocess = function preprocess(state) {
-            if (this.children instanceof Array) {
-                var id, child;
-                for (id in this.children) {
-                    child = this.children[id];
-                    child.preprocess(state);
-                }
-            }
-        };
-        CaptureNode.prototype.each = function each(fn) {
-            var children;
-            children = this.children;
-            if (children instanceof Array) {
-                var last;
-                last = children.length - 1;
-                var id;
-                for (id in children) {
-                    fn.call(this, children[id], +id === 0, +id === last);
-                }
-            }
-        };
-        CaptureNode.prototype.eachKey = function eachKey(key, fn) {
-            var part;
-            part = key.split('.');
-            if (this.children instanceof Array) {
-                var children, len, prevChild, first, id;
-                children = this.children;
-                len = children.length;
-                prevChild = null;
-                first = true;
-                var child;
-                for (id = 0; id < len;id++) {
-                    child = children[id];
-                    if (child.key === part[0]) {
-                        if (part.length === 1) {
-                            if (prevChild !== null) {
-                                fn.call(this, prevChild, first, false);
-                                first = false;
-                            }
-                            prevChild = child;
-                        } else if (part.length > 1) {
-                            child.eachKey(part.slice(1).join('.'), fn);
-                        }
-                    }
-                }
-                if (prevChild !== null && prevChild.key === part[0] && part.length === 1) {
-                    fn.call(this, prevChild, first, true);
-                }
-            }
-        };
-        CaptureNode.prototype.setTemplate = function setTemplate(fileName) {
-            this.tpl = new Template();
-            this.tpl.debug = this.parser().transform.options['debug'];
-            this.tplFile = fileName;
-        };
-        CaptureNode.prototype.processTemplate = function processTemplate() {
-            return this.tpl.fetchFile(this.tplFile);
-        };
-        CaptureNode.prototype.assign = function assign(name, value) {
-            this.tpl.assign(name, value);
-        };
-        return CaptureNode;
-    })();
-    CaptureNode.prototype.dummy = new CaptureNode('', '');
-    CaptureNode.prototype.dummy.row = -1;
-    CaptureNode.prototype.dummy.col = -1;
-    stackDiff = function stackDiff(stack, lastStack, minStackLen) {
-        var deepestCommonCapture, minLen, numCaptures, lastLen, captures, len;
-        deepestCommonCapture = -1;
-        minLen = Math.min(stack.length, lastStack.length, minStackLen);
-        var i;
-        for (i = 0; i < minLen;i++) {
-            if (stack[i].node === lastStack[i].node) {
-                if (stack[i].node.capture !== '') {
-                    deepestCommonCapture = i;
-                }
-            } else {
-                break ;
-            }
-        }
-        numCaptures = 0;
-        lastLen = lastStack.length;
-        var i;
-        for (i = deepestCommonCapture + 1; i < lastLen;i++) {
-            if (lastStack[i].node.capture !== '') {
-                numCaptures++;
-            }
-        }
-        captures = [  ];
-        len = stack.length;
-        var i;
-        for (i = deepestCommonCapture + 1; i < len;i++) {
-            if (stack[i].node.capture !== '') {
-                captures.push(stack[i].node);
-            }
-        }
-        return { ascend: numCaptures, create: captures };
-    };
-    module.exports = CaptureNode;
-});
-module('language_parser/ast_exception.adria', function(module, resource) {
-    var CaptureNode, ASTException;
-    CaptureNode = require('language_parser/capture_node.adria');
-    ASTException = (function(___parent) {
-        function ASTException(message, node) {
-            this.row = node.row;
-            this.col = node.col;
-            this.file = node.file;
-            Exception.prototype.constructor.call(this, message + ' in ' + node.parser().file + ' line ' + node.row + ', column ' + node.col);
-        }
-        ASTException.prototype = Object.create(___parent.prototype);
-        ASTException.prototype.constructor = ASTException;
-        ASTException.prototype.row = 0;
-        ASTException.prototype.col = 0;
-        ASTException.prototype.file = '';
-        return ASTException;
-    })(Exception);
-    module.exports = ASTException;
-});
-module('log.adria', function(module, resource) {
-    var singleton, log, enable, disable, Log, initInstance;
-    singleton = null;
-    log = function log(source, message, offset) {
-        offset = (arguments.length > 2 ? offset : (0));
-        initInstance.call(this);
-        singleton.print(source, message, offset);
-    };
-    enable = function enable() {
-        initInstance.call(this);
-        singleton.enable();
-    };
-    disable = function disable() {
-        initInstance.call(this);
-        singleton.disable();
-    };
-    Log = (function() {
-        function Log() {}
-        Log.prototype.indent = 0;
-        Log.prototype.start = 0;
-        Log.prototype.last = 0;
-        Log.prototype.enabled = false;
-        Log.prototype.enable = function enable() {
-            this.start = Date.now();
-            this.last = this.start;
-            this.enabled = true;
-            console.log('=============================: Log started');
-        };
-        Log.prototype.disable = function disable(source) {
-            source = (arguments.length > 0 ? source : ('Log'));
-            this.print(source, 'Log stopped');
-            this.enabled = false;
-        };
-        Log.prototype.print = function print(source, message, offset) {
-            var now, diffStart, diffLast;
-            offset = (arguments.length > 2 ? offset : (0));
-            now = Date.now();
-            diffStart = now - this.start;
-            diffLast = now - this.last;
-            this.last = now;
-            if (offset < 0) {
-                this.indent += offset;
-            }
-            if (message !== undefined && this.enabled) {
-                console.log(('+' + diffLast + '/' + diffStart).padLeft(10, ' ') + 'ms: ' + source.padLeft(15) + ': ' + ' '.repeat(this.indent) + message);
-            }
-            if (offset > 0) {
-                this.indent += offset;
-            }
-        };
-        return Log;
-    })();
-    initInstance = function initInstance(initalState) {
-        initalState = (arguments.length > 0 ? initalState : (false));
-        if (singleton === null) {
-            singleton = new Log(initalState);
-        }
-    };
-    module.exports = log;
-    module.exports.enable = enable;
-    module.exports.disable = disable;
-    module.exports.Log = Log;
 });
 module('targets/adria/base/node.adria', function(module, resource) {
     var LanguageParser, ASTException, CaptureNode, Node;
@@ -3669,7 +3665,7 @@ module('targets/adria/base/node.adria', function(module, resource) {
         };
         Node.prototype.checkDefined = function checkDefined(name) {
             var parser;
-            parser = this.parser();
+            parser = this.parser;
             if (parser.transform.implicits.has(name) || parser.transform.globals.has(name)) {
                 return ;
             }
@@ -3730,6 +3726,9 @@ module('targets/adria/base/node.adria', function(module, resource) {
         };
         Node.prototype.toString = function toString() {
             return this.toSourceNode().toString();
+        };
+        Node.prototype.toES5SourceNode = function toES5SourceNode() {
+            return this.toSourceNode();
         };
         return Node;
     })(CaptureNode);
@@ -4090,7 +4089,6 @@ module('targets/adria/scope.adria', function(module, resource) {
             }
         } while (scope instanceof FunctionLiteral === false && (scope = scope.findProto(Scope, FunctionLiteral, true, null)) !== null);
         if (refName !== null) {
-            console.log('mangled', name);
             return '___' + name + '_scp' + scopeLocalId++;
         }
         return name;
@@ -4117,7 +4115,7 @@ module('targets/adria/module.adria', function(module, resource) {
             if (this.isInterface) {
                 throw new ASTException('Duplicate interface declaration', this);
             }
-            parser = this.parser();
+            parser = this.parser;
             parser.resultData.isInterface = true;
             this.isInterface = true;
         };
@@ -4154,7 +4152,7 @@ module('targets/adria/module.adria', function(module, resource) {
         Module.prototype.toSourceNode = function toSourceNode() {
             var parser, code, file, result, exports;
             this.nl(1);
-            parser = this.parser();
+            parser = this.parser;
             code = Scope.prototype.toSourceNode.call(this);
             file = parser.file;
             result = this.csn('module(\'' + parser.moduleName + '\', function(module, resource) {' + this.nl());
@@ -4238,7 +4236,7 @@ module('targets/adria/require_literal.adria', function(module, resource) {
         RequireLiteral.prototype.constructor = RequireLiteral;
         RequireLiteral.prototype.toSourceNode = function toSourceNode() {
             var parser, options, fileNode, moduleName, requireFunction, resolvedName;
-            parser = this.parser();
+            parser = this.parser;
             options = parser.transform.options;
             fileNode = this.get('file');
             moduleName = fileNode.toString().slice(1, -1);
@@ -4283,7 +4281,7 @@ module('targets/adria/resource_literal.adria', function(module, resource) {
         ResourceLiteral.prototype.constructor = ResourceLiteral;
         ResourceLiteral.prototype.toSourceNode = function toSourceNode() {
             var parser, options, fileNode, fileName, resolvedName, result;
-            parser = this.parser();
+            parser = this.parser;
             options = parser.transform.options;
             fileNode = this.get('file');
             fileName = fileNode.toSourceNode().toString().slice(1, -1);
@@ -4375,7 +4373,7 @@ module('targets/adria/async_literal.adria', function(module, resource) {
             }
             ___s = ___s.constructor,
             ___p = (___c !== null ? Object.getPrototypeOf(___c).constructor : ___c0);
-            parser = this.parser();
+            parser = this.parser;
             parser.resultData.globals.add('___Async');
             parser.transform.usedBuiltins.add('async.adria');
             result = this.csn();
@@ -4558,7 +4556,7 @@ module('targets/adria/function_param_list.adria', function(module, resource) {
         FunctionParamList.prototype.checkAnnotation = function checkAnnotation(node, functionNode) {
             var annotationNode, type, allowNull, name, argId;
             annotationNode = node.get('annotation');
-            if (annotationNode.isDummy() || this.parser().transform.options['assert'] === false) {
+            if (annotationNode.isDummy() || this.parser.transform.options['assert'] === false) {
                 return ;
             }
             type = annotationNode.toString();
@@ -5352,7 +5350,7 @@ module('targets/adria/application_statement.adria', function(module, resource) {
         ApplicationStatement.prototype.constructor = ApplicationStatement;
         ApplicationStatement.prototype.toSourceNode = function toSourceNode() {
             if (this.findScope().getRef('application') === null) {
-                this.parser().transform.addApplication = true;
+                this.parser.transform.addApplication = true;
             }
             return this.csn([
                 'application(',
@@ -5867,7 +5865,7 @@ module('targets/adria/assert_statement.adria', function(module, resource) {
         AssertStatement.prototype.toSourceNode = function toSourceNode() {
             var result;
             result = this.csn();
-            if (this.parser().transform.options['assert']) {
+            if (this.parser.transform.options['assert']) {
                 var params, paramsSN, numParams;
                 params = this.get('call');
                 paramsSN = params.toSourceNode(false);
@@ -5993,7 +5991,7 @@ module('targets/adria/global_statement.adria', function(module, resource) {
         GlobalStatement.prototype.constructor = GlobalStatement;
         GlobalStatement.prototype.toSourceNode = function toSourceNode() {
             var valueNode, nameNode, globals, result, nl;
-            globals = this.parser().resultData.globals;
+            globals = this.parser.resultData.globals;
             result = this.csn();
             nl = this.nl();
             this.eachKey('item', function(node, first, last) {
@@ -6346,10 +6344,14 @@ module('targets/adria_parser.adria', function(module, resource) {
             return parser;
         };
         AdriaParser.prototype.preprocessRaw = function preprocessRaw(data) {
-            var defines;
+            var defines, that;
             data = LanguageParser.prototype.preprocessRaw.call(this, data);
             defines = this.transform.options.defines;
-            return data.replace(/\{\{([a-zA-Z][a-zA-Z_0-9]*)\}\}/g, function(matches, key) {
+            that = this;
+            return data.replace(/\{\{([_a-zA-Z][_a-zA-Z_0-9]*)\}\}/g, function(matches, key) {
+                if (key === '___uniqueId') {
+                    that.forceNoCache = true;
+                }
                 return (defines[key] === undefined ? '' : defines[key]);
             });
         };
@@ -6385,6 +6387,7 @@ module('targets/adria_parser.adria', function(module, resource) {
                 'resource',
                 'module',
                 'export',
+                'import',
                 'interface',
                 'delete',
                 'new',
@@ -6504,6 +6507,13 @@ module('targets/adria_transform.adria', function(module, resource) {
             var args;
             Transform.prototype.initOptions.call(this, this);
             args = application.args;
+            args.add([ 'files' ], { help: 'File(s) to compile', nargs: '+' });
+            args.add([ '-o', '--out' ], {
+                help: 'Output file',
+                action: 'store',
+                dest: 'outFile',
+                metavar: '<file>'
+            });
             args.add([ '-b', '--base' ], {
                 help: 'Base path, include paths are relative to this',
                 defaultValue: '',
@@ -6516,12 +6526,6 @@ module('targets/adria_transform.adria', function(module, resource) {
                 action: 'append',
                 dest: 'paths',
                 metavar: '<path>'
-            });
-            args.add([ '-o', '--out' ], {
-                help: 'Output file',
-                action: 'store',
-                dest: 'outFile',
-                metavar: '<file>'
             });
             args.add([ '--extension' ], {
                 help: 'Adria file extension (adria)',
@@ -6561,13 +6565,13 @@ module('targets/adria_transform.adria', function(module, resource) {
                 }
                 return result;
             });
-            args.add([ 'files' ], { help: 'File(s) to compile', nargs: '+' });
             args.addSwitch('shellwrap', 'Wrap in shell-script and flag executable', false);
-            args.addSwitch('map', 'Generate source map', false);
-            args.addSwitch('link', 'Link sourcemap to output', true);
             args.addSwitch('strict', 'Compile strict Javascript', true);
+            args.addSwitch('es5', 'Compile to ES5', false);
             args.addSwitch('assert', 'Add assert() support', false);
             args.addSwitch('scan', 'Perform basic logic checks', true);
+            args.addSwitch('map', 'Generate source map', false);
+            args.addSwitch('link', 'Link sourcemap to output', true);
             args.addSwitch('time', 'Report compilation duration', false);
         };
         AdriaTransform.prototype.processOptions = function processOptions() {
@@ -6583,6 +6587,7 @@ module('targets/adria_transform.adria', function(module, resource) {
             if (this.options['time']) {
                 this.startTime = Date.now();
             }
+            this.options['defines']['___uniqueId'] = util.uniqueId();
         };
         AdriaTransform.prototype.defineImplicits = function defineImplicits() {
             this.implicits.add([
@@ -6761,9 +6766,10 @@ module('targets/adria_transform.adria', function(module, resource) {
             }
         };
         AdriaTransform.prototype.run = function run() {
-            var files, node;
+            var files;
             this.protoParser = new AdriaParser(this);
             this.protoParser.trainSelf();
+            this.protoParser.outputMethod = this.options['es5'] ? 'toES5SourceNode' : 'toSourceNode';
             if (this.options['time'] && this.options['outFile'] !== null) {
                 var duration;
                 duration = Date.now() - this.startTime;
@@ -6781,16 +6787,22 @@ module('targets/adria_transform.adria', function(module, resource) {
             if (this.options['scan']) {
                 this.scan();
             }
+            this.generateAndWrite();
+        };
+        AdriaTransform.prototype.generateAndWrite = function generateAndWrite() {
+            var node;
             node = this.generateOutputTree();
             if (this.options['outFile'] !== null) {
-                var jsFile, mapFile;
+                var jsFile;
                 jsFile = this.options['basePath'] + this.options['outFile'];
-                mapFile = jsFile.stripPostfix('.js') + '.map';
                 if (this.options['map']) {
-                    var result, mapLink;
+                    var mapFile, result;
+                    mapFile = jsFile.stripPostfix('.js') + '.map';
                     result = node.toStringWithSourceMap({ file: this.options['outFile'] });
-                    mapLink = '\n//@ sourceMappingURL=' + path.relative(this.options['basePath'], mapFile);
-                    fs.writeFileSync(jsFile, result.code + (this.options['link'] ? mapLink : ''));
+                    if (this.options['link']) {
+                        result.code += '\n//@ sourceMappingURL=' + path.relative(this.options['basePath'], mapFile);
+                    }
+                    fs.writeFileSync(jsFile, result.code);
                     fs.writeFileSync(mapFile, result.map);
                 } else {
                     fs.writeFileSync(jsFile, node.toString());
@@ -6928,8 +6940,7 @@ module('application.adria', function(module, resource) {
                     } catch (___exc1) {
                         if (___exc1 instanceof ASTException) {
                             var e = ___exc1;
-                            console.log(e.message);
-                            process.exit(1);
+                            this.error(e.message);
                         } else { 
                             throw ___exc1;
                         }
@@ -6965,6 +6976,11 @@ module('application.adria', function(module, resource) {
                 callback(null, data);
             });
             process.stdin.resume();
+        };
+        Application.prototype.error = function error(message, exitCode) {
+            exitCode = (arguments.length > 1 ? exitCode : (1));
+            process.stderr.write('Error: ' + message);
+            process.exit(exitCode);
         };
         return Application;
     })();

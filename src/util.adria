@@ -85,6 +85,25 @@ export normalizeExtension = func(string fullname, string defaultExtension) {
 };
 
 /**
+ * generates a unique string of 64 characters of the set [0-9a-z]
+ *
+ * @return string
+ */
+export uniqueId = func() {
+
+    var result = '';
+    var shift = 10000;
+    var maxRandom = 4294967294 / (shift * 2);
+    var timeMultiplier = Math.abs(Math.sin(Date.now()) * shift) +1;
+
+    while (result.length < 64) {
+        result += Math.floor(Math.random() * maxRandom * timeMultiplier).toString(36).slice(1, -1);
+    }
+
+    return result.slice(-64);
+};
+
+/**
  * returns hexadecimal md5 hash for given input
  *
  * @param string input

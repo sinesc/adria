@@ -29,11 +29,11 @@ var Template = require('../template');
  */
 module CaptureNode = proto {
 
+    parser  : null,
     parent  : null,
     children: null,
     key     : '',
     value   : '',
-    tpl     : null,
     row     : 0,
     col     : 0,
 
@@ -68,7 +68,6 @@ module CaptureNode = proto {
             s: children,
             k: this.key,
             v: this.value,
-            t: this.tpl,
             r: this.row,
             c: this.col
         };
@@ -83,11 +82,11 @@ module CaptureNode = proto {
      */
     fromJSON: func(object json, object parentNode, func typeMapper) {
 
-        var Type = typeMapper(null, json._);
+        var Type = typeMapper('', json._);
 
         var result = new Type(json.k, json.v);
+        result.parser = parentNode instanceof CaptureNode ? parentNode.parser : parentNode;
         result.parent = parentNode;
-        result.tpl = json.t;    //!todo did I test this? that doesn't recreate a Template instance. also check if templating can be removed from nodes
         result.row = json.r;
         result.col = json.c;
         result.children = [ ];
@@ -118,6 +117,7 @@ module CaptureNode = proto {
 
         // set parent parser for root node
 
+        root.parser = parentNode;
         root.parent = parentNode;
 
         // process each result
@@ -259,24 +259,7 @@ module CaptureNode = proto {
     },
 
     /**
-     * returns the LanguageParser object owning this node
-     *
-     * @return LanguageParser or null
-     */
-    parser: func() {
-
-        var current = this;
-        var LanguageParser = require('../language_parser');
-
-        while (current.parent !== null && (current.parent instanceof LanguageParser === false)) {
-            current = current.parent;
-        }
-
-        return current.parent;
-    },
-
-    /**
-     * adds given CaptureNode to this node
+     * adds given CaptureNode to this node and set's its parent
      *
      * @param CaptureNode child new node to add
      * @return CaptureNode given CaptureNode
@@ -287,8 +270,27 @@ module CaptureNode = proto {
             this.children = [ ];
         }
 
+        child.parser = this.parser;
+        child.parent = this;
         this.children.push(child);
         return child;
+    },
+
+    /**
+     * creates and adds a node of given subclass to this node
+     *
+     * @param string key node key
+     * @param string value node value
+     * @param func Constructor constructor to use for the new node
+     * @return CaptureNode
+     */
+    addNew: func(string key, string value, func Constructor) {
+
+        var child = new Constructor(key, value);
+
+        assert(child != null);
+
+        return this.add(child);
     },
 
     /**
@@ -369,25 +371,6 @@ module CaptureNode = proto {
     },
 
     /**
-     * creates and adds a node of given subclass to this node
-     *
-     * @param string key node key
-     * @param string value node value
-     * @param func Constructor constructor to use for the new node
-     * @return CaptureNode
-     */
-    addNew: func(string key, string value, func Constructor) {
-
-        var child = new Constructor(key, value);
-
-        assert(child != null);
-
-        child.parent = this;
-
-        return this.add(child);
-    },
-
-    /**
       * extracts a set of this node's children and returns them
       *
       * @param finite from start inclusive child index
@@ -411,7 +394,6 @@ module CaptureNode = proto {
 
         node.children = this.children.splice(from, to - from + 1, node);
         node.parent = this;
-        node.tpl = this.tpl;
         node.row = node.children[0].row;
         node.col = node.children[0].col;
 
@@ -428,14 +410,13 @@ module CaptureNode = proto {
      */
     nl: func(finite indent = 0, SourceNode? node = null) {
 
-        var parser = this.parser();
-        parser.indent += indent;
+        this.parser.indent += indent;
 
         if (node !== null) {
             node.trim();
         }
 
-        return '\n' + String.repeat(parser.indent * 4, ' ');
+        return '\n' + String.repeat(this.parser.indent * 4, ' ');
     },
 
     /**
@@ -581,41 +562,6 @@ module CaptureNode = proto {
                 fn.call(this, prevChild, first, true);
             }
         }
-    },
-
-    /**
-     * initialize a template object for this node and set the file to be used during tplGenerate()
-     *
-     * @param string fileName
-     */
-    setTemplate: func(string fileName) {
-
-        this.tpl = new Template();
-        this.tpl.debug = this.parser().transform.options['debug'];
-        this.tplFile = fileName;
-    },
-
-    /**
-     * returns generated template string for previously selected template file and assigned values
-     *
-     * @return string generated template string
-     */
-    processTemplate: func() {
-
-        assert(this.tpl instanceof Template);
-
-        return this.tpl.fetchFile(this.tplFile);
-    },
-
-    /**
-     * assigns a value to the current template
-     *
-     * @param string name variable name
-     * @param any value
-     */
-    assign: func(string name, value) {
-
-        this.tpl.assign(name, value);
     },
 };
 

@@ -160,7 +160,7 @@ module FunctionParamList = proto (ParamsNode) {
 
         var annotationNode = node.get('annotation');
 
-        if (annotationNode.isDummy() || this.parser().transform.options['assert'] === false) {
+        if (annotationNode.isDummy() || this.parser.transform.options['assert'] === false) {
             return;
         }
 

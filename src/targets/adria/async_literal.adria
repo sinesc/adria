@@ -60,7 +60,7 @@ module AsyncLiteral = proto (GeneratorLiteral) {
 
         // include Async module
 
-        var parser = this.parser();
+        var parser = this.parser;
         parser.resultData.globals.add('___Async');
         parser.transform.usedBuiltins.add('async.adria');
 

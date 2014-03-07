@@ -29,7 +29,7 @@ module RequireLiteral = proto (FileNode) {
 
     toSourceNode: func() {
 
-        var parser = this.parser();
+        var parser = this.parser;
         var options = parser.transform.options;
         var fileNode = this.get('file');
         var moduleName = fileNode.toString().slice(1, -1);

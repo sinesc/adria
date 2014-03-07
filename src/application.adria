@@ -64,7 +64,6 @@ module Application = proto {
         // break here on debug mode to make it easier to skip over all those nodejs-init-exceptions and start logging
 
         if (options['debug']) {
-
             debugger;
             this.log.enable();
         }
@@ -88,8 +87,7 @@ module Application = proto {
             try {
                 this.handle(options['mode'], stdin);
             } catch (ASTException e) {
-                console.log(e.message);
-                process.exit(1);
+                this.error(e.message);
             }
         }
     },
@@ -100,7 +98,7 @@ module Application = proto {
      * @param string mode currently supported: adria, adriadebug
      * @param func callback(null, data)
      */
-    handle: func(mode, stdin) {
+    handle: func(string mode, string? stdin) {
 
         var transform;
 
@@ -140,5 +138,17 @@ module Application = proto {
         });
 
         process.stdin.resume();
+    },
+
+    /**
+     * write error-message to stderr and exit
+     *
+     * @param string message
+     * @param finite exitCode
+     */
+    error: func(message, exitCode = 1) {
+
+        process.stderr.write('Error: ' + message);
+        process.exit(exitCode);
     },
 };

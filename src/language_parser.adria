@@ -69,6 +69,11 @@ module LanguageParser = proto(Parser) {
     cacheModifier: null,
 
     /**
+     * @var boolean forcibly disable writing to cache for this parser
+     */
+    forceNoCache: false,
+
+    /**
      * @var Object the parent transform object
      */
     transform: null,
@@ -106,6 +111,7 @@ module LanguageParser = proto(Parser) {
         parser.resultData = this.resultData;
         parser.cacheData = this.cacheData;
         parser.cacheModifier = this.cacheModifier;
+        parser.forceNoCache = this.forceNoCache;
         parser.transform = this.transform;
         parser.outputMethod = this.outputMethod;
         parser.includeTrace = this.includeTrace;
@@ -162,7 +168,11 @@ module LanguageParser = proto(Parser) {
     },
 
     /**
-     * called during capture list to tree conversion process to select an appropriate node-type
+     * called during capture-list-to-tree-conversion process to select an appropriate node-type,
+     * usually maps blockName to subclasses of CaptureNode
+     *
+     * @param string captureName name-part of the capture (<block>:<name>[....)
+     * @param string blockName block-part of the capture (<block>:<name>[....)
      */
     mapType: func(string captureName, string blockName) {
         return CaptureNode;
@@ -226,7 +236,7 @@ module LanguageParser = proto(Parser) {
 
                 } else if (name[0] == '\'') {
 
-                    // regex match
+                    // regexp match
 
                     assert(numChars >= 3);
 
@@ -308,7 +318,7 @@ module LanguageParser = proto(Parser) {
     },
 
     /**
-     * try to load sourcefile from cache
+     * try to load source-file from cache
      *
      * @param string filename
      * @param string? optional cache modifier to identify different versions of the same file (i.e. different compilation flags)
@@ -349,7 +359,7 @@ module LanguageParser = proto(Parser) {
     /**
      * runs scan on the capture tree
      *
-     * @param state userdefined scan state object passed to every node
+     * @param state user-defined scan state object passed to every node
      */
     scan: func(state) {
 
@@ -358,9 +368,9 @@ module LanguageParser = proto(Parser) {
     },
 
     /**
-     * runs preprocess on the capture tree
+     * runs preprocess() on the capture tree
      *
-     * @param state userdefined preprocess state object passed to every node
+     * @param state user-defined preprocess() state object passed to every node
      */
     preprocess: func(state) {
 
@@ -386,14 +396,18 @@ module LanguageParser = proto(Parser) {
 
         if (this.transform.options['cache'] && this.cacheData === null && fs.existsSync(this.file)) {
 
-            this.transform.cache.insert(
-                this.file,
-                {
-                    base        : this.captureTree.toJSON(),
-                    //resultData  : this.serializeData(this.resultData)
-                },
-                this.cacheModifier
-            );
+            if (this.forceNoCache) {
+                application.log('LanguageParser', 'caching of ' + this.file + ' explicitly disabled');
+            } else {
+                this.transform.cache.insert(
+                    this.file,
+                    {
+                        base        : this.captureTree.toJSON(),
+                        //resultData  : this.serializeData(this.resultData)
+                    },
+                    this.cacheModifier
+                );
+            }
         }
 
         return result;

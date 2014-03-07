@@ -82,6 +82,16 @@ module AdriaTransform = proto (Transform) {
         var args = application.args;
 
         args.add(
+            [ 'files' ],
+            { help: 'File(s) to compile', nargs: '+' }
+        );
+
+        args.add(
+            [ '-o', '--out' ],
+            { help: 'Output file', action: 'store', dest: 'outFile', metavar: '<file>' }
+        );
+
+        args.add(
             [ '-b', '--base' ],
             { help: 'Base path, include paths are relative to this', defaultValue: '', dest: 'basePath', metavar: '<path>', required: false }
         );
@@ -89,11 +99,6 @@ module AdriaTransform = proto (Transform) {
         args.add(
             [ '-p', '--path' ],
             { help: 'Additional path to look for includes', action: 'append', dest: 'paths', metavar: '<path>' }
-        );
-
-        args.add(
-            [ '-o', '--out' ],
-            { help: 'Output file', action: 'store', dest: 'outFile', metavar: '<file>' }
         );
 
         args.add(
@@ -125,17 +130,13 @@ module AdriaTransform = proto (Transform) {
             }
         );
 
-        args.add(
-            [ 'files' ],
-            { help: 'File(s) to compile', nargs: '+' }
-        );
-
         args.addSwitch('shellwrap', 'Wrap in shell-script and flag executable', false);
-        args.addSwitch('map', 'Generate source map', false);
-        args.addSwitch('link', 'Link sourcemap to output', true);
         args.addSwitch('strict', 'Compile strict Javascript', true);
+        args.addSwitch('es5', 'Compile to ES5', false);
         args.addSwitch('assert', 'Add assert() support', false);
         args.addSwitch('scan', 'Perform basic logic checks', true);
+        args.addSwitch('map', 'Generate source map', false);
+        args.addSwitch('link', 'Link sourcemap to output', true);
         args.addSwitch('time', 'Report compilation duration', false);
     },
 
@@ -147,6 +148,8 @@ module AdriaTransform = proto (Transform) {
         if (this.options['time']) {
             this.startTime = Date.now();
         }
+
+        this.options['defines']['___uniqueId'] = util.uniqueId();
     },
 
     /**
@@ -343,6 +346,7 @@ module AdriaTransform = proto (Transform) {
 
         this.protoParser = new AdriaParser(this);
         this.protoParser.trainSelf();
+        this.protoParser.outputMethod = this.options['es5'] ? 'toES5SourceNode' : 'toSourceNode';
 
         if (this.options['time'] && this.options['outFile'] !== null) {
             var duration = Date.now() - this.startTime;
@@ -368,21 +372,32 @@ module AdriaTransform = proto (Transform) {
             this.scan();
         }
 
-        // result
+        // finally generate code
+
+        this.generateAndWrite();
+    },
+
+    /**
+     * generate code and write it to disk or stdout
+     */
+    generateAndWrite: func() {
 
         var node = this.generateOutputTree();
 
         if (this.options['outFile'] !== null) {
 
             var jsFile = this.options['basePath'] + this.options['outFile'];
-            var mapFile = jsFile.stripPostfix('.js') + '.map';
 
             if (this.options['map']) {
 
+                var mapFile = jsFile.stripPostfix('.js') + '.map';
                 var result = node.toStringWithSourceMap({ file: this.options['outFile'] });
-                var mapLink = '\n//@ sourceMappingURL=' + path.relative(this.options['basePath'], mapFile);
 
-                fs.writeFileSync(jsFile, result.code + (this.options['link'] ? mapLink : ''));
+                if (this.options['link']) {
+                    result.code += '\n//@ sourceMappingURL=' + path.relative(this.options['basePath'], mapFile);
+                }
+
+                fs.writeFileSync(jsFile, result.code);
                 fs.writeFileSync(mapFile, result.map);
 
             } else {

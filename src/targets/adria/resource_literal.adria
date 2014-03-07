@@ -28,7 +28,7 @@ module ResourceLiteral = proto (FileNode) {
 
     toSourceNode: func() {
 
-        var parser = this.parser();
+        var parser = this.parser;
         var options = parser.transform.options;
         var fileNode = this.get('file');
         var fileName = fileNode.toSourceNode().toString().slice(1, -1);
