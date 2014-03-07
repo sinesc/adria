@@ -22,7 +22,6 @@
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 var fs = require('fs');
-var util = require('./util');
 var Parser = require('./parser');
 var DefinitionParser = require('./definition_parser');
 var Transform = require('./transform');
@@ -307,17 +306,6 @@ module LanguageParser = proto(Parser) {
     },
 
     /**
-     * called by setSource() with raw source code
-     *
-     * @param string data unprocessed source code
-     * @return string
-     */
-    preprocessRaw: func(string data) {
-
-        return data.replace('\r\n', '\n');
-    },
-
-    /**
      * try to load source-file from cache
      *
      * @param string filename
@@ -357,14 +345,14 @@ module LanguageParser = proto(Parser) {
     },
 
     /**
-     * runs scan on the capture tree
+     * called by setSource() with raw source code
      *
-     * @param state user-defined scan state object passed to every node
+     * @param string data unprocessed source code
+     * @return string
      */
-    scan: func(state) {
+    preprocessRaw: func(string data) {
 
-        var InitialType = this.mapType('', this.definition.initialBlock);
-        InitialType::scan.call(this.captureTree, state);
+        return data.replace('\r\n', '\n');
     },
 
     /**
@@ -411,5 +399,27 @@ module LanguageParser = proto(Parser) {
         }
 
         return result;
+    },
+
+    /**
+     * runs prescan() on the capture tree
+     *
+     * @param state user-defined prescan() state object passed to every node
+     */
+    prescan: func(state) {
+
+        var InitialType = this.mapType('', this.definition.initialBlock);
+        InitialType::prescan.call(this.captureTree, state);
+    },
+
+    /**
+     * runs scan() on the capture tree
+     *
+     * @param state user-defined scan() state object passed to every node
+     */
+    scan: func(state) {
+
+        var InitialType = this.mapType('', this.definition.initialBlock);
+        InitialType::scan.call(this.captureTree, state);
     },
 };

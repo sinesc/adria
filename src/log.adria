@@ -107,7 +107,7 @@ export Log = proto {
 /**
  * ensures the existance of the singleton instance
  */
-var initInstance= func(initalState = false) {
+var initInstance = func(initalState = false) {
     if (singleton === null) {
         singleton = new Log(initalState);
     }

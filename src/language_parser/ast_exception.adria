@@ -29,14 +29,12 @@ module ASTException = proto (Exception) {
     col     : 0,
     file    : '',
 
-    constructor: func(message, node) {
-
-        assert(node instanceof CaptureNode);
+    constructor: func(string message, CaptureNode node) {
 
         this.row = node.row;
         this.col = node.col;
-        this.file = node.file;
+        this.file = node.parser.file;
 
-        Exception->constructor(message + ' in ' + node.parser().file + ' line ' + node.row + ', column ' + node.col);
+        Exception->constructor(message + ' in ' + node.parser.file + ' line ' + node.row + ', column ' + node.col);
     },
 };

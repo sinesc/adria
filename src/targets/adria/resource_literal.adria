@@ -28,15 +28,13 @@ module ResourceLiteral = proto (FileNode) {
 
     toSourceNode: func() {
 
-        var parser = this.parser;
-        var options = parser.transform.options;
         var fileNode = this.get('file');
         var fileName = fileNode.toSourceNode().toString().slice(1, -1);
 
-        var resolvedName = this.resolvePath(fileName, parser);
+        var resolvedName = this.resolvePath(fileName, this.parser);
 
         if (resolvedName !== null) {
-            parser.resultData.resources.add(resolvedName);
+            this.parser.resultData.resources.add(resolvedName);
         } else {
             throw new ASTException('Could not find resource "' + fileName + '"', this);
         }

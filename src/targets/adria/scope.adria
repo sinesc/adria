@@ -31,12 +31,25 @@ var scopeLocalId = 1;
 
 module Scope = proto (Node) {
 
-    locals      : null,
-    implicits   : null,
+    /**
+     * @var Map locals variables defined in local scope, mapped to their mangled name
+     */
+    locals: null,
+
+    /**
+     * @var Map implicits variables implicitly existing in local scope, mapped to their mangled name
+     */
+    implicits: null,
+
+    /**
+     * @var Map usages usage statistics on variables
+     */
+    usages: null,
 
     constructor: func(string key, string value) {
         this.locals = new Map();
         this.implicits = new Map();
+        this.usages = new Map();
         Node->constructor(key, value);
     },
 
@@ -70,7 +83,7 @@ module Scope = proto (Node) {
         // implicits may not be defined in any parent scope
 
         if (ignore == false && this.getRef(name) !== null) {
-            throw new ASTException('Reference "' + name + '" already defined in local scope', this);
+            throw new ASTException('Implicit reference "' + name + '" already defined in scope', this);
         }
 
         this.implicits.set(name, name);
@@ -105,12 +118,10 @@ module Scope = proto (Node) {
      */
     getRef: func(string name) {
 
-        var refName;
+        var scope = this.findRefScope(name);
 
-        if ((refName = this.getOwnRef(name)) !== null) {
-            return refName;
-        } else if ((refName = findRef.call(this, name)) !== null) {
-            return refName;
+        if (scope !== null) {
+            return scope.getOwnRef(name);
         }
 
         return null;
@@ -134,20 +145,6 @@ module Scope = proto (Node) {
 // register with Node
 
 Node::Scope = Scope;
-
-var findRef = func(string name) {
-
-    var scope = this;
-    var refName = null;
-
-    while ((scope = scope.findScope(true)) !== null) {
-        if ((refName = scope.getOwnRef(name)) !== null) {
-            return refName;
-        }
-    }
-
-    return null;
-};
 
 var createLocalName = func(string name) {
 

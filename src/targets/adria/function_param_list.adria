@@ -36,7 +36,7 @@ module FunctionParamList = proto (ParamsNode) {
     optionalPermutations    : null,
     optionalGroups          : null,
 
-    types: new Set([ 'boolean', 'number', 'finite', 'string', 'func', 'object' ]),
+    types: new Set([ 'boolean', 'number', 'finite', 'string', 'scalar', 'func', 'object' ]),
 
     toSourceNode: func(boolean declare = true) {
 
@@ -160,14 +160,29 @@ module FunctionParamList = proto (ParamsNode) {
 
         var annotationNode = node.get('annotation');
 
-        if (annotationNode.isDummy() || this.parser.transform.options['assert'] === false) {
+        if (annotationNode.isDummy()) {
             return;
         }
 
-        var type        = annotationNode.toString();
+        // mark constructor reference as used
+
+        var type = annotationNode.toString();
+
+        if (this.types.has(type) === false) {
+            this.markUsed(type);
+        }
+
+        // stop here if assertions are disabled
+
+        if (this.parser.transform.options['assert'] === false) {
+            return;
+        }
+
         var allowNull   = node.get('annotation_mod').value === '?';
         var name        = node.get('name').toString();
         var argId       = this.numParams + 1;
+
+        // either check instanceof or type
 
         if (this.types.has(type)) {
             var check = "'$0', $1, $2, 'argument $3 ($2)'".format(type, allowNull ? 'true' : 'false', name, argId);

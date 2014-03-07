@@ -23,7 +23,6 @@
  */
 var Node = require('./base/node');
 var Ident = require('./ident');
-var ProtoBodyConstructor = require('./proto_body_constructor');
 
 module ProtoBodyItem = proto (Node) {
 

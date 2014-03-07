@@ -21,6 +21,7 @@
  * IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
+var Map = require('astd/map');
 var LanguageParser = require('../../../language_parser');
 var ASTException = LanguageParser.ASTException;
 var CaptureNode = LanguageParser.CaptureNode;
@@ -28,9 +29,56 @@ var CaptureNode = LanguageParser.CaptureNode;
 module Node = proto (CaptureNode) {
 
     /**
-     * constructor-type findScope will search for (should be set to Scope)
+     * @var function constructor-type findScope will search for (should be set to Scope)
      */
     Scope: null,
+
+    /**
+     * @var Map references this node would have marked as used, had the definition already been processed
+     */
+    toBeMarkedAsUsed: null,
+
+    prescan: func(object state) {
+
+        if (this.toBeMarkedAsUsed !== null) {
+
+            for (var name, fromParent in this.toBeMarkedAsUsed.data) {
+                this.markUsed(name, fromParent);
+            }
+        }
+
+        CaptureNode->prescan(state);
+    },
+
+    /**
+     * increases usage count for give name in it's origin scope, effectively marking it as "used"
+     *
+     * @param string name reference name
+     * @param boolean fromParent skip current node in search
+     * @return boolean success
+     */
+    markUsed: func(string name, fromParent = false) {
+
+        var refScope = this.findRefScope(name, fromParent);
+
+        if (refScope !== null) {
+
+            refScope.usages.inc(name);
+            return true;
+
+        } else {
+
+            if (this.toBeMarkedAsUsed === null) {
+                this.toBeMarkedAsUsed = new Map();
+            }
+
+            if (this.toBeMarkedAsUsed.lacks(name)) {
+                this.toBeMarkedAsUsed.set(name, fromParent);
+            }
+
+            return false;
+        }
+    },
 
     /**
      * find this node's scope
@@ -43,20 +91,41 @@ module Node = proto (CaptureNode) {
     },
 
     /**
-     * returns true if the name is defined in current scope or above
+     * finds (parent-)scope defining given name
      *
      * @param string name
+     * @param boolean fromParent skip current node in search
+     * @return Scope/null
+     */
+    findRefScope: func(string name, fromParent = false) {
+
+        var current = this.findScope(fromParent);
+
+        do {
+            if (current.getOwnRef(name) !== null) {
+                return current;
+            }
+        } while ((current = current.findScope(true)) !== null);
+
+        return current;
+    },
+
+    /**
+     * returns true if the name is defined in current scope or above,
+     * false if the name is implicitly known or throws if the name is
+     * not known
+     *
+     * @param string name
+     * @return boolean
      */
     checkDefined: func(string name) {
 
-        var parser = this.parser;
-
-        if (parser.transform.implicits.has(name) || parser.transform.globals.has(name)) {
-            return;
+        if (this.parser.transform.implicits.has(name) || this.parser.transform.globals.has(name)) {
+            return false;
         }
 
         if (this.findScope().getRef(name) !== null) {
-            return;
+            return true;
         }
 
         throw new ASTException('Undefined reference "' + name + '"', this);
@@ -144,15 +213,6 @@ module Node = proto (CaptureNode) {
      */
     toString: func() {
         return this.toSourceNode().toString();
-    },
-
-    /**
-     * when compiling to ES5, this function is used instead of toSourceNode()
-     *
-     * @return SourceNode
-     */
-    toES5SourceNode: func() {
-        return this.toSourceNode();
     },
 
 };

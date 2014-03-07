@@ -79,32 +79,40 @@ module Expression = proto (Node) {
                 case 'member':
                     result.add(child.csn('.' + child.children[0].value));
                     break;
+
                 case 'index':
                     result.add(child.csn('['));
                     result.add(child.toSourceNode());
                     result.add(child.csn(']'));
                     break;
+
                 case 'proto':
                     result.add(child.csn('.prototype.' + child.children[0].value));
                     break;
+
+                case 'ident':
+                    this.markUsed(child.value);
                 case 'call':
                 case 'pcall':
                 case 'wrap':
-                case 'ident':
                     result.add(child.csn(child.toSourceNode()));
                     break;
+
                 case 'brace_op':
                 case 'xfix_op':
                     result.add(child.csn(child.value));
                     break;
+
                 case 'unary_op':
                     result.add(child.csn(child.value.search(/[a-z]/) > -1 ? child.value + ' ' : child.value));
                     break;
+
                 case 'binary_op':
                 case 'assignment_op':
                 case 'ternary_op':
                     result.add([ ' ', child.csn(child.value), ' ' ]);
                     break;
+
                 default:
                     result.add(child.toSourceNode());
                     break;
@@ -134,7 +142,7 @@ module Expression = proto (Node) {
                     break;
             }
 
-            // handle readonly assignment
+            // handle read-only assignment
 
             if (children[propertyAssignSplit].value === ':=') {
                 result.prepend('Object.defineProperty(');

@@ -6,19 +6,19 @@ BASE_PARAMS="--shellwrap -t node --no-map --path $ASTD_PATH -D version=0.1.12"
 BUILD_PARAMS="$@ $BASE_PARAMS --time --base src/ --header ../LICENSE --out ../bin/ngadria.js main.adria"
 TEST_PARAMS="$@ $BASE_PARAMS --base tests/ --assert --out test_all.js test_all.adria";
 
-echo "changing working directory to $DIR"
+echo "== build == changing working directory to $DIR"
 cd $DIR
 chmod +x ./bin/adria.js
 
-echo "adria compiling ngadria..."
+echo "== build == adria compiling ngadria..."
 ./bin/adria.js $BUILD_PARAMS
 
-echo "ngadria compiling ngadria (assertive)..."
+echo "== build == ngadria compiling ngadria (assertive)..."
 ./bin/ngadria.js $BUILD_PARAMS --assert
 
-echo "ok. again..."
+echo "== build == ok. again..."
 ./bin/ngadria.js $BUILD_PARAMS
 
-echo "unit testing...";
+echo "== build == unit testing...";
 ./bin/ngadria.js $TEST_PARAMS
 ./tests/test_all.js

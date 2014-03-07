@@ -40,7 +40,6 @@ module BaseLiteral = proto (Node) {
 
         this.each(func(child) {
             switch (child.key) {
-                //!case 'ident':
                 case 'numeric':
                 case 'string':
                 case 'regexp':
@@ -48,6 +47,8 @@ module BaseLiteral = proto (Node) {
                     result += this.csn(child.value);
                     break;
 
+                case 'ident':
+                    this.markUsed(child.value);
                 default:
                     result += child.toSourceNode();
             }

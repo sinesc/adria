@@ -45,7 +45,7 @@ var Exception{! if (enableAssert): !}, AssertionFailedException{! endif !};
         resources[name] = data;
     };{! if (enableApplication): !}
 
-    application = function(Constructor /*, params... */) {
+    application = function(Constructor{*, params... *}) {
         function Application() {
             application = this;
             Constructor.apply(this, Array.prototype.slice.call(arguments));
@@ -80,9 +80,9 @@ var Exception{! if (enableAssert): !}, AssertionFailedException{! endif !};
             throw new AssertionFailedException(message);
         }
     };
-    
+
     assert.instance = function(type, allowNull, value, name, typeName) {
-    
+
         if (value === null) {
             if (allowNull) {
                 return;
@@ -90,13 +90,13 @@ var Exception{! if (enableAssert): !}, AssertionFailedException{! endif !};
                 throw new AssertionFailedException(name + ' expected to be instance of ' + typeName + ', got null instead');
             }
         }
-        
+
         if (value instanceof type !== true) {
             var actualName = (typeof value === 'object' && typeof value.constructor === 'function' && typeof value.constructor.name === 'string' ? value.constructor.name : 'type ' + typeof value);
             throw new AssertionFailedException(name + ' expected to be instance of ' + typeName + ', got ' + actualName + ' instead');
         }
     }
-    
+
     assert.type = function(type, allowNull, value, name) {
 
         type = (type !== 'func' ? type : 'function');
@@ -112,6 +112,7 @@ var Exception{! if (enableAssert): !}, AssertionFailedException{! endif !};
         var actualType = typeof value;
 
         if (type === 'finite' || type === 'number') {
+
             if (actualType !== 'number') {
                 throw new AssertionFailedException(name + ' expected to be of type number, got ' + actualType + ' instead');
             }
@@ -119,7 +120,16 @@ var Exception{! if (enableAssert): !}, AssertionFailedException{! endif !};
                 throw new AssertionFailedException(name + ' expected to be finite number, got ' + value + ' instead');
             }
 
+        } else if (type === 'scalar') {
+
+            if (actualType === 'number' && isFinite(value) === false) {
+                throw new AssertionFailedException(name + ' expected to be scalar, got ' + value + ' instead');
+            } else if (actualType !== 'string' && actualType !== 'boolean') {
+                throw new AssertionFailedException(name + ' expected to be scalar, got ' + actualType + ' instead');
+            }
+
         } else if (type !== actualType) {
+
             throw new AssertionFailedException(name + ' expected to be of type ' + type + ', got ' + actualType + ' instead');
         }
     };

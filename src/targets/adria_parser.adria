@@ -22,7 +22,6 @@
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 var fs = require('fs');
-var util = require('../util');
 var Set = require('astd/set');
 var LanguageParser = require('../language_parser');
 var Tokenizer = require('../tokenizer');

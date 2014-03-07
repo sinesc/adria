@@ -75,6 +75,65 @@ module AdriaTransform = proto (Transform) {
         this.defineImplicits();
     },
 
+    /**
+     * entry point, run transformation
+     */
+    run: func() {
+
+        // create a prototype parser to clone from (to avoid training overhead)
+
+        this.protoParser = new AdriaParser(this);
+        this.protoParser.trainSelf();
+        this.protoParser.outputMethod = this.options['es5'] ? 'toES5SourceNode' : 'toSourceNode';
+
+        this.time('Setup duration: $0.ms');
+
+        // process data from stdin and initial files
+
+        if (this.stdin !== null) {
+            this.buildModule('main' + this.options['extension'], this.stdin);
+        }
+
+        var files = this.options['files'];
+
+        for (var id in files) {
+            this.buildModule(util.normalizeExtension(files[id], this.options['extension']));
+        }
+
+        this.time('Modules duration: $0.ms');
+
+        // scan modules for undefined variables
+
+        if (this.options['scan']) {
+            this.scan();
+            this.time('Scan duration: $0.ms');
+        }
+
+        // finally generate and write the code
+
+        var code = this.buildApplication();
+        this.time('Merge duration: $0.ms');
+
+        this.output(code);
+        this.time('Write duration: $0.ms');
+    },
+
+    /**
+     * prints timing information if timing is enabled
+     *
+     * @param string message
+     */
+    time: func(string message) {
+        if (this.options['time'] && this.options['outFile'] !== null) {
+            var duration = Date.now() - this.startTime;
+            console.log(message.format(duration));
+            this.startTime = Date.now();
+        }
+    },
+
+    /**
+     * initialize arguments for argument parser
+     */
     initOptions: func() {
 
         Transform->initOptions(this);
@@ -140,6 +199,9 @@ module AdriaTransform = proto (Transform) {
         args.addSwitch('time', 'Report compilation duration', false);
     },
 
+    /**
+     * process arguments to options property
+     */
     processOptions: func() {
 
         parent->processOptions();
@@ -153,7 +215,7 @@ module AdriaTransform = proto (Transform) {
     },
 
     /**
-     * defines implictly known references
+     * defines implicitly known references
      */
     defineImplicits: func() {
 
@@ -238,9 +300,9 @@ module AdriaTransform = proto (Transform) {
     },
 
     /**
-     * generate JavaScript SourceNode output tree from built modules
+     * build application from modules
      */
-    generateOutputTree: func() {
+    buildApplication: func() {
 
         var options = this.options;
         var node    = new SourceNode(null, null);
@@ -276,19 +338,15 @@ module AdriaTransform = proto (Transform) {
             node.add('"use strict";\n');
         }
 
-        var fw, tmpNode;
+        var fw = tpl.fetch(resource('../../templates/adria/framework.tpl'));
+        var moduleSN = node.add(new SourceNode(1, 0, 'adria-framework.js', fw));
+        moduleSN.setSourceContent('adria-framework.js', fw);
 
-        fw = tpl.fetch(resource('../../templates/adria/framework.tpl'));
-        tmpNode = node.add(new SourceNode(1, 0, 'adria-framework.js', fw));
-        tmpNode.setSourceContent('adria-framework.js', fw);
+        // merge modules
 
-        // merge resources
-
-        for (var fileName in this.resources.data) {
-            var contents = fs.readFileSync(options['basePath'] + fileName, 'UTF-8');
-            var wrapped = 'resource(\'' + fileName + '\', \'' + contents.jsify("'") + '\');\n';
-            tmpNode = node.add(new SourceNode(null, null, fileName, wrapped));
-            tmpNode.setSourceContent(fileName, contents);
+        for (var id, currentModule in this.modules) {
+            var moduleSN = node.add(new SourceNode(null, null, currentModule.parser.file, currentModule.result));
+            moduleSN.setSourceContent(currentModule.parser.file, currentModule.parser.sourceCode);
         }
 
         // merge built-ins
@@ -296,21 +354,23 @@ module AdriaTransform = proto (Transform) {
         var usedBuiltins = this.usedBuiltins.toArray();
 
         for (var id, name in usedBuiltins) {
-            fw = tpl.fetch(this.builtins[name]);
-            tmpNode = node.add(new SourceNode(1, 0, name.replace('.adria', '.js'), fw));
-            tmpNode.setSourceContent(name.replace('.adria', '.js'), fw);
+            var builtIn = tpl.fetch(this.builtins[name]);
+            var moduleSN = node.add(new SourceNode(1, 0, name.replace('.adria', '.js'), builtIn));
+            moduleSN.setSourceContent(name.replace('.adria', '.js'), builtIn);
         }
 
-        // merge modules
+        // merge resources
 
-        for (var id, currentModule in this.modules) {
-            tmpNode = node.add(new SourceNode(null, null, currentModule.parser.file, currentModule.result));
-            tmpNode.setSourceContent(currentModule.parser.file, currentModule.parser.sourceCode);
+        for (var fileName in this.resources.data) {
+            var contents = fs.readFileSync(options['basePath'] + fileName, 'UTF-8');
+            var wrapped = 'resource(\'' + fileName + '\', \'' + contents.jsify("'") + '\');\n';
+            var moduleSN = node.add(new SourceNode(null, null, fileName, wrapped));
+            moduleSN.setSourceContent(fileName, contents);
         }
 
         node.trim();
 
-        // start builtins
+        // start built-ins
 
         for (var id, name in usedBuiltins) {
             node.add('\nrequire(\'' + name + '\');');
@@ -328,9 +388,13 @@ module AdriaTransform = proto (Transform) {
     },
 
     /**
-     * runs scan on the tree (used by some nodes to check variable declarations etc)
+     * runs (pre)scan on the tree (used by some nodes to check variable declarations etc)
      */
     scan: func() {
+
+        for (var id, currentModule in this.modules) {
+            currentModule.parser.prescan({ });
+        }
 
         for (var id, currentModule in this.modules) {
             currentModule.parser.scan({ });
@@ -338,51 +402,11 @@ module AdriaTransform = proto (Transform) {
     },
 
     /**
-     * entry point, run transformation
+     * output generated code to disk or stdout
+     *
+     * @param SourceNode node
      */
-    run: func() {
-
-        // create a prototype parser to clone from (to avoid training overhead)
-
-        this.protoParser = new AdriaParser(this);
-        this.protoParser.trainSelf();
-        this.protoParser.outputMethod = this.options['es5'] ? 'toES5SourceNode' : 'toSourceNode';
-
-        if (this.options['time'] && this.options['outFile'] !== null) {
-            var duration = Date.now() - this.startTime;
-            console.log('Setup duration: ' + duration + 'ms');
-            this.startTime = Date.now();
-        }
-
-        // process data from stdin and initial files
-
-        if (this.stdin !== null) {
-            this.buildModule('main' + this.options['extension'], this.stdin);
-        }
-
-        var files = this.options['files'];
-
-        for (var id in files) {
-            this.buildModule(util.normalizeExtension(files[id], this.options['extension']));
-        }
-
-        // scan modules for undefined variables
-
-        if (this.options['scan']) {
-            this.scan();
-        }
-
-        // finally generate code
-
-        this.generateAndWrite();
-    },
-
-    /**
-     * generate code and write it to disk or stdout
-     */
-    generateAndWrite: func() {
-
-        var node = this.generateOutputTree();
+    output: func(SourceNode node) {
 
         if (this.options['outFile'] !== null) {
 
@@ -407,11 +431,6 @@ module AdriaTransform = proto (Transform) {
 
             if (this.options['shellwrap']) {
                 fs.chmodSync(jsFile, 493 /*0755*/);
-            }
-
-            if (this.options['time']) {
-                var duration = Date.now() - this.startTime;
-                console.log('Transformation duration: ' + duration + 'ms');
             }
 
         } else {

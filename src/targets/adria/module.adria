@@ -92,11 +92,8 @@ module Module = proto (Scope) {
 
         this.nl(1);
 
-        var parser = this.parser;
         var code = Scope->toSourceNode();
-        var file = parser.file;
-
-        var result = this.csn('module(\'' + parser.moduleName + '\', function(module, resource) {' + this.nl());
+        var result = this.csn('module(\'' + this.parser.moduleName + '\', function(module, resource) {' + this.nl());
 
         result.add(this.refsToSourceNode());
         result.add(code);

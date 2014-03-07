@@ -148,7 +148,17 @@ module Application = proto {
      */
     error: func(message, exitCode = 1) {
 
-        process.stderr.write('Error: ' + message);
+        process.stderr.write('Error: ' + message + '\n');
         process.exit(exitCode);
+    },
+
+    /**
+     * write notice to stderr
+     *
+     * @param string message
+     */
+    notice: func(message) {
+
+        process.stderr.write('Notice: ' + message + '\n');
     },
 };

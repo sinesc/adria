@@ -25,6 +25,22 @@ var Node = require('./base/node');
 
 module VarStatement = proto (Node) {
 
+    scan: func(object state) {
+
+        var usages = this.findScope().usages;
+
+        this.eachKey('item', func(node) {
+
+            var ident = node.get('name').value;
+
+            if (usages.lacks(ident)) {
+                application.notice(ident + ' not used in ' + this.parser.file + ' line ' + node.row + ', column ' + node.col);
+            }
+        });
+
+        Node->scan(state);
+    },
+
     toSourceNode: func() {
 
         var valueNode, nameNode;

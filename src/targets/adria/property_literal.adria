@@ -22,7 +22,6 @@
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 var ObjectLiteral = require('./object_literal');
-var ASTException = require('../../language_parser/ast_exception');
 var SourceNode = require('../../source_node');
 
 var storageId = 1;
