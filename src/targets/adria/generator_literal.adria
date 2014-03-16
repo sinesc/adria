@@ -26,12 +26,12 @@ var SourceNode = require('../../source_node');
 
 module GeneratorLiteral = proto (FunctionLiteral) {
 
-    preParamList: func(SourceNode result, SourceNode? nameSN) {
+    preParamList: func(SourceNode result) {
 
         result.add('function*');
 
-        if (nameSN !== null) {
-            result.add([ ' ', nameSN ]);
+        if (this.nameSN !== null) {
+            result.add([ ' ', this.nameSN ]);
         }
     },
 };

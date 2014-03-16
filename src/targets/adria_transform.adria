@@ -25,6 +25,7 @@ var fs = require('fs');
 var path = require('path');
 var util = require('../util');
 var Set = require('astd/set');
+var Map = require('astd/map');
 var SourceNode = require('../source_node');
 var Template = require('../template');
 var Transform = require('../transform');
@@ -39,10 +40,24 @@ var ASTException = require('../language_parser/ast_exception');
  */
 module AdriaTransform = proto (Transform) {
 
+    /**
+     * @var Set declarations required in application scope
+     */
+    globalDeclarations: null,
+
+    /**
+     * @var Set reference names that may not be overwritten by normal variable declarations anywhere within the application
+     */
+    globalReservations: null,
+
+    /**
+     * @var Map globally known references and their mangled names
+     */
+    globalReferences: null,
+
+
     cacheModifier   : null,
     startTime       : 0,
-    globals         : null,
-    implicits       : null,
     requires        : null,
     modules         : null,
     resources       : null,
@@ -61,12 +76,15 @@ module AdriaTransform = proto (Transform) {
 
         Transform->constructor(stdin);
 
-        this.globals        = new Set();
-        this.implicits      = new Set();
+        this.globalDeclarations = new Set();
+        this.globalReservations = new Set();
+        this.globalReferences   = new Map();
+
         this.requires       = new Set();
         this.resources      = new Set();
         this.requiresDone   = new Set();
         this.usedBuiltins   = new Set();
+        this.closureParams  = new Map();
         this.modules        = [ ];
         this.sourceCode     = { };
 
@@ -84,29 +102,45 @@ module AdriaTransform = proto (Transform) {
 
         this.protoParser = new AdriaParser(this);
         this.protoParser.trainSelf();
-        this.protoParser.outputMethod = this.options['es5'] ? 'toES5SourceNode' : 'toSourceNode';
 
         this.time('Setup duration: $0.ms');
 
         // process data from stdin and initial files
 
         if (this.stdin !== null) {
-            this.buildModule('main' + this.options['extension'], this.stdin);
+            this.preprocessModule('main' + this.options['extension'], this.stdin);
         }
 
         var files = this.options['files'];
 
         for (var id in files) {
-            this.buildModule(util.normalizeExtension(files[id], this.options['extension']));
+            this.preprocessModule(util.normalizeExtension(files[id], this.options['extension']));
         }
 
-        this.time('Modules duration: $0.ms');
+        this.time('Load/preprocess duration: $0.ms');
+        
+        // generate module code
+        
+        this.process();
+        this.time('Process duration: $0.ms');
 
         // scan modules for undefined variables
 
         if (this.options['scan']) {
             this.scan();
             this.time('Scan duration: $0.ms');
+        }
+
+        // add global imports specific to target platform
+
+        if (this.options['platform'] === 'node') {
+            this.closureParams.set({
+                'module'    : '___module',
+                'require'   : '___require',
+                'global'    : 'window',
+            });
+        } else {
+            this.closureParams.set('self', 'window');
         }
 
         // finally generate and write the code
@@ -119,14 +153,187 @@ module AdriaTransform = proto (Transform) {
     },
 
     /**
+     * loads given module, runs the given the parsers preprocess method on it and pulls
+     * in and preprocesses any requires for that module. adds all preprocessed modules
+     * to AdriaTransform::modules
+     *
+     * @param string moduleName name of the module
+     * @param string? data module source code
+     */
+    preprocessModule: func(string moduleName, string? data = null) {
+
+        // create parser from proto-parser
+
+        var parser = this.protoParser.clone();
+        parser.moduleName = moduleName;
+
+        if (data === null) {
+            parser.loadSource(this.options['basePath'] + moduleName, this.cacheModifier);
+        } else {
+            parser.setSource(moduleName, data, this.cacheModifier);
+        }
+
+        // run preprocess
+
+        parser.preprocess({ });
+
+        // add global declarations and requires to transform
+
+        var requires = parser.resultData.requires;
+
+        this.requiresDone.add(moduleName);
+
+        for (var name in requires.data) {
+            if (this.requiresDone.has(name) === false) {
+                this.preprocessModule(name);
+            }
+        }
+
+        // these are used in the template
+
+        this.globalDeclarations = this.globalDeclarations.merge(parser.resultData.globalDeclarations);
+        this.globalReservations = this.globalReservations.merge(parser.resultData.globalReservations);
+        this.globalReferences = this.globalReferences.merge(parser.resultData.globalReferences);
+        this.requires = this.requires.merge(parser.resultData.requires);
+        this.resources = this.resources.merge(parser.resultData.resources);
+
+        if (parser.resultData.isInterface) {
+            if (this.addInterface) {
+                throw new ASTException('Interface already defined', parser); //!todo where
+            }
+            this.addInterface = true;
+        }
+
+        // push module after all dependencies have been resolved
+
+        this.modules.push({ parser: parser, result: null });
+    },
+
+    /**
+     * run process on each module, save result to AdriaTransform::modules
+     */
+    process: func() {
+
+        for (var id, currentModule in this.modules) {
+            currentModule.result = currentModule.parser.process();
+        } 
+    },
+    
+    /**
+     * runs (pre)scan on each module (used by some nodes to check variable declarations etc)
+     */
+    scan: func() {
+
+        for (var id, currentModule in this.modules) {
+            currentModule.parser.prescan({ });
+        }
+
+        for (var id, currentModule in this.modules) {
+            currentModule.parser.scan({ });
+        }
+    },
+    
+    /**
+     * build application from modules
+     */
+    buildApplication: func() {
+
+        var options = this.options;
+        var node    = new SourceNode(null, null);
+        var tpl     = new Template();
+
+        tpl.debug = this.options['debug'];
+        tpl.assign('globals', this.globalDeclarations.toArray());
+        tpl.assign('builtins', this.usedBuiltins.toArray());
+        tpl.assign('enableAssert', options['assert']);
+        tpl.assign('enableApplication', this.addApplication);
+        tpl.assign('platform', options['platform']);
+
+        // wrap in shell-script
+
+        if (options['shellwrap']) {
+            node.add([ '#!/bin/sh\n', '\':\' //; exec "`command -v nodejs || command -v node`" --harmony "$0" "$@"\n' ]);
+        }
+
+        // include header comment
+
+        if (options['headerFile'] !== '') {
+            var header = fs.readFileSync(options['basePath'] + options['headerFile'], 'UTF-8');
+            node.add('/**\n * ' + header.trim().replace(/\r?\n/g, '\n * ') + '\n */\n');
+        }
+
+        // wrap with application and merge
+
+        node.add(';(function(' + this.closureParams.values().join(', ') + ') {\n');
+
+        // apply strict mode
+
+        if (options['strict']) {
+            node.add('"use strict";\n');
+        }
+
+        var fw = tpl.fetch(resource('../../templates/adria/framework.tpl'));
+        var moduleSN = node.add(new SourceNode(1, 0, 'adria-framework.js', fw));
+        moduleSN.setSourceContent('adria-framework.js', fw);
+
+        // merge modules
+
+        for (var id, currentModule in this.modules) {
+            var moduleSN = node.add(new SourceNode(null, null, currentModule.parser.file, currentModule.result));
+            moduleSN.setSourceContent(currentModule.parser.file, currentModule.parser.sourceCode);
+        }
+
+        // merge built-ins
+
+        var usedBuiltins = this.usedBuiltins.toArray();
+
+        for (var id, name in usedBuiltins) {
+            var builtIn = tpl.fetch(this.builtins[name]);
+            var moduleSN = node.add(new SourceNode(1, 0, name.replace('.adria', '.js'), builtIn));
+            moduleSN.setSourceContent(name.replace('.adria', '.js'), builtIn);
+        }
+
+        // merge resources
+
+        for (var fileName in this.resources.data) {
+            var contents = fs.readFileSync(options['basePath'] + fileName, 'UTF-8');
+            var wrapped = 'resource(\'' + fileName + '\', \'' + contents.jsify("'") + '\');\n';
+            var moduleSN = node.add(new SourceNode(null, null, fileName, wrapped));
+            moduleSN.setSourceContent(fileName, contents);
+        }
+
+        node.trim();
+
+        // start built-ins
+
+        for (var id, name in usedBuiltins) {
+            node.add('\nrequire(\'' + name + '\');');
+        }
+
+        // start entry module
+
+        for (var id, file in options['files']) {
+            node.add('\nrequire(\'' + util.normalizeExtension(file, this.options['extension']) + '\');');
+        }
+
+        node.add('\n})(' + this.closureParams.keys().join(', ') + ');');
+
+        return node;
+    },
+
+    /**
      * prints timing information if timing is enabled
      *
-     * @param string message
+     * @param string? message
      */
-    time: func(string message) {
+    time: func(string? message = null) {
+
         if (this.options['time'] && this.options['outFile'] !== null) {
-            var duration = Date.now() - this.startTime;
-            console.log(message.format(duration));
+
+            if (message !== null) {
+                console.log(message.format(Date.now() - this.startTime));
+            }
+
             this.startTime = Date.now();
         }
     },
@@ -205,13 +412,11 @@ module AdriaTransform = proto (Transform) {
     processOptions: func() {
 
         parent->processOptions();
+
         this.cacheModifier = util.md5(JSON.stringify(this.options));
-
-        if (this.options['time']) {
-            this.startTime = Date.now();
-        }
-
         this.options['defines']['___uniqueId'] = util.uniqueId();
+
+        this.time();
     },
 
     /**
@@ -219,7 +424,15 @@ module AdriaTransform = proto (Transform) {
      */
     defineImplicits: func() {
 
-        this.implicits.add([
+        var transform = this;
+
+        var addReferences = func(...refs) {
+            for (var _, ref in refs) {
+                transform.globalReferences.set(ref, ref);
+            }
+        };
+
+        addReferences(
             'window',
             'arguments', 'this', 'true', 'false', 'null', 'undefined', 'Infinity', 'NaN',
             'Array', 'Boolean', 'Date', 'Intl', 'JSON', 'Function', 'Math', 'Number', 'Object', 'RegExp', 'String',
@@ -230,174 +443,17 @@ module AdriaTransform = proto (Transform) {
             'setTimeout', 'clearTimeout', 'setInterval', 'clearInterval',
             'isFinite', 'isNaN', 'parseFloat', 'parseInt',
             'console', 'debugger',
-            'application', 'Exception',
-        ]);
+            'application', 'Exception'
+        );
 
         if (this.options['platform'] === 'node') {
-            this.implicits.add([ 'process', 'Buffer' ]);
+            addReferences('process', 'Buffer');
         } else if (this.options['platform'] === 'web') {
-            this.implicits.add([ 'screen', 'document', 'location', 'performance', 'alert', 'XMLHttpRequest', 'Worker' ]);
+            addReferences('screen', 'document', 'location', 'performance', 'alert', 'XMLHttpRequest', 'Worker');
         }
 
         if (this.options['assert']) {
-            this.implicits.add('AssertionFailedException');
-        }
-    },
-
-    /**
-     * build a module and its dependencies recursively and push the
-     * result onto AdriaTransform::modules
-     *
-     * @param string moduleName name of the module
-     * @param string? data module source code
-     */
-    buildModule: func(string moduleName, string? data = null) {
-
-        // create parser from proto-parser
-
-        var parser = this.protoParser.clone();
-        parser.moduleName = moduleName;
-
-        if (data === null) {
-            parser.loadSource(this.options['basePath'] + moduleName, this.cacheModifier);
-        } else {
-            parser.setSource(moduleName, data, this.cacheModifier);
-        }
-
-        // generate result
-
-        parser.preprocess({ });
-        var result = parser.output();
-
-        // add globals and requires to transform
-
-        var requires = parser.resultData.requires;
-
-        this.requiresDone.add(moduleName);
-
-        for (var name in requires.data) {
-            if (this.requiresDone.has(name) === false) {
-                this.buildModule(name);
-            }
-        }
-
-        // these are used in the template
-
-        this.requires = this.requires.merge(parser.resultData.requires);
-        this.globals = this.globals.merge(parser.resultData.globals);
-        this.resources = this.resources.merge(parser.resultData.resources);
-
-        if (parser.resultData.isInterface) {
-            if (this.addInterface) {
-                throw new ASTException('Interface already defined', parser); //!todo where
-            }
-            this.addInterface = true;
-        }
-
-        // push module after all dependencies have been resolved
-
-        this.modules.push({ result: result, parser: parser });
-    },
-
-    /**
-     * build application from modules
-     */
-    buildApplication: func() {
-
-        var options = this.options;
-        var node    = new SourceNode(null, null);
-        var tpl     = new Template();
-
-        tpl.debug = this.options['debug'];
-        tpl.assign('globals', this.globals.toArray());
-        tpl.assign('builtins', this.usedBuiltins.toArray());
-        tpl.assign('enableAssert', options['assert']);
-        tpl.assign('enableApplication', this.addApplication);
-        tpl.assign('platform', options['platform']);
-
-        // wrap in shell-script
-
-        if (options['shellwrap']) {
-            node.add([ '#!/bin/sh\n', '\':\' //; exec "`command -v nodejs || command -v node`" --harmony "$0" "$@"\n' ]);
-        }
-
-        // include header comment
-
-        if (options['headerFile'] !== '') {
-            var header = fs.readFileSync(options['basePath'] + options['headerFile'], 'UTF-8');
-            node.add('/**\n * ' + header.trim().replace(/\r?\n/g, '\n * ') + '\n */\n');
-        }
-
-        // wrap with application and merge
-
-        node.add(';(function(' + (options['platform'] === 'node' ? '___module, ___require, window' : '') + ') {\n');
-
-        // apply strict mode
-
-        if (options['strict']) {
-            node.add('"use strict";\n');
-        }
-
-        var fw = tpl.fetch(resource('../../templates/adria/framework.tpl'));
-        var moduleSN = node.add(new SourceNode(1, 0, 'adria-framework.js', fw));
-        moduleSN.setSourceContent('adria-framework.js', fw);
-
-        // merge modules
-
-        for (var id, currentModule in this.modules) {
-            var moduleSN = node.add(new SourceNode(null, null, currentModule.parser.file, currentModule.result));
-            moduleSN.setSourceContent(currentModule.parser.file, currentModule.parser.sourceCode);
-        }
-
-        // merge built-ins
-
-        var usedBuiltins = this.usedBuiltins.toArray();
-
-        for (var id, name in usedBuiltins) {
-            var builtIn = tpl.fetch(this.builtins[name]);
-            var moduleSN = node.add(new SourceNode(1, 0, name.replace('.adria', '.js'), builtIn));
-            moduleSN.setSourceContent(name.replace('.adria', '.js'), builtIn);
-        }
-
-        // merge resources
-
-        for (var fileName in this.resources.data) {
-            var contents = fs.readFileSync(options['basePath'] + fileName, 'UTF-8');
-            var wrapped = 'resource(\'' + fileName + '\', \'' + contents.jsify("'") + '\');\n';
-            var moduleSN = node.add(new SourceNode(null, null, fileName, wrapped));
-            moduleSN.setSourceContent(fileName, contents);
-        }
-
-        node.trim();
-
-        // start built-ins
-
-        for (var id, name in usedBuiltins) {
-            node.add('\nrequire(\'' + name + '\');');
-        }
-
-        // start entry module
-
-        for (var id, file in options['files']) {
-            node.add('\nrequire(\'' + util.normalizeExtension(file, this.options['extension']) + '\');');
-        }
-
-        node.add('\n})(' + (options['platform'] === 'node' ? 'module, require, global' : '') + ');');
-
-        return node;
-    },
-
-    /**
-     * runs (pre)scan on the tree (used by some nodes to check variable declarations etc)
-     */
-    scan: func() {
-
-        for (var id, currentModule in this.modules) {
-            currentModule.parser.prescan({ });
-        }
-
-        for (var id, currentModule in this.modules) {
-            currentModule.parser.scan({ });
+            addReferences('AssertionFailedException');
         }
     },
 

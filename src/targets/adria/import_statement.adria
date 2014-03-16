@@ -25,12 +25,21 @@ var Node = require('./base/node');
 
 module ImportStatement = proto (Node) {
 
+    preprocess: func() {
+
+        var resultData = this.parser.resultData;
+
+        this.eachKey('item', func(Node node) {
+            resultData.globalReservations.add(node.value);
+        });
+    },
+
     toSourceNode: func() {
 
         var scope = this.findScope();
 
         this.eachKey('item', func(node) {
-            scope.addImplicit(node.value);
+            scope.addLocal(node.value, false);
         });
 
         return this.csn();

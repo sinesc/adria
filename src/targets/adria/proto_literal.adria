@@ -22,72 +22,74 @@
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 var Node = require('./base/node');
+var SourceNode = require('../../source_node');
 
 module ProtoLiteral = proto (Node) {
 
     constructorSN: null,
     provideParent: false,
-    name: '',
 
-    constructor: func(string key, string value) {
+    nameSN: null,
+    mangledNameSN: null,
 
-        parent->constructor(key, value);
+    setLocalName: func() {
+
+        var name = this.findName();
+
+        if (name !== null && name.valid) {
+            var plain = name.getPlain();
+            var isReserved = this.parser.transform.globalReservations.has(plain);
+            this.nameSN = name.makeSourceNode(plain);
+            this.mangledNameSN = name.makeSourceNode((isReserved ? '___' : '') + plain);
+        }
     },
+
+    preBody: func(SourceNode result, string name) { },
+
+    postBody: func(SourceNode result) { },
 
     toSourceNode: func() {
 
-        // get own and parent name
-
-        var nameSN = this.findName();
-
-        if (nameSN !== null) {
-            this.name = nameSN.toString();
-        }
+        // check parent, do we have to chain to it?
 
         var parentNode = this.get('parent');
         var haveParent = parentNode.isNode();
         var blankParent = (haveParent ? parentNode.toString() === 'null' : false);
         var chainToParent = haveParent && blankParent === false;
-        var refName = this.name !== '' ? this.name : 'Anonymous';
 
-        // generate output
+        // determine local name
+
+        this.setLocalName();
+        var name = this.nameSN !== null ? this.nameSN.toString() : 'Anonymous';
+        var mangledName = this.mangledNameSN !== null ? this.mangledNameSN.toString() : 'Anonymous';
+
+        // assemble wrapper
 
         var result = this.csn();
-
-        if (this.value === 'proto_statement') {
-
-            // statement requires assignment of wrapper
-
-            var mangledName = this.parent.findScope().addLocal(this.name);
-            result.add(mangledName + ' = ');
-        }
-
+        this.preBody(result, name);
         result.add('(function(' + (chainToParent ? '___parent' : '') + ') {' + this.nl(1));
 
-        var body = this.get('body').toSourceNode();
+        // generate body, move extracted constructor to top or use default constructor
 
-        // user-defined or default-constructor
+        var body = this.get('body').toSourceNode();
 
         if (this.constructorSN !== null) {
             result.add([ this.constructorSN, this.nl() ]);
         } else {
-            this.addDefaultConstructor(result, refName, chainToParent);
+            this.addDefaultConstructor(result, name, mangledName, chainToParent);
         }
 
         // chain to parent
 
         if (haveParent) {
-            result.add(refName + '.prototype = Object.create(' + (blankParent ? 'null' : '___parent.prototype') + ');' + this.nl());
-            result.add(refName + '.prototype.constructor = ' + refName + ';' + this.nl());
+            result.add(mangledName + '.prototype = Object.create(' + (blankParent ? 'null' : '___parent.prototype') + ');' + this.nl());
+            result.add(mangledName + '.prototype.constructor = ' + mangledName + ';' + this.nl());
         }
 
-        // body elements
+        // append body elements, close and return
 
         result.add(body);
-
-        // close and return
-
-        result.add('return ' + refName + ';' + this.nl(-1));
+        result.add('return ' + mangledName + ';' + this.nl(-1));
         result.add('})(');
 
         if (chainToParent) {
@@ -96,21 +98,23 @@ module ProtoLiteral = proto (Node) {
 
         result.add(')');
 
-        if (this.value === 'proto_statement') {
-            result.add(';');
-        }
+        this.postBody(result);
 
         return result;
     },
 
-    addDefaultConstructor: func(result, refName, chain) {
+    addDefaultConstructor: func(result, name, mangledName, chain) {
 
-        result.add('function ' + refName + '() {');
+        if (name !== mangledName) {
+            result.add('var ' + mangledName + ' = function ' + name + '() {');
+        } else {
+            result.add('function ' + name + '() {');
+        }
 
         if (chain) {
             result.add(this.nl(1) + '___parent.apply(this, arguments);' + this.nl(-1));
         }
 
-        result.add('}' + this.nl());
+        result.add((name !== mangledName ? '};' : '}') + this.nl());
     },
 };

@@ -23,26 +23,60 @@
  */
 var Node = require('./base/node');
 
+// used as running-id to resolve name conflicts
+
+var globalId = 1;
+
 module GlobalStatement = proto (Node) {
+
+    /**
+     * need to handle globals during preprocess so that all modules have access to them
+     */
+    preprocess: func() {
+
+        var resultData = this.parser.resultData;
+
+        this.eachKey('item', func(Node node) {
+
+            var nameNode = node.get('name');
+            var fromNameNode = node.get('from_name');
+
+            // don't declare imports
+
+            if (fromNameNode.isNode()) {
+
+                // reserve import source references, add import name to known references
+
+                resultData.globalReservations.add(fromNameNode.value);
+                resultData.globalReferences.set(nameNode.value, fromNameNode.value);
+
+            } else {
+
+                // normal global variable, add var-declaration code and add as known reference
+
+                resultData.globalDeclarations.add(nameNode.value);
+                resultData.globalReferences.set(nameNode.value, nameNode.value); //!todo mangling
+            }
+        });
+    },
 
     toSourceNode: func() {
 
-        var valueNode, nameNode;
-        var globals = this.parser.resultData.globals;
         var result = this.csn();
         var nl = this.nl();
 
-        this.eachKey('item', func(Node node, boolean first, boolean last) {
-            nameNode = node.get('name');
-            valueNode = node.get('value');
+        // generate code, if an assignment was made
 
-            globals.add(nameNode.value);
+        this.eachKey('item', func(Node node, boolean first, boolean last) {
+
+            var nameNode = node.get('name');
+            var valueNode = node.get('value');
 
             if (valueNode.isNode()) {
                 result.add([ nameNode.value + ' = ', valueNode.toSourceNode(), ';' + (last ? '' : nl) ]);
             }
         });
 
-        return result.children.length > 0 ? result : null;
+        return result.children.length > 0 ? result : '';
     },
 };

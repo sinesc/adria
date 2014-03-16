@@ -38,7 +38,7 @@ module FunctionParamList = proto (ParamsNode) {
 
     types: new Set([ 'boolean', 'number', 'finite', 'string', 'scalar', 'func', 'object' ]),
 
-    toSourceNode: func(boolean declare = true) {
+    toSourceNode: func() {
 
         var result = this.csn();
         var functionNode = this.findProto(FunctionLiteral);
@@ -49,7 +49,7 @@ module FunctionParamList = proto (ParamsNode) {
             this.generatePermutationSwitch(functionNode);
         }
 
-        this.each(this.handle.bind(this, declare, functionNode, scope, result));
+        this.each(this.handle.bind(this, functionNode, scope, result));
 
         return result.join(', ');
     },
@@ -57,13 +57,12 @@ module FunctionParamList = proto (ParamsNode) {
     /**
      * handle individual parameter
      *
-     * @param boolean declare
      * @param FunctionLiteral functionNode
      * @param Scope scope
      * @param SourceNode result
      * @param CaptureNode node parameter
      */
-    handle: func(boolean declare, FunctionLiteral functionNode, Scope scope, SourceNode result, Node node) {
+    handle: func(FunctionLiteral functionNode, Scope scope, SourceNode result, Node node) {
 
         if (node.key === 'item') {
 
@@ -77,12 +76,10 @@ module FunctionParamList = proto (ParamsNode) {
 
             // add to local scope if variables need to be declared
 
-            if (declare) {
-                if (this.optionalPermutations === null) {
-                    scope.addImplicit(nameSN.toString(), true);
-                } else {
-                    scope.addLocal(nameSN.toString());
-                }
+            if (this.optionalPermutations === null) {
+                scope.addLocal(nameSN.toString(), false, true);
+            } else {
+                scope.addLocal(nameSN.toString());
             }
 
             // check for basic default args, push those to FunctionLiteral's specialArgs property
@@ -106,15 +103,13 @@ module FunctionParamList = proto (ParamsNode) {
 
         } else if (node.key === 'opt_items') {
 
-            node.each(this.handle.bind(this, declare, functionNode, scope, result));
+            node.each(this.handle.bind(this, functionNode, scope, result));
 
         } else if (node.key === 'rest') {
 
             var name = node.get('name').toSourceNode();
 
-            if (declare) {
-                scope.addImplicit(name.toString(), true);
-            }
+                scope.addLocal(name.toString(), false, true);
 
             var restArg = this.csn([ 'var ', name, ' = Array.prototype.slice.call(arguments, ' + this.numParams + ');' ]);
             functionNode.specialArgs.push(restArg);

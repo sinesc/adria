@@ -30,13 +30,36 @@ var thisId = 1;
 module FunctionLiteral = proto (Scope) {
 
     thisId              : 0,
-    name                : '',
     provideContext      : false,
     provideParent       : false,
     provideSelf         : false,
-    registerWithParent  : false,
-    specialArgs         : null,
 
+    /**
+     * @var SourceNode function name
+     */
+    nameSN: null,
+
+    /**
+     * @var SourceNode mangled function name
+     */
+    mangledNameSN: null,
+
+    /**
+     * @var boolean function literals only register their names inside their own scope, statements publish the name to parent as well
+     */
+    registerWithParent: false,
+
+    /**
+     * @var Array extra code to be placed right below local declarations, usually handling special argument features
+     */
+    specialArgs: null,
+
+    /**
+     * extends Scope with special args and thisId support
+     *
+     * @param string key
+     * @param string value
+     */
     constructor: func(string key, string value) {
 
         this.specialArgs = [ ];
@@ -53,7 +76,8 @@ module FunctionLiteral = proto (Scope) {
 
         // determine own name, generate code before parameter list
 
-        this.preParamList(result, this.setLocalName());
+        this.setLocalName();
+        this.preParamList(result);
 
         // handle parameters
 
@@ -81,7 +105,7 @@ module FunctionLiteral = proto (Scope) {
         // prepare parent/self lookup, if any of those keywords were used
 
         if (this.provideParent || this.provideSelf) {
-            this.getParentLookupCode(result, this.name);
+            this.getParentLookupCode(result, this.nameSN !== null ? this.nameSN.toString() : '');
         }
 
         result.add(this.nl(0, result));
@@ -98,14 +122,13 @@ module FunctionLiteral = proto (Scope) {
      * called to generate the part before the parameter list
      *
      * @param SourceNode result
-     * @param SourceNode? nameSN
      */
-    preParamList: func(SourceNode result, SourceNode? nameSN) {
+    preParamList: func(SourceNode result) {
 
         result.add('function');
 
-        if (nameSN !== null) {
-            result.add([ ' ', nameSN ]);
+        if (this.nameSN !== null) {
+            result.add([ ' ', this.nameSN ]);
         }
     },
 
@@ -171,7 +194,7 @@ module FunctionLiteral = proto (Scope) {
      */
     getParentLookupCode: func(SourceNode result, string lookupName, string ownName = lookupName) {
 
-        if (this.name === '') {
+        if (lookupName === '') {
             throw new ASTException('Unable to determine function name required by parent/self lookup', this);
         }
 
@@ -199,29 +222,22 @@ module FunctionLiteral = proto (Scope) {
      */
     setLocalName: func() {
 
-        var nameSN = this.findName();
+        var name = this.findName();
 
-        if (nameSN !== null) {
-
-            var name = nameSN.toString();
-
-            if (name.match(/^([\'\"]).*\1$/) === null) {
-                this.name = name;
-                this.addImplicit(name, true);
-            }
+        if (name !== null && name.valid) {
+            var mangledName = this.addLocal(name.getPlain(), false, true);
+            this.nameSN = name.makeSourceNode(name.getPlain());
+            this.mangledNameSN = name.makeSourceNode(mangledName);
         }
 
         // check if name needs to be registered with parent scope
 
         if (this.registerWithParent) {
-
-            if (this.name === '') {
+            if (this.nameSN === null) {
                 throw new ASTException('Unable to determine function name in func statement', this);
             } else {
-                this.parent.findScope().addImplicit(this.name);
+                this.parent.findScope().addLocal(name.getPlain(), false);
             }
         }
-
-        return this.name === '' ? null : nameSN;
     },
 };

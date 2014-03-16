@@ -29,7 +29,7 @@ var storageId = 1;
 module PropertyLiteral = proto (ObjectLiteral) {
 
     useStorage          : false,
-    storageName         : null,
+    storageName         : null, //!todo probably shouldn't contain the quotes
     defaultValueNode    : 'undefined', //!todo should be sourcenode, but returning sourcenodes also needs to be refactored. eventually should be Node
     target              : 'undefined',
     name                : 'undefined',
@@ -96,12 +96,12 @@ module PropertyLiteral = proto (ObjectLiteral) {
 
         if (this.storageName === null) {
 
-            var nameSN = this.findName();
+            var name = this.findName();
 
-            if (nameSN === null) {
+            if (name === null) {
                 this.storageName = '\'___psf' + (storageId++) + '\'';
             } else {
-                this.storageName = '\'_' + nameSN.toString() + '\'';
+                this.storageName = '\'_' + name.getPlain() + '\'';
             }
         }
 

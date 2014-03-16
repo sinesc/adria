@@ -78,9 +78,9 @@ module LanguageParser = proto(Parser) {
     transform: null,
 
     /**
-     * @var String method used for output generation
+     * @var String method used for processing (output generation)
      */
-    outputMethod: 'toSourceNode',
+    processMethod: 'toSourceNode',
 
     /**
      * construct new instance
@@ -112,7 +112,7 @@ module LanguageParser = proto(Parser) {
         parser.cacheModifier = this.cacheModifier;
         parser.forceNoCache = this.forceNoCache;
         parser.transform = this.transform;
-        parser.outputMethod = this.outputMethod;
+        parser.processMethod = this.processMethod;
         parser.includeTrace = this.includeTrace;
         return parser;
     },
@@ -371,14 +371,14 @@ module LanguageParser = proto(Parser) {
      *
      * @return string output string
      */
-    output: func() {
+    process: func() {
 
         var result;
 
         // generate result
 
         var InitialType = this.mapType('', this.definition.initialBlock);
-        result = InitialType.prototype[this.outputMethod].call(this.captureTree);
+        result = InitialType.prototype[this.processMethod].call(this.captureTree);
 
         // write new data to cache (don't write it again if it just came from the cache)
 

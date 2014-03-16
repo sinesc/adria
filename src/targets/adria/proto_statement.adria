@@ -1,7 +1,7 @@
 /*
  * Adria transcompiler
  *
- * Copyright (C) 2014 Dennis MÃ¶hlmann <mail@dennismoehlmann.de>
+ * Copyright (C) 2014 Dennis Möhlmann <mail@dennismoehlmann.de>
  * Licensed under the MIT license.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -21,43 +21,21 @@
  * IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-var Node = require('./base/node');
+var ProtoLiteral = require('./proto_literal');
 
-module VarStatement = proto (Node) {
+module ProtoStatement = proto (ProtoLiteral) {
 
-    scan: func(object state) {
+    preBody: func(SourceNode result, string name) {
 
-        var usages = this.findScope().usages;
+        // statement is achieved by assigning wrapper to reference
 
-        this.eachKey('item', func(node) {
-
-            var ident = node.get('name').value;
-
-            if (usages.lacks(ident)) {
-                application.notice(ident + ' not used in ' + this.parser.file + ' line ' + node.row + ', column ' + node.col);
-            }
-        });
-
-        Node->scan(state);
+        assert(this.nameSN !== null);
+var scp = this.findScope();
+console.log(name, scp.getOwnRef(name));
+        result.add(this.findScope().addLocal(name) + ' = ');
     },
 
-    toSourceNode: func() {
-
-        var scope = this.findScope();
-        var result = this.csn();
-        var nl = this.nl();
-
-        this.eachKey('item', func(node, first, last) {
-        
-            var nameNode = node.get('name');
-            var valueNode = node.get('value');
-            var localName = scope.addLocal(nameNode.value);
-
-            if (valueNode.isNode()) {
-                result.add([ nameNode.csn(localName), ' = ', valueNode.toSourceNode(), ';' + (last ? '' : nl) ]);
-            }
-        });
-
-        return result;
+    postBody: func(SourceNode result) {
+        result.add(';');
     },
 };

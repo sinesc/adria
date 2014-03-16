@@ -30,29 +30,40 @@ module ForInStatement = proto (Scope) {
         var keyNode = this.get('key');
         var valueNode = this.get('value');
 
+        // declare locals, create SourceNodes for possibly mangled names
+
+        var keySN, valueSN;
+
         if (this.get('var').isNode()) {
 
-            //var scope = this.findScope();
-            this.addLocal(keyNode.value);
+            keySN = keyNode.csn(this.addLocal(keyNode.value));
 
             if (valueNode.isNode()) {
-                this.addLocal(valueNode.value);
+                valueSN = valueNode.csn(this.addLocal(valueNode.value));
             }
+
+        } else {
+
+            keySN = keyNode.toSourceNode();
+            valueSN = valueNode.toSourceNode();
         }
 
         var source = this.get('source').toSourceNode();
-        var key = keyNode.toSourceNode();
+
+        // generate indented body code
 
         this.nl(1);
         var body = this.get('body').toSourceNode();
         this.nl(-1);
 
+        // generate loop code, place body inside
+
         var result = this.csn();
         result.add(this.refsToSourceNode());
-        result.add(['for (', key, ' in ', source, ') {' + this.nl(1) ]);
+        result.add(['for (', keySN, ' in ', source, ') {' + this.nl(1) ]);
 
         if (valueNode.isNode()) {
-            result.add([ valueNode.toSourceNode(), ' = ', source, '[', key, '];', this.nl() ]);
+            result.add([ valueSN, ' = ', source, '[', keySN, '];', this.nl() ]);
         }
 
         result.add([ body, this.nl(-1, body), '}' ]);

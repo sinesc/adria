@@ -26,22 +26,26 @@ var ASTException = require('../../language_parser/ast_exception');
 
 module ResourceLiteral = proto (FileNode) {
 
-    toSourceNode: func() {
+    resolvedName: '',
 
-        var fileNode = this.get('file');
-        var fileName = fileNode.toSourceNode().toString().slice(1, -1);
+    preprocess: func() {
+    
+        var fileName = this.get('file').toString().slice(1, -1);
 
-        var resolvedName = this.resolvePath(fileName, this.parser);
+        this.resolvedName = this.resolvePath(fileName, this.parser);
 
-        if (resolvedName !== null) {
-            this.parser.resultData.resources.add(resolvedName);
+        if (this.resolvedName !== null) {
+            this.parser.resultData.resources.add(this.resolvedName);
         } else {
             throw new ASTException('Could not find resource "' + fileName + '"', this);
         }
+    },
+
+    toSourceNode: func() {
 
         var result = this.csn();
         result.add('resource(');
-        result.add(fileNode.csn("'" + resolvedName + "'"));
+        result.add(this.get('file').csn("'" + this.resolvedName + "'"));
         result.add(')');
         return result;
     },

@@ -40,14 +40,12 @@ module ForCountStatement = proto (Scope) {
 
                 var valueNode = node.get('value');
                 var nameNode = node.get('name');
-
-                ownScope.addLocal(nameNode.value);
+                var localName = ownScope.addLocal(nameNode.value);
 
                 if (valueNode.isNode()) {
-                    var varDef = this.csn([ nameNode.toSourceNode(), ' = ', valueNode.toSourceNode() ]);
-                    varDefs.add(varDef);
+                    varDefs.add(this.csn([ nameNode.csn(localName), ' = ', valueNode.toSourceNode() ]));
                 } else {
-                    varDefs.add(nameNode.toSourceNode);
+                    varDefs.add(nameNode.csn(localName));
                 }
             });
 

@@ -175,5 +175,40 @@ module Expression = proto (Node) {
         }
 
         return result;
-    }
+    },
+
+    /**
+     * fetches the rightmost name on the left side of an assignment
+     * i.e. name of (a || b).node.name
+     *
+     * @return SourceNode for name or null
+     */
+    findAssignee: func() {
+
+        var children = this.children;
+        var found = -1;
+
+        for (var id = 0; id < children.length; id++) {
+            if (children[id].key === 'assignment_op') {
+                found = id - 1;
+                break;
+            }
+        }
+
+        if (found !== -1) {
+
+            var child = children[found];
+
+            if (child.value === 'access_operation_member' || child.value === 'access_operation_proto') {
+                var item = child.get('item');
+                return new this.Name(item, item.value);
+            }
+
+            if (child.key === 'ident') {
+                return new this.Name(child, child.value);
+            }
+        }
+
+        return null;
+    },
 };

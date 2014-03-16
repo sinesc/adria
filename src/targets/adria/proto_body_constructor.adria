@@ -27,6 +27,8 @@ var SourceNode = require('../../source_node');
 
 module ProtoBodyConstructor = proto (FunctionLiteral) {
 
+    requiresMangling: false,
+
     /**
      * set local function name and return SourceNode of it
      *
@@ -34,26 +36,42 @@ module ProtoBodyConstructor = proto (FunctionLiteral) {
      */
     setLocalName: func() {
 
-        var name = this.findProto(ProtoLiteral).name;
+        var protoLiteral = this.findProto(ProtoLiteral);
+        this.nameSN = protoLiteral.nameSN;
+        this.mangledNameSN = protoLiteral.mangledNameSN;
 
-        if (name !== null) {
-
-            if (name.match(/^([\'\"]).*\1$/) === null) {
-                this.name = name;
-                this.addImplicit(name, true);
-            }
+        if (this.nameSN !== null) {
+            this.addLocal(this.nameSN.toString(), false, true);
         }
-
-        return this.name === '' ? null : this.csn(name); //!todo
     },
 
-    preParamList: func(SourceNode result, SourceNode? nameSN) {
+    preParamList: func(SourceNode result) {
 
-        if (nameSN !== null) {
-            result.add([ 'function ', nameSN ]);
+        if (this.nameSN !== null) {
+
+            var name = this.nameSN !== null ? this.nameSN.toString() : 'Anonymous';
+            var mangledName = this.mangledNameSN !== null ? this.mangledNameSN.toString() : 'Anonymous';
+
+            if (name !== mangledName) {
+            console.log(name, mangledName);
+                this.requiresMangling = true;
+            }
+
+            if (this.requiresMangling) {
+                result.add([ 'var ', this.mangledNameSN, ' = function ', this.nameSN ]);
+            } else {
+                result.add([ 'function ', this.nameSN ]);
+            }
+
         } else {
+
             result.add([ 'function Anonymous' ]);
         }
+    },
+
+    postBody: func(SourceNode result) {
+
+        result.add(this.nl(-1, result) + (this.requiresMangling ? '};' : '}'));
     },
 
     getParentLookupCode: func(SourceNode result, string lookupName, string ownName = lookupName) {

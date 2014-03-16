@@ -25,6 +25,11 @@ var ValueType = require('./base/value_type');
 
 module Ident = proto (ValueType) {
 
+    /**
+     * returns a sourcenode for the possibly mangled identifier
+     *
+     * @return SourceNode
+     */
     toSourceNode: func() {
         var name = this.findScope().getRef(this.value);
         return this.csn(name !== null ? name : this.value);

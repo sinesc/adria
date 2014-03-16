@@ -88,7 +88,7 @@ module Parser = proto {
      */
     trace: func(Token token, Node node, Array stack) {
 
-        // for output simplicy, add current node to stack
+        // for output simplicity, add current node to stack
 
         stack = stack.slice();
         stack.push({ node: node, token: token });

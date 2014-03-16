@@ -28,6 +28,39 @@ var CaptureNode = LanguageParser.CaptureNode;
 
 module Node = proto (CaptureNode) {
 
+    Name: proto {
+
+        node: null,
+        value: null,
+        valid: false,
+
+        constructor: func(Node node, string value) {
+            this.node = node;
+            this.value = value;
+            this.valid = (value.match(/^([\'\"]).*\1$/) === null);
+        },
+
+        getPlain: func() {
+            return (this.valid ? this.value : null);
+        },
+
+        getMangled: func() {
+
+            var value = this.getPlain();
+
+            if (value !== null) {
+                var name = this.node.findScope().getRef(value);
+                return name === null ? value : name;
+            }
+
+            return null;
+        },
+
+        makeSourceNode: func(value) {
+            return this.node.csn(value);
+        },
+    },
+
     /**
      * @var function constructor-type findScope will search for (should be set to Scope)
      */
@@ -38,6 +71,11 @@ module Node = proto (CaptureNode) {
      */
     toBeMarkedAsUsed: null,
 
+    /**
+     * run just before scan, marks references that were used before their declaration was parsed (possible due to var hoisting)
+     *
+     * @param object state
+     */
     prescan: func(object state) {
 
         if (this.toBeMarkedAsUsed !== null) {
@@ -120,7 +158,9 @@ module Node = proto (CaptureNode) {
      */
     checkDefined: func(string name) {
 
-        if (this.parser.transform.implicits.has(name) || this.parser.transform.globals.has(name)) {
+        var transform = this.parser.transform;
+
+        if (transform.globalReferences.has(name)) {
             return false;
         }
 
@@ -143,64 +183,31 @@ module Node = proto (CaptureNode) {
 
         if (nameNode.isNode() === false) {
 
-            nameNode = this.ancestor(null, ['module_statement', 'export_statement', 'expression', 'dec_def', 'proto_body_item']);
+            nameNode = this.ancestor(null, ['module_statement', 'export_statement', 'expression', 'dec_def', 'dec_def_import', 'proto_body_item']);
 
             if (nameNode.isNode()) {
 
                 // fetch from declaration, proto-literal item's left side or expression
 
-                if (nameNode.value === 'dec_def' || nameNode.value === 'module_statement' || nameNode.value === 'export_statement') {
+                if (nameNode.value === 'dec_def' || nameNode.value === 'dec_def_import' || nameNode.value === 'module_statement' || nameNode.value === 'export_statement') {
 
-                    result = nameNode.get('name').toSourceNode();
+                    var item = nameNode.get('name');
+                    return new this.Name(item, item.value);
 
                 } else if (nameNode.value === 'proto_body_item') {
 
-                    result = nameNode.get('key').toSourceNode();
+                    var item = nameNode.get('key');
+                    return new this.Name(item, item.value);
 
                 } else if (nameNode.value === 'expression') {
 
-                    result = nameNode.findAssignee();
+                    return nameNode.findAssignee();
                 }
             }
 
         } else {
 
-            result = nameNode.toSourceNode();
-        }
-
-        return result;
-    },
-
-    /**
-     * fetches the rightmost name on the left side of an assignment
-     * i.e. name of (a || b).node.name
-     *
-     * @return SourceNode for name or null
-     */
-    findAssignee: func() {
-
-        var children = this.children;
-        var found = -1;
-        var result = null;
-
-        for (var id = 0; id < children.length; id++) {
-            if (children[id].key === 'assignment_op') {
-                found = id - 1;
-                break;
-            }
-        }
-
-        if (found !== -1) {
-
-            var child = children[found];
-
-            if (child.value === 'access_operation_member' || child.value === 'access_operation_proto') {
-                result = child.csn(child.get('item').value);
-            }
-
-            if (child.key === 'ident') {
-                result = child.csn(child.toSourceNode());
-            }
+            return new this.Name(nameNode, nameNode.value);
         }
 
         return result;

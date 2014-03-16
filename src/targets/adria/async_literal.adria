@@ -28,15 +28,24 @@ module AsyncLiteral = proto (GeneratorLiteral) {
 
     useCallback: false,
 
+    preprocess: func() {
+
+        var parser = this.parser;
+        parser.resultData.globalDeclarations.add('___Async');
+        parser.transform.usedBuiltins.add('async.adria');
+    },
+
     storeCallback: func() {
 
         this.useCallback = true;
         return '___cbh' + this.thisId;
     },
 
-    preParamList: func(SourceNode result, SourceNode? nameSN) {
+    preParamList: func(SourceNode result) {
 
         result.add('function*');
+
+        // don't set local name, so that recursive async will properly reference the outer function
     },
 
     preBody: func(SourceNode result) {
@@ -58,16 +67,10 @@ module AsyncLiteral = proto (GeneratorLiteral) {
 
     toSourceNode: func() {
 
-        // include Async module
-
-        var parser = this.parser;
-        parser.resultData.globals.add('___Async');
-        parser.transform.usedBuiltins.add('async.adria');
-
         var result = this.csn();
         result.add('(function() {' + this.nl(1));
         result.add([ 'var ___self = ', parent->toSourceNode(), ';', this.nl() ]);
-        result.add([ 'return function(', this.get('param_list').toSourceNode(false), ') {' + this.nl(1) ]);
+        result.add([ 'return function', this.name !== null ? ' ' + this.name : '', '() {' + this.nl(1) ]);
         result.add('return new ___Async(___self.apply(this, arguments));' + this.nl(-1));
         result.add('};'+ this.nl(-1));
         result.add('})()');

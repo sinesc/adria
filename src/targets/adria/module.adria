@@ -27,11 +27,23 @@ var ASTException = require('../../language_parser/ast_exception');
 
 module Module = proto (Scope) {
 
+    /**
+     * @var string? name of the reference to export as module, if any
+     */
     moduleExport: null,
-    exports     : null,
-    isInterface : false,
+
+    /**
+     * @var Map exported references mapped to their local, mangled name
+     */
+    exports: null,
+
+    /**
+     * @var boolean whether or not this module is to act as CommonJS interface module of the application
+     */
+    isInterface: false,
 
     constructor: func(string key, string value) {
+
         this.exports = new Map();
         Scope->constructor(key, value);
     },

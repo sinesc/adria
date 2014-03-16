@@ -55,5 +55,5 @@ Node::toString = func() {
  */
 module AdriaDebugParser = proto(AdriaParser) {
 
-    outputMethod: 'toString',
+    processMethod: 'toString',
 };

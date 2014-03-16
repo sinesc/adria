@@ -23,6 +23,7 @@
  */
 var fs = require('fs');
 var Set = require('astd/set');
+var Map = require('astd/map');
 var LanguageParser = require('../language_parser');
 var Tokenizer = require('../tokenizer');
 var Match = require('../tokenizer/match');
@@ -43,10 +44,12 @@ module AdriaParser = proto(LanguageParser) {
         LanguageParser->constructor(transform);
 
         this.resultData = {
-            globals     : new Set(),
-            requires    : new Set(),
-            resources   : new Set(),
-            isInterface : false,
+            globalDeclarations  : new Set(),
+            globalReservations  : new Set(),
+            globalReferences    : new Map(),
+            requires            : new Set(),
+            resources           : new Set(),
+            isInterface         : false,
         };
     },
 
@@ -58,10 +61,12 @@ module AdriaParser = proto(LanguageParser) {
         var parser = LanguageParser->clone();
 
         parser.resultData = {
-            globals     : new Set(),
-            requires    : new Set(),
-            resources   : new Set(),
-            isInterface : false,
+            globalDeclarations  : new Set(),
+            globalReservations  : new Set(),
+            globalReferences    : new Map(),
+            requires            : new Set(),
+            resources           : new Set(),
+            isInterface         : false,
         };
 
         return parser;

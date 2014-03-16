@@ -29,9 +29,9 @@ var Node = require('./base/node');
 
 module AsyncParamList = proto (FunctionParamList) {
 
-    handle: func(boolean declare, AsyncLiteral functionNode, Scope scope, SourceNode result, Node node) {
+    handle: func(AsyncLiteral functionNode, Scope scope, SourceNode result, Node node) {
 
-        if (parent->handle(declare, functionNode, scope, result, node)) {
+        if (parent->handle(functionNode, scope, result, node)) {
             return true;
         }
 

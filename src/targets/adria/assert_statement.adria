@@ -29,22 +29,17 @@ module AssertStatement = proto (Node) {
 
         var result = this.csn();
 
-        if (this.parser.transform.options['assert']) {
+        // always process parameters so that references used by assertions
+        // don't cause notices when assertions are disabled
 
-            var params = this.get('call');
-            var paramsSN = params.toSourceNode(false);
+        var params = this.get('call');
+        var paramsSN = params.toSourceNode(false);
+
+        if (this.parser.transform.options['assert']) {
 
             result.add([ 'assert(', paramsSN ]);
 
-            // if only one parameter, add textual version of assertion as secondary parameter
-
-            var numParams = 0;
-
-            params.each(func(node, first) {
-                numParams++;
-            });
-
-            if (numParams < 2) {
+            if (params.length < 2) {
                 result.add([ ", '" + paramsSN.toString().jsify("'") + "'" ]);
             }
 
