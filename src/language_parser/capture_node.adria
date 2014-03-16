@@ -519,6 +519,15 @@ module CaptureNode = proto {
 
         return new SourceNode(this.row, this.col -1, null, code); //!todo why is everthing offset by one if I don't subtract 1 here? col start at 0, row at 1? unlikely
     },
+    
+    /**
+     * returns node location in source, useful for error output
+     *
+     * @return string
+     */
+    loc: func() {
+        return ' in $0 line $1, column $2'.format(this.parser.file, this.row, this.col);
+    },
 
     /**
      * recursively calls children for preprocessing purposes

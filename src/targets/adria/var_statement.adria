@@ -22,8 +22,28 @@
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 var Node = require('./base/node');
+var ASTException = require('../../language_parser/ast_exception');
 
 module VarStatement = proto (Node) {
+
+    /**
+     * locate imports and reserve their reference names
+     */
+    preprocess: func(state) {
+
+        var resultData = this.parser.resultData;
+
+        this.eachKey('item', func(Node node) {
+
+            var fromNameNode = node.get('from_name');
+
+            if (fromNameNode.isNode()) {
+                resultData.globalReservations.add(fromNameNode.value);
+            }
+        });
+
+        parent->preprocess(state);
+    },
 
     scan: func(object state) {
 
@@ -34,7 +54,7 @@ module VarStatement = proto (Node) {
             var ident = node.get('name').value;
 
             if (usages.lacks(ident)) {
-                application.notice(ident + ' not used in ' + this.parser.file + ' line ' + node.row + ', column ' + node.col);
+                application.notice('unused reference "$0"' + this.loc(), ident);
             }
         });
 
@@ -48,13 +68,30 @@ module VarStatement = proto (Node) {
         var nl = this.nl();
 
         this.eachKey('item', func(node, first, last) {
-        
+
             var nameNode = node.get('name');
             var valueNode = node.get('value');
-            var localName = scope.addLocal(nameNode.value);
+            var fromNameNode = node.get('from_name');
 
-            if (valueNode.isNode()) {
-                result.add([ nameNode.csn(localName), ' = ', valueNode.toSourceNode(), ';' + (last ? '' : nl) ]);
+            if (fromNameNode.isNode()) {
+
+                // local import
+
+                if (scope.localReferences.has(nameNode.value)) {
+                    throw new ASTException('Reference "' + nameNode.value + '" already defined in local scope', this);
+                }
+
+                scope.localReferences.set(nameNode.value, fromNameNode.value);
+
+            } else {
+
+                // local declaration
+
+                var localName = scope.addLocal(nameNode.value);
+
+                if (valueNode.isNode()) {
+                    result.add([ nameNode.csn(localName), ' = ', valueNode.toSourceNode(), ';' + (last ? '' : nl) ]);
+                }
             }
         });
 

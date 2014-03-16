@@ -67,7 +67,7 @@ module Module = proto (Scope) {
 
         var localName = this.addLocal(name);
         this.moduleExport = localName;
-        return name;
+        return localName;
     },
 
     addExport: func(string name) {
@@ -78,7 +78,7 @@ module Module = proto (Scope) {
 
         var localName = this.addLocal(name);
         this.exports.set(name, localName);
-        return name;
+        return localName;
     },
 
     getOwnRef: func(string name) {

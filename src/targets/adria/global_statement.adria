@@ -23,10 +23,6 @@
  */
 var Node = require('./base/node');
 
-// used as running-id to resolve name conflicts
-
-var globalId = 1;
-
 module GlobalStatement = proto (Node) {
 
     /**
@@ -55,7 +51,7 @@ module GlobalStatement = proto (Node) {
                 // normal global variable, add var-declaration code and add as known reference
 
                 resultData.globalDeclarations.add(nameNode.value);
-                resultData.globalReferences.set(nameNode.value, nameNode.value); //!todo mangling
+                resultData.globalReferences.set(nameNode.value, nameNode.value);
             }
         });
     },

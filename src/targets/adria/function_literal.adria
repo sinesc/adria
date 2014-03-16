@@ -67,6 +67,33 @@ module FunctionLiteral = proto (Scope) {
         this.thisId = thisId++;
     },
 
+    /**
+     * scan for shadowed imports
+     *
+     * @param any state user-defined scan state object passed to every child
+     */
+    scan: func(state) {
+
+        if (this.nameSN !== null) { //!todo would be nice to have the plain name available
+
+            var transform = this.parser.transform;
+            var name = this.nameSN.toString();
+
+            if (transform.globalReservations.has(name)) {
+                var importedAs = transform.globalReferences.find(name, null);
+                var message = '"$0" locally shadows external "$0"' + (importedAs !== null ? ' (imported as "$1")' : '');
+                application.notice(message + this.loc(), name, importedAs);
+            }
+        }
+
+        parent->scan(state);
+    },
+
+    /**
+     * generate function source code
+     *
+     * @return SourceNode
+     */
     toSourceNode: func() {
 
         // indent child content, compensate by not indenting at opening {

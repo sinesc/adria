@@ -30,8 +30,6 @@ module ProtoStatement = proto (ProtoLiteral) {
         // statement is achieved by assigning wrapper to reference
 
         assert(this.nameSN !== null);
-var scp = this.findScope();
-console.log(name, scp.getOwnRef(name));
         result.add(this.findScope().addLocal(name) + ' = ');
     },
 

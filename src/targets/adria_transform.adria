@@ -118,9 +118,9 @@ module AdriaTransform = proto (Transform) {
         }
 
         this.time('Load/preprocess duration: $0.ms');
-        
+
         // generate module code
-        
+
         this.process();
         this.time('Process duration: $0.ms');
 
@@ -216,9 +216,9 @@ module AdriaTransform = proto (Transform) {
 
         for (var id, currentModule in this.modules) {
             currentModule.result = currentModule.parser.process();
-        } 
+        }
     },
-    
+
     /**
      * runs (pre)scan on each module (used by some nodes to check variable declarations etc)
      */
@@ -232,7 +232,7 @@ module AdriaTransform = proto (Transform) {
             currentModule.parser.scan({ });
         }
     },
-    
+
     /**
      * build application from modules
      */
@@ -429,6 +429,7 @@ module AdriaTransform = proto (Transform) {
         var addReferences = func(...refs) {
             for (var _, ref in refs) {
                 transform.globalReferences.set(ref, ref);
+                transform.globalReservations.add(ref);
             }
         };
 

@@ -69,7 +69,7 @@ module Scope = proto (Node) {
             throw new ASTException('Reference "' + name + '" already defined in local scope', this);
         }
 
-        var localName = this.createLocalName.call(this, name);
+        var localName = this.createLocalName(name);
         this.localReferences.set(name, localName);
 
         if (declare) {
@@ -105,18 +105,22 @@ module Scope = proto (Node) {
      */
     getRef: func(string name, boolean checkGlobals = true) {
 
+        // check locally first
+    
+        var scope = this.findRefScope(name);
+
+        if (scope !== null) {
+            return scope.getOwnRef(name);
+        }
+
+        // check globals
+        
         if (checkGlobals) {
             var globalReferences = this.parser.transform.globalReferences;
 
             if (globalReferences.has(name)) {
                 return globalReferences.get(name);
             }
-        }
-
-        var scope = this.findRefScope(name);
-
-        if (scope !== null) {
-            return scope.getOwnRef(name);
         }
 
         return null;

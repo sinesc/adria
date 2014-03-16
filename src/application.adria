@@ -157,8 +157,8 @@ module Application = proto {
      *
      * @param string message
      */
-    notice: func(message) {
+    notice: func(message, ...vars) {
 
-        process.stderr.write('Notice: ' + message + '\n');
+        process.stderr.write('Notice: ' + message.format(vars) + '\n');
     },
 };

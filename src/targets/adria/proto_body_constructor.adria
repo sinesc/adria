@@ -53,7 +53,6 @@ module ProtoBodyConstructor = proto (FunctionLiteral) {
             var mangledName = this.mangledNameSN !== null ? this.mangledNameSN.toString() : 'Anonymous';
 
             if (name !== mangledName) {
-            console.log(name, mangledName);
                 this.requiresMangling = true;
             }
 

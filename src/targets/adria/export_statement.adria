@@ -30,8 +30,8 @@ module ExportStatement = proto (Node) {
 
         var name = this.get('name').value;
         var moduleNode = this.findProto(Module);
-        moduleNode.addExport(name);
+        var mangledName = moduleNode.addExport(name);
 
-        return this.csn([ name, ' = ', this.get('value').toSourceNode(), ';' ]);
+        return this.csn([ mangledName, ' = ', this.get('value').toSourceNode(), ';' ]);
     },
 };
