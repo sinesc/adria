@@ -1,0 +1,124 @@
+/*
+ * Adria transcompiler
+ *
+ * Copyright (C) 2014 Dennis Möhlmann <mail@dennismoehlmann.de>
+ * Licensed under the MIT license.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of
+ * this software and associated documentation files (the "Software"), to deal in
+ * the Software without restriction, including without limitation the rights to
+ * use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of
+ * the Software, and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+ * FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+ * COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
+ * IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+ * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ */
+var Node = require('../node');
+var SourceNode = require('../../../source_node');
+var Name = require('../name');
+
+module ProtoLiteral = proto (Node) {
+
+    constructorSN: null,
+    provideParent: false,
+
+    /**
+     * @var Name
+     */
+    name: null,
+
+    setLocalName: func() {
+
+        var name = this.findName();
+
+        if (name !== null && name.valid) {
+            var plain = name.getPlain();
+            var isReserved = this.parser.transform.globalReservations.has(plain);
+            this.name = new Name(name.node, plain, (isReserved ? '___' : '') + plain);
+        } else {
+            this.name = new Name();
+        }
+    },
+
+    preBody: func(SourceNode result, string name) { },
+
+    postBody: func(SourceNode result) { },
+
+    toSourceNode: func() {
+
+        // check parent, do we have to chain to it?
+
+        var parentNode = this.get('parent');
+        var haveParent = parentNode.isNode();
+        var blankParent = (haveParent ? parentNode.toString() === 'null' : false);
+        var chainToParent = haveParent && blankParent === false;
+
+        // determine local name
+
+        this.setLocalName();
+        var name = this.name.valid ? this.name.getPlain() : 'Anonymous';
+        var mangledName = this.name.valid ? this.name.getMangled() : 'Anonymous';
+
+        // assemble wrapper
+
+        var result = this.csn();
+        this.preBody(result, name);
+        result.add('(function(' + (chainToParent ? '___parent' : '') + ') {' + this.nl(1));
+
+        // generate body, move extracted constructor to top or use default constructor
+
+        var body = this.get('body').toSourceNode();
+
+        if (this.constructorSN !== null) {
+            result.add([ this.constructorSN, this.nl() ]);
+        } else {
+            this.addDefaultConstructor(result, name, mangledName, chainToParent);
+        }
+
+        // chain to parent
+
+        if (haveParent) {
+            result.add(mangledName + '.prototype = Object.create(' + (blankParent ? 'null' : '___parent.prototype') + ');' + this.nl());
+            result.add(mangledName + '.prototype.constructor = ' + mangledName + ';' + this.nl());
+        }
+
+        // append body elements, close and return
+
+        result.add(body);
+        result.add('return ' + mangledName + ';' + this.nl(-1));
+        result.add('})(');
+
+        if (chainToParent) {
+            result.add(parentNode.toSourceNode());
+        }
+
+        result.add(')');
+
+        this.postBody(result);
+
+        return result;
+    },
+
+    addDefaultConstructor: func(result, name, mangledName, chain) {
+
+        if (name !== mangledName) {
+            result.add('var ' + mangledName + ' = function ' + name + '() {');
+        } else {
+            result.add('function ' + name + '() {');
+        }
+
+        if (chain) {
+            result.add(this.nl(1) + '___parent.apply(this, arguments);' + this.nl(-1));
+        }
+
+        result.add((name !== mangledName ? '};' : '}') + this.nl());
+    },
+};

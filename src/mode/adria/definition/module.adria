@@ -1,0 +1,137 @@
+/*
+ * Adria transcompiler
+ *
+ * Copyright (C) 2014 Dennis Möhlmann <mail@dennismoehlmann.de>
+ * Licensed under the MIT license.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of
+ * this software and associated documentation files (the "Software"), to deal in
+ * the Software without restriction, including without limitation the rights to
+ * use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of
+ * the Software, and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+ * FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+ * COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
+ * IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+ * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ */
+var Map = require('astd/map');
+var Scope = require('./scope');
+var ASTException = require('../../../language_parser/ast_exception');
+
+module Module = proto (Scope) {
+
+    /**
+     * @var string? name of the reference to export as module, if any
+     */
+    moduleExport: null,
+
+    /**
+     * @var Map exported references mapped to their local, mangled name
+     */
+    exports: null,
+
+    /**
+     * @var boolean whether or not this module is to act as CommonJS interface module of the application
+     */
+    isInterface: false,
+
+    constructor: func(string key, string value) {
+
+        this.exports = new Map();
+        Scope->constructor(key, value);
+    },
+
+    setInterface: func() {
+
+        if (this.isInterface) {
+            throw new ASTException('Duplicate interface declaration', this);
+        }
+
+        var parser = this.parser;
+        parser.resultData.isInterface = true;
+        this.isInterface = true;
+    },
+
+    setModuleExport: func(string name) {
+
+        if (this.getOwnRef(name)) {
+            throw new ASTException('Reference "' + name + '" already defined in local scope', this);
+        }
+
+        var localName = this.addLocal(name);
+        this.moduleExport = localName;
+        return localName;
+    },
+
+    addExport: func(string name) {
+
+        if (this.getOwnRef(name)) {
+            throw new ASTException('Reference "' + name + '" already defined in local scope', this);
+        }
+
+        var localName = this.addLocal(name);
+        this.exports.set(name, localName);
+        return localName;
+    },
+
+    getOwnRef: func(string name) {
+
+        var refName;
+
+        if ((refName = Scope->getOwnRef(name)) !== null) {
+            return refName;
+        }
+
+        assert(this.exports instanceof Map);
+
+        if (this.exports.has(name)) {
+            return this.exports.get(name);
+        } else if (this.moduleExport === name) {
+            return this.moduleExport;
+        }
+
+        return null;
+    },
+
+    toSourceNode: func() {
+
+        this.nl(1);
+
+        var code = Scope->toSourceNode();
+        var result = this.csn('module(\'' + this.parser.moduleName + '\', function(module, resource) {' + this.nl());
+
+        result.add(this.refsToSourceNode());
+        result.add(code);
+
+        // module export
+
+        if (this.moduleExport !== null) {
+            result.add([ 'module.exports = ', this.moduleExport, ';' + this.nl() ]);
+        }
+
+        // individual exports
+
+        var exports = this.exports.keys();
+
+        for (var id in exports) {
+            result.add([ 'module.exports.' + exports[id] + ' = ', this.exports.get(exports[id]), ';' + this.nl() ]);
+        }
+
+        // publish as application interface
+
+        if (this.isInterface) {
+            result.add('___module.exports = module.exports;' + this.nl());
+        }
+
+        result.add(this.nl(-1, result) + '});' + this.nl());
+
+        return result;
+    },
+};

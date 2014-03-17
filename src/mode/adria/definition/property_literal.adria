@@ -1,0 +1,135 @@
+/*
+ * Adria transcompiler
+ *
+ * Copyright (C) 2014 Dennis Möhlmann <mail@dennismoehlmann.de>
+ * Licensed under the MIT license.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of
+ * this software and associated documentation files (the "Software"), to deal in
+ * the Software without restriction, including without limitation the rights to
+ * use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of
+ * the Software, and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+ * FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+ * COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
+ * IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+ * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ */
+var ObjectLiteral = require('./object_literal');
+var SourceNode = require('../../../source_node');
+
+var storageId = 1;
+
+module PropertyLiteral = proto (ObjectLiteral) {
+
+    useStorage          : false,
+    storageName         : null, //!todo probably shouldn't contain the quotes
+    defaultValueNode    : 'undefined', //!todo should be sourcenode, but returning sourcenodes also needs to be refactored. eventually should be Node
+    target              : 'undefined',
+    name                : 'undefined',
+
+    assignmentToSourceNode: func(name, target) { //!todo sn/string mix
+
+        // set target for inheritance lookup code
+
+        this.target = target;
+        this.name = name;
+
+        // let object parent class build the output using our assembleItemList
+
+        var propertyBody = ObjectLiteral->toSourceNode();
+        var result = this.csn();
+
+        if (this.useStorage) {
+            result.add('(');
+            this.getStorageCode(result);
+        }
+
+        result.add([ 'Object.defineProperty(', target, ', ', name, ', ' ]);
+        result.add(propertyBody);
+        result.add(this.useStorage ? '))' : ')');
+        return result;
+    },
+
+    getStorageCode: func(SourceNode result) {
+
+        result.add('Object.defineProperty(' + this.target + ', ' + this.storageName + ', {' + this.nl(1));
+        result.add([ 'value: ', this.defaultValueNode, ',' + this.nl() ]);
+        result.add('writable: true' + this.nl(-1));
+        result.add('}),' + this.nl());
+    },
+
+    getLookupCode: func(SourceNode result, string type) {
+
+        result.add('(function() {' + this.nl(1));
+        result.add([ 'var descriptor, level = ', this.target, ';' + this.nl() ]);
+        result.add([ 'while ((level = Object.getPrototypeOf(level)) !== null && (descriptor = Object.getOwnPropertyDescriptor(level, ', this.name, ')) === undefined);' + this.nl() ]);
+        result.add('return descriptor.' + type + ';' + this.nl(-1));
+        result.add('})()');
+    },
+
+    assembleItemList: func() {
+
+        // fetch storage and default settings in advance
+
+        this.each(func(child) {
+
+            var childKey = child.get('key');
+            var childValue = child.get('value');
+
+            if (childKey.value === 'default') {
+                this.defaultValueNode = childValue.toSourceNode();
+                this.useStorage = true;
+            } else if (childKey.value === 'storage') {
+                this.storageName = childValue.value;
+                this.useStorage = true;
+            }
+        });
+
+        // find name for property storage field
+
+        if (this.storageName === null) {
+
+            var name = this.findName();
+
+            if (name === null) {
+                this.storageName = '\'___psf' + (storageId++) + '\'';
+            } else {
+                this.storageName = '\'_' + name.getPlain() + '\'';
+            }
+        }
+
+        // process property fields
+
+        var items = this.csn();
+
+        this.each(func(child) {
+
+            var childKey = child.get('key');
+            var inherit = child.has('inherit');
+
+            if (childKey.value !== 'default' && childKey.value !== 'storage') {
+
+                var item = this.csn();
+                item.add(childKey.csn(childKey.value));
+                item.add(': ');
+
+                if (inherit) {
+                    this.getLookupCode(item, childKey.value);
+                } else {
+                    item.add(child.get('value').toSourceNode());
+                }
+
+                items.add(item);
+            }
+        });
+
+        return items;
+    },
+};

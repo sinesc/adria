@@ -1,0 +1,117 @@
+/*
+ * Adria transcompiler
+ *
+ * Copyright (C) 2014 Dennis Möhlmann <mail@dennismoehlmann.de>
+ * Licensed under the MIT license.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of
+ * this software and associated documentation files (the "Software"), to deal in
+ * the Software without restriction, including without limitation the rights to
+ * use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of
+ * the Software, and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+ * FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+ * COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
+ * IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+ * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ */
+
+export Node = require('./node');
+
+var ValueType = require('./value_type');
+export Ident = require('./definition/ident');
+export Name = Ident; //!todo derive from ValueType
+export String = proto (ValueType) { };
+export Numeric = proto (ValueType) { };
+
+export Scope = require('./definition/scope');
+export Module = require('./definition/module');
+export RequireLiteral = require('./definition/require_literal');
+export ResourceLiteral = require('./definition/resource_literal');
+
+export FunctionLiteral = require('./definition/function_literal');
+export GeneratorLiteral = require('./definition/generator_literal');
+export AsyncLiteral = require('./definition/async_literal');
+export FunctionStatement = proto (FunctionLiteral) {
+    registerWithParent: true,
+};
+export GeneratorStatement = proto (GeneratorLiteral) {
+    registerWithParent: true,
+};
+export AsyncStatement = proto (AsyncLiteral) {
+    registerWithParent: true,
+};
+
+export FunctionParamsOptional = require('./definition/function_params_optional');
+export FunctionParamList = require('./definition/function_param_list');
+export AsyncParamList = require('./definition/async_param_list');
+
+export Expression = require('./definition/expression');
+
+export ObjectLiteral = require('./definition/object_literal');
+export PropertyLiteral = require('./definition/property_literal');
+
+export ProtoLiteral = require('./definition/proto_literal');
+export ProtoStatement = require('./definition/proto_statement');
+export ProtoBodyItem = require('./definition/proto_body_item');
+export ProtoBodyConstructor = require('./definition/proto_body_constructor');
+
+var TryStatement = require('./definition/try_statement');
+export Try = TryStatement.Try;
+export Catch = TryStatement.Catch;
+export CatchAll = TryStatement.CatchAll;
+export CatchSpecific = TryStatement.CatchSpecific;
+export Finally = TryStatement.Finally;
+
+export ForCountStatement = require('./definition/for_count_statement');
+export ImportStatement = require('./definition/import_statement');
+export ApplicationStatement = require('./definition/application_statement');
+
+export AccessOperationProtocall = require('./definition/access_operation_protocall');
+
+export ConstLiteral = require('./definition/const_literal');
+export InvokeOperation = require('./definition/invoke_operation');
+export AsyncWrapOperation = require('./definition/async_wrap_operation');
+export BaseLiteral = require('./definition/base_literal');
+
+export DoWhileStatement = require('./definition/do_while_statement');
+export WhileStatement = require('./definition/while_statement');
+export SwitchStatement = require('./definition/switch_statement');
+export ForInStatement = require('./definition/for_in_statement');
+
+var IfBlock = require('./definition/if_statement'); //!todo bad naming
+export IfStatement = IfBlock.IfStatement;
+export IfConditional = IfBlock.IfConditional;
+export IfUnconditional = IfBlock.IfUnconditional;
+
+export ArrayLiteral = require('./definition/array_literal');
+export NewProtoLiteral = require('./definition/new_proto_literal');
+
+export ReturnStatement = require('./definition/return_statement');
+
+export YieldLiteral = require('./definition/yield_literal');
+export AwaitLiteral = require('./definition/await_literal');
+
+export ThrowStatement = require('./definition/throw_statement');
+export AssertStatement = require('./definition/assert_statement');
+
+export Statement = require('./definition/statement');
+
+export InterfaceStatement = require('./definition/interface_statement');
+export ModuleStatement = require('./definition/module_statement');
+export ExportStatement = require('./definition/export_statement');
+
+export GlobalStatement = require('./definition/global_statement');
+export VarStatement = require('./definition/var_statement');
+
+export StorageLiteral = require('./definition/storage_literal');
+export ParentLiteral = require('./definition/parent_literal');
+export SelfLiteral = require('./definition/self_literal');
+
+export FlowStatement = require('./definition/flow_statement');

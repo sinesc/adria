@@ -18,6 +18,7 @@ echo "== build == ngadria compiling ngadria (assertive)..."
 
 echo "== build == ok. again..."
 ./bin/ngadria.js $BUILD_PARAMS
+#--shellargs="--debug-brk"
 
 echo "== build == unit testing...";
 ./bin/ngadria.js $TEST_PARAMS

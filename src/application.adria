@@ -104,12 +104,12 @@ module Application = proto {
 
         if (mode === 'adria') {
 
-            var AdriaTransform = require('./targets/adria_transform');
+            var AdriaTransform = require('./mode/adria/transform');
             transform = new AdriaTransform(stdin);
 
         } else if (mode === 'adriadebug') {
 
-            var AdriaDebugTransform = require('./targets/adriadebug_transform');
+            var AdriaDebugTransform = require('./mode/adriadebug/transform');
             transform = new AdriaDebugTransform(stdin);
 
         } else {

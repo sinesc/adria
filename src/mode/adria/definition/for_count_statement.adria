@@ -1,0 +1,74 @@
+/*
+ * Adria transcompiler
+ *
+ * Copyright (C) 2014 Dennis Möhlmann <mail@dennismoehlmann.de>
+ * Licensed under the MIT license.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of
+ * this software and associated documentation files (the "Software"), to deal in
+ * the Software without restriction, including without limitation the rights to
+ * use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of
+ * the Software, and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+ * FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+ * COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
+ * IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+ * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ */
+var Scope = require('./scope');
+var Node = require('../node');
+
+module ForCountStatement = proto (Scope) {
+
+    toSourceNode: func() {
+
+        var initNode = this.get('init');
+        var init;
+
+        if (initNode.value === 'var_statement') {
+
+            var varDefs = this.csn();
+            var ownScope = this;
+
+            initNode.eachKey('item', func(Node node) {
+
+                var valueNode = node.get('value');
+                var nameNode = node.get('name');
+                var localName = ownScope.addLocal(nameNode.value);
+
+                if (valueNode.isNode()) {
+                    varDefs.add(this.csn([ nameNode.csn(localName), ' = ', valueNode.toSourceNode() ]));
+                } else {
+                    varDefs.add(nameNode.csn(localName));
+                }
+            });
+
+            init = this.csn();
+            init.add([ varDefs.join(', ') ]);
+
+        } else {
+
+            init = initNode.toSourceNode();
+        }
+
+        var test = this.get('test').toSourceNode();
+        var condOp = this.get('cond_op').toSourceNode();
+
+        this.nl(1);
+        var body = this.get('body').toSourceNode();
+        this.nl(-1);
+
+        var result = this.csn();
+        result.add(this.refsToSourceNode());
+        result.add([ 'for (', init, '; ', test, ';', condOp, ') {' + this.nl(1) ]);
+        result.add([ body, this.nl(-1, body) + '}' ]);
+
+        return result;
+    },
+};

@@ -1,0 +1,75 @@
+/*
+ * Adria transcompiler
+ *
+ * Copyright (C) 2014 Dennis Möhlmann <mail@dennismoehlmann.de>
+ * Licensed under the MIT license.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of
+ * this software and associated documentation files (the "Software"), to deal in
+ * the Software without restriction, including without limitation the rights to
+ * use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of
+ * the Software, and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+ * FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+ * COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
+ * IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+ * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ */
+
+module Name = proto {
+
+    node: null,
+    plain: null,
+    mangled: null,
+    valid: false,
+
+    constructor: func(/*Node*/ Object? node = null, string? plain = null, string? mangled = null) {
+        this.node = node;
+        this.plain = plain;
+        this.mangled = mangled;
+        this.valid = /^([\'\"]).*\1$/.test(plain) === false && node !== null && plain !== null;
+    },
+
+    getPlain: func() {
+        return (this.valid ? this.plain : null);
+    },
+
+    getMangled: func() {
+
+        // return custom mangled name
+
+        if (this.mangled !== null && this.valid) {
+            return this.mangled;
+        }
+
+        // lookup mangled name
+
+        var plain = this.getPlain();
+
+        if (plain !== null) {
+            var name = this.node.findScope().getRef(plain);
+            this.mangled = (name === null ? plain : name);
+            return this.mangled;
+        }
+
+        return null;
+    },
+
+    getPlainNode: func() {
+        return this.makeSourceNode(this.getPlain());
+    },
+
+    getMangledNode: func() {
+        return this.makeSourceNode(this.getMangled());
+    },
+
+    makeSourceNode: func(string value) {
+        return this.node.csn(value);
+    },
+};
