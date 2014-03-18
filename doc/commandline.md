@@ -3,13 +3,14 @@ adria
 
 - <a href="//github.com/sinesc/adria/blob/master/README.md">Readme</a>
 - <a href="//github.com/sinesc/adria/blob/master/doc/overview.md">Language overview</a>
-- <a href="//github.com/sinesc/adria/blob/master/doc/modules.md">Module structure</a>
+- <a href="//github.com/sinesc/adria/blob/master/doc/modules.md">Module handling</a>
 - <a href="//github.com/sinesc/adria/blob/master/doc/commandline.md">Commandline options</a>
 
 Commandline options
 -------------------
 
-Command line help is available via the --help switch. By default this will print the arguments available for mode=adria, use `adria -m <mode> --help` to get help for `<mode>`
+Command line help is available via the --help switch. By default this will print the arguments available for mode=adria, use `adria -m <mode> --help` to get
+help for `<mode>`
 
 ```
 usage: adria [-v] [-d] [-m {adria,adriadebug}] [--stdin] [--cache] [-b <path>]

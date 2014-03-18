@@ -3,7 +3,7 @@ adria
 
 - <a href="//github.com/sinesc/adria/blob/master/README.md">Readme</a>
 - <a href="//github.com/sinesc/adria/blob/master/doc/overview.md">Language overview</a>
-- <a href="//github.com/sinesc/adria/blob/master/doc/modules.md">Module structure</a>
+- <a href="//github.com/sinesc/adria/blob/master/doc/modules.md">Module handling</a>
 - <a href="//github.com/sinesc/adria/blob/master/doc/commandline.md">Commandline options</a>
 
 Language overview
@@ -23,6 +23,13 @@ This is a short overview of the differences between Javascript and Adria
 - Adria tries to infer names for function- and proto-literals from the left side of an assignment or property declaration. The name is valid only in the function scope but may prevent the function from accessing a parent scope object with the same name.
 
 ## Changed syntax
+
+### var statement
+
+`var <name> import <èxternal name>`
+
+Adria's `var` statment creates a block scoped reference. It also support a sepcial syntax used to
+[import external references](https://github.com/sinesc/adria/blob/master/doc/modules.md#import).
 
 ### Default parameters
 
@@ -86,7 +93,7 @@ Rest parameters are not supported after advanced parameter lists.
 
 `[<type>[<modifier>]] <parameter> [= <default value> ]`
 
-Parameter lists may specify the type of individual or all parameters. The following values are supported for type: `boolean`, `number`, `finite` (finite number, i.e. not `NaN`), `string`, `func`, `object` as well as references to constructors, i.e. `RegExp`. The modifier `?` additionally allows passing (strictly) `null`. 
+Parameter lists may specify the type of individual or all parameters. The following values are supported for type: `boolean`, `number`, `finite` (finite number, i.e. not `NaN`), `string`, `func`, `object` as well as references to constructors, i.e. `RegExp`. The modifier `?` additionally allows passing (strictly) `null`.
 
 Type annotations compile to no code unless the `--assert` flag is used during compilation, in which case non-matching parameters will throw an `AssertionFailedException`.
 
@@ -298,7 +305,7 @@ proto Sub (Base) {
 
 `parent`
 
-Refers to the parent constructor of the constructor whose prototype defines the current function. `parent` is available wherever `this` is available. It is **not limited** to `proto`-defined objects. `parent` operates by traversing the prototype chain, starting at `this`.
+Refers to the parent constructor of the constructor whose prototype defines the current function. `parent` is available wherever `this` is available. It is not limited to `proto`-defined objects. `parent` operates by traversing the prototype chain, starting at `this`.
 
 ```javascript
 proto Base {
@@ -338,7 +345,7 @@ proto Sub (Base) {
 
 `self`
 
-Refers to the constructor whose prototype defines the current function. `self` is available wherever `this` is available. It is **not limited** to `proto`-defined objects. `self` operates by traversing the prototype chain, starting at `this`.
+Refers to the constructor whose prototype defines the current function. `self` is available wherever `this` is available. It is not limited to `proto`-defined objects. `self` operates by traversing the prototype chain, starting at `this`.
 
 ### async function literals and statements
 

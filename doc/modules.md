@@ -3,7 +3,7 @@ adria
 
 - <a href="//github.com/sinesc/adria/blob/master/README.md">Readme</a>
 - <a href="//github.com/sinesc/adria/blob/master/doc/overview.md">Language overview</a>
-- <a href="//github.com/sinesc/adria/blob/master/doc/modules.md">Module structure</a>
+- <a href="//github.com/sinesc/adria/blob/master/doc/modules.md">Module handling</a>
 - <a href="//github.com/sinesc/adria/blob/master/doc/commandline.md">Commandline options</a>
 
 Module structure
@@ -129,7 +129,13 @@ Declares one or more variables in the application scope, making them available t
 
 `import <name>[, <name>[, ...]];`
 
+`var <name> import <external name>[, ...];`
+
+`global <name> import <external name>[, ...];`
+
 Imports one or more symbols from the environment. The statement does not compile to any code but informs the compiler about symbols declared outside of the application being compiled.
+
+Alternatively, the var statement supports a syntax that allows renaming of the external reference (without copying it, `name` refers to the actual reference). Similarly, the global statement offers the same feature, but also allows the reference to be used within the entire application scope.
 
 ### interface
 
@@ -174,4 +180,3 @@ application(Application);   // => Application ID is 362
 At compiletime, the compiler will append all utf8-encoded files indicated by `resource` function-calls to the sourcecode it is currently generating.
 At runtime, the `resource` function immediately returns the contents of files that were embedded during compilation.
 `<filename>` is expected to be a constant literal, the compiler will exit with an error message if `<filename>` requires runtime evaluation.
-
