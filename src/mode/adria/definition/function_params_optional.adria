@@ -28,6 +28,11 @@ module FunctionParamsOptional = proto (ParamsNode) {
 
     optionalIsActive: true,
 
+    reset: func(state) {
+        this.optionalIsActive = true;
+        parent->reset(state);
+    },
+
     /**
      * attempt to set the optional active status. optionals can only be active if their
      * parent is active as well

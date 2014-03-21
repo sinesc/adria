@@ -24,6 +24,7 @@
 require('astd/prototype/string').extend();
 require('astd/prototype/regexp').extend();
 require('astd/prototype/object').extend();
+require('astd/prototype/date').extend();
 
 // run the application
 

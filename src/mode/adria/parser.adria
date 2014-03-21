@@ -42,6 +42,23 @@ module AdriaParser = proto(LanguageParser) {
     constructor: func(object transform) {
 
         LanguageParser->constructor(transform);
+        this.resetResult();
+    },
+
+    /**
+     * returns new instance suitable for parsing
+     */
+    clone: func() {
+
+        var parser = LanguageParser->clone();
+        parser.resetResult();
+        return parser;
+    },
+
+    /**
+     * resets the parsers result-data
+     */
+    resetResult: func() {
 
         this.resultData = {
             globalDeclarations  : new Set(),
@@ -51,25 +68,6 @@ module AdriaParser = proto(LanguageParser) {
             resources           : new Set(),
             isInterface         : false,
         };
-    },
-
-    /**
-     * returns new instance suitable for parsing
-     */
-    clone: func() {
-
-        var parser = LanguageParser->clone();
-
-        parser.resultData = {
-            globalDeclarations  : new Set(),
-            globalReservations  : new Set(),
-            globalReferences    : new Map(),
-            requires            : new Set(),
-            resources           : new Set(),
-            isInterface         : false,
-        };
-
-        return parser;
     },
 
     /**

@@ -30,19 +30,24 @@ var Cache = require('./cache');
 module Transform = proto {
 
     /**
-     * set command line options
+     * @var Array command line options
      */
     options: null,
 
     /**
-     * data received via stdin
+     * @var string? data received via stdin
      */
     stdin: null,
 
     /**
-     * output cache
+     * @var Cache output cache
      */
     cache: null,
+
+    /**
+     * @var integer short unique id
+     */
+    uid: 1,
 
     /**
      * constructor
@@ -62,10 +67,16 @@ module Transform = proto {
     },
 
     /**
+     * reset transform object
+     */
+    reset: func() {
+        this.uid = 1;
+    },
+
+    /**
      * initialize options definition, extend with own options
      */
     initOptions: func() {
-
         application.args.addSwitch('cache', 'Cache generated code', true);
     },
 
@@ -73,8 +84,16 @@ module Transform = proto {
      * processes options definition into options
      */
     processOptions: func() {
-
         this.options = application.args.parseAll();
+    },
+
+    /**
+     * returns continuously increasing unique id
+     *
+     * @return integer
+     */
+    makeUID: func() {
+        return this.uid++;
     },
 
     /**

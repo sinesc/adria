@@ -1,0 +1,176 @@
+/*
+ * Adria transcompiler
+ *
+ * Copyright (C) 2014 Dennis Möhlmann <mail@dennismoehlmann.de>
+ * Licensed under the MIT license.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of
+ * this software and associated documentation files (the "Software"), to deal in
+ * the Software without restriction, including without limitation the rights to
+ * use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of
+ * the Software, and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+ * FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+ * COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
+ * IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+ * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ */
+var Set = require('astd/set');
+var Listenable = require('astd/listenable');
+var fs = require('fs');
+var fspath = require('path');
+
+module Monitor = proto (Listenable) {
+
+    paths: null,
+    ignoreFiles: null,
+    delay: 0,
+    diff: null,
+    rescan: false,
+    timeout: null,
+    watcher: null,
+
+    constructor: func(Array paths = [], Array ignoreFiles = [], delay = 250) {
+
+        this.paths = paths;
+        this.delay = delay;
+        this.ignoreFiles = new Set();
+
+        for (var _, file in ignoreFiles) {
+            this.ignoreFiles.add(fspath.normalize(file));
+        }
+    },
+
+    /**
+     * set monitored paths
+     *
+     * @param Array paths
+     */
+    getPaths: func(Array paths) {
+
+        var result = [];
+
+        for (var _, path in paths) {
+            result.push.apply(result, recursePath(path));
+        }
+
+        return result;
+    },
+
+    /**
+     * start watching paths
+     */
+    start: func() {
+
+        this.stop();
+
+        this.watcher = [];
+        this.rescan = false;
+        this.diff = new Set();
+
+        var paths = this.getPaths(this.paths);
+
+        for (var _, path in paths) {
+            var watcher = fs.watch(path, this.compounder.bind(this, path));
+            this.watcher.push(watcher);
+        }
+    },
+
+    /**
+     * stop watching paths
+     */
+    stop: func() {
+
+        if (this.watcher !== null) {
+            for (var _, watcher in this.watcher) {
+                watcher.close();
+            }
+            this.watcher = null;
+        }
+    },
+
+    /**
+     * called for each changed file and adds it to a map
+     * passes that map to handler once timeout has expired
+     *
+     * @param string path
+     * @param string event
+     * @param string file
+     */
+    compounder: func(path, event, file) {
+
+        var fullName = fspath.normalize(path + '/' + file);
+
+        // deleting a folder returns "change" for path with file = the folder name, resulting in path/to/deleted folder/deleted folder
+
+        if (path.hasPostfix(file) && fs.existsSync(fullName) === false) {
+            return;
+        }
+
+        // skip ignored files
+
+        if (this.ignoreFiles.has(fullName)) {
+            return;
+        }
+
+        // add file to list of changed files
+
+        this.diff.add(fullName);
+
+        if (event === 'rename') {
+            this.rescan = true;
+        }
+
+        // wait a moment for more changed files before triggering event
+
+        clearTimeout(this.timeout);
+        this.timeout = setTimeout(this.handler.bind(this), this.delay);
+    },
+
+    /**
+     * handles a compounded event
+     */
+    handler: func() {
+
+        var diff = this.diff;
+
+        if (this.rescan) {
+            this.stop();
+            this.start();
+        } else {
+            this.diff = new Set();
+        }
+
+        this.execute('change', diff);
+    },
+};
+
+var recursePath = func(path = '.', includeHidden = false) {
+
+    var files = fs.readdirSync(path);
+    var result = [ ];
+
+    path = path.replace(/\/$/, '');
+
+    result.push(path);
+
+    for (var file in files) {
+
+        if (includeHidden === true || files[file].substr(0, 1) !== '.') {
+
+            var stat = fs.statSync(path + '/' + files[file]);
+
+            if (stat.isDirectory()) {
+                result.push.apply(result, recursePath(path + '/' + files[file], includeHidden));
+            }
+        }
+    }
+
+    return result;
+};

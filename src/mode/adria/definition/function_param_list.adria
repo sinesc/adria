@@ -38,6 +38,13 @@ module FunctionParamList = proto (ParamsNode) {
 
     types: new Set([ 'boolean', 'number', 'finite', 'string', 'scalar', 'func', 'object' ]),
 
+    reset: func(state) {
+        this.numParams = 0;
+        this.optionalPermutations = null;
+        this.optionalGroups = null;
+        parent->reset(state);
+    },
+
     toSourceNode: func() {
 
         var result = this.csn();

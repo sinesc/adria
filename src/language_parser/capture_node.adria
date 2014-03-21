@@ -519,7 +519,7 @@ module CaptureNode = proto {
 
         return new SourceNode(this.row, this.col -1, null, code); //!todo why is everthing offset by one if I don't subtract 1 here? col start at 0, row at 1? unlikely
     },
-    
+
     /**
      * returns node location in source, useful for error output
      *
@@ -532,7 +532,7 @@ module CaptureNode = proto {
     /**
      * recursively calls children for preprocessing purposes
      *
-     * @param any state user-defined preprocessing state object passed to every child
+     * @param any state user-defined object passed to every child
      */
     preprocess: func(state) {
 
@@ -585,7 +585,7 @@ module CaptureNode = proto {
     /**
      * recursively calls children for pre-scanning purposes
      *
-     * @param any state user-defined prescan state object passed to every child
+     * @param any state user-defined object passed to every child
      */
     prescan: func(state) {
 
@@ -599,7 +599,7 @@ module CaptureNode = proto {
     /**
      * recursively calls children for scanning purposes
      *
-     * @param any state user-defined scan state object passed to every child
+     * @param any state user-defined object passed to every child
      */
     scan: func(state) {
 
@@ -610,6 +610,19 @@ module CaptureNode = proto {
         }
     },
 
+    /**
+     * recursively calls children for reset purposes
+     *
+     * @param any state user-defined object passed to every child
+     */
+    reset: func(state) {
+
+        if (this.children instanceof Array) {
+            for (var id, child in this.children) {
+                child.reset(state);
+            }
+        }
+    },
 };
 
 /**

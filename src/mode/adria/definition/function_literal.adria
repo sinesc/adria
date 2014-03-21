@@ -26,14 +26,12 @@ var Scope = require('./scope');
 var ASTException = require('../../../language_parser/ast_exception');
 var Name = require('../name');
 
-var thisId = 1;
-
 module FunctionLiteral = proto (Scope) {
 
-    thisId              : 0,
-    provideContext      : false,
-    provideParent       : false,
-    provideSelf         : false,
+    thisId          : 0,
+    provideContext  : false,
+    provideParent   : false,
+    provideSelf     : false,
 
     /**
      * @var Name
@@ -60,7 +58,11 @@ module FunctionLiteral = proto (Scope) {
 
         this.specialArgs = [ ];
         Scope->constructor(key, value);
-        this.thisId = thisId++;
+    },
+
+    reset: func(state) {
+        this.specialArgs = [ ];
+        parent->reset(state);
     },
 
     /**
@@ -90,6 +92,8 @@ module FunctionLiteral = proto (Scope) {
      * @return SourceNode
      */
     toSourceNode: func() {
+
+        this.thisId = this.parser.transform.makeUID();
 
         // indent child content, compensate by not indenting at opening {
 

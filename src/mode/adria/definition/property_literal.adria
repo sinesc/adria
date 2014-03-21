@@ -24,8 +24,6 @@
 var ObjectLiteral = require('./object_literal');
 var SourceNode = require('../../../source_node');
 
-var storageId = 1;
-
 module PropertyLiteral = proto (ObjectLiteral) {
 
     useStorage          : false,
@@ -99,7 +97,7 @@ module PropertyLiteral = proto (ObjectLiteral) {
             var name = this.findName();
 
             if (name === null) {
-                this.storageName = '\'___psf' + (storageId++) + '\'';
+                this.storageName = '\'___psf' + this.parser.transform.makeUID() + '\'';
             } else {
                 this.storageName = '\'_' + name.getPlain() + '\'';
             }

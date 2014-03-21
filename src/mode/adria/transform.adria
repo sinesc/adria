@@ -31,6 +31,7 @@ var Template = require('../../template');
 var Transform = require('../../transform');
 var AdriaParser = require('./parser');
 var ASTException = require('../../language_parser/ast_exception');
+var Monitor = require('../../monitor');
 
 /**
  * Transforms a set of input files into one or more output files using the
@@ -55,101 +56,149 @@ module AdriaTransform = proto (Transform) {
      */
     globalReferences: null,
 
-
-    cacheModifier   : null,
-    startTime       : 0,
     requires        : null,
     modules         : null,
     resources       : null,
     usedBuiltins    : null,
     requiresDone    : null,
-    sourceCode      : null,
-    protoParser     : null,
     addInterface    : false,
     addApplication  : false,
 
+    /**
+     * @var AdriaParser trained parser to use as cloning source
+     */
+    protoParser: null,
+
+    /**
+     * @var Map caches parsers by their module name, used when monitoring
+     */
+    cachedParsers: null,
+
+    /**
+     * @var string calculated from arguments, alters cache hashes to ensure cache data corresponds to current compilation options
+     */
+    cacheModifier: null,
+
+    /**
+     * @var integer timing reference
+     */
+    startTime: 0,
+
+    /**
+     * @var integer number of compiled modules
+     */
+    numCompiled: 0,
+
+    /**
+     * @var object builtin modules
+     */
     builtins: {
         'async.adria': resource('../../../templates/adria/async.tpl'),
     },
 
+    /**
+     * constructor
+     *
+     * @param string? stdin
+     */
     constructor: func(string? stdin) {
-
         Transform->constructor(stdin);
-
-        this.globalDeclarations = new Set();
-        this.globalReservations = new Set();
-        this.globalReferences   = new Map();
-
-        this.requires       = new Set();
-        this.resources      = new Set();
-        this.requiresDone   = new Set();
-        this.usedBuiltins   = new Set();
-        this.closureParams  = new Map();
-        this.modules        = [ ];
-        this.sourceCode     = { };
-
-        // implicitly known references
-
-        this.defineImplicits();
+        this.cachedParsers = new Map();
     },
 
     /**
-     * entry point, run transformation
+     * triggers transformation
      */
     run: func() {
 
         // create a prototype parser to clone from (to avoid training overhead)
 
+        this.time();
         this.protoParser = new AdriaParser(this);
         this.protoParser.trainSelf();
+        this.time('Setup $0.ms');
 
-        this.time('Setup duration: $0.ms');
+        // optionally set up file monitoring mode
 
-        // process data from stdin and initial files
+        if (this.options['monitor']) {
+            this.startMonitoring();
+        }
+
+        // (initial) compile
+
+        this.compile();
+    },
+
+    /**
+     * runs transformation on the given input
+     *
+     * @param Array? forceReload in monitoring mode contains list of changed files
+     */
+    compile: func(Array? forceReload = null) {
+
+        this.reset();
+
+        // additional monitor mode output
+
+        if (forceReload !== null) {
+            console.log((new Date()).format('Monitor: [%H:%M:%S] recompiling changed files...'));
+            this.time();
+        }
+
+        // recursively preprocess data from stdin and initial files, assemble list of modules
 
         if (this.stdin !== null) {
-            this.preprocessModule('main' + this.options['extension'], this.stdin);
+            this.recurseDependencies('main' + this.options['extension'], this.stdin, forceReload);
         }
 
         var files = this.options['files'];
 
         for (var id in files) {
-            this.preprocessModule(util.normalizeExtension(files[id], this.options['extension']));
+            this.recurseDependencies(util.normalizeExtension(files[id], this.options['extension']), null, forceReload);
         }
 
-        this.time('Load/preprocess duration: $0.ms');
+        this.time('Load/preprocess $0.ms');
 
         // generate module code
 
-        this.process();
-        this.time('Process duration: $0.ms');
+        for (var id, currentModule in this.modules) {
+            currentModule.result = currentModule.parser.process();
+        }
+
+        this.time('Process $0.ms');
 
         // scan modules for undefined variables
 
         if (this.options['scan']) {
-            this.scan();
-            this.time('Scan duration: $0.ms');
+            for (var id, currentModule in this.modules) {
+                currentModule.parser.prescan({ });
+            }
+            for (var id, currentModule in this.modules) {
+                currentModule.parser.scan({ });
+            }
+            this.time('Scan $0.ms');
         }
 
-        // add global imports specific to target platform
+        // only write if files changed
 
-        if (this.options['platform'] === 'node') {
-            this.closureParams.set({
-                'module'    : '___module',
-                'require'   : '___require',
-                'global'    : 'window',
-            });
-        } else {
-            this.closureParams.set('self', 'window');
+        if (this.options['monitor'] && this.numCompiled === 0) {
+            console.log((new Date()).format('Monitor: [%H:%M:%S] no changes. ready.'));
+            return;
         }
 
         // finally generate and write the code
 
-        var code = this.buildApplication();
-        this.time('Merge duration: $0.ms');
+        var code = this.mergeAll();
+        this.time('Merge $0.ms');
 
         this.output(code);
-        this.time('Write duration: $0.ms');
+        this.time('Write $0.ms');
+
+        // additional monitor mode output
+
+        if (this.options['monitor']) {
+            console.log((new Date()).format('Monitor: [%H:%M:%S] ready.'));
+        }
     },
 
     /**
@@ -159,22 +208,13 @@ module AdriaTransform = proto (Transform) {
      *
      * @param string moduleName name of the module
      * @param string? data module source code
+     * @param Set? forceReload in monitoring mode contains the names of modified modules
      */
-    preprocessModule: func(string moduleName, string? data = null) {
+    recurseDependencies: func(string moduleName, string? data = null, Set? forceReload = null) {
 
-        // create parser from proto-parser
+        // get a parser for the module and run preprocess
 
-        var parser = this.protoParser.clone();
-        parser.moduleName = moduleName;
-
-        if (data === null) {
-            parser.loadSource(this.options['basePath'] + moduleName, this.cacheModifier);
-        } else {
-            parser.setSource(moduleName, data, this.cacheModifier);
-        }
-
-        // run preprocess
-
+        var parser = this.getParser(moduleName, data, forceReload);
         parser.preprocess({ });
 
         // add global declarations and requires to transform
@@ -185,7 +225,7 @@ module AdriaTransform = proto (Transform) {
 
         for (var name in requires.data) {
             if (this.requiresDone.has(name) === false) {
-                this.preprocessModule(name);
+                this.recurseDependencies(name, null, forceReload);
             }
         }
 
@@ -210,33 +250,215 @@ module AdriaTransform = proto (Transform) {
     },
 
     /**
-     * run process on each module, save result to AdriaTransform::modules
+     * prints timing information if timing is enabled
+     *
+     * @param string? message
      */
-    process: func() {
+    time: func(string? message = null) {
 
-        for (var id, currentModule in this.modules) {
-            currentModule.result = currentModule.parser.process();
+        if (this.options['time'] && this.options['outFile'] !== null) {
+
+            if (message !== null) {
+                console.log('Timing: ' + message.format(Date.now() - this.startTime));
+            }
+
+            this.startTime = Date.now();
         }
     },
 
     /**
-     * runs (pre)scan on each module (used by some nodes to check variable declarations etc)
+     * initialize arguments for argument parser
      */
-    scan: func() {
+    initOptions: func() {
 
-        for (var id, currentModule in this.modules) {
-            currentModule.parser.prescan({ });
+        Transform->initOptions(this);
+
+        var args = application.args;
+
+        args.add(
+            [ 'files' ],
+            { help: 'File(s) to compile', nargs: '+' }
+        );
+
+        args.add(
+            [ '-o', '--out' ],
+            { help: 'Output file', action: 'store', dest: 'outFile', metavar: '<file>' }
+        );
+
+        args.add(
+            [ '-b', '--base' ],
+            { help: 'Base path, include paths are relative to this', defaultValue: './', dest: 'basePath', metavar: '<path>', required: false }
+        );
+
+        args.add(
+            [ '-p', '--path' ],
+            { help: 'Additional path to look for includes', action: 'append', dest: 'paths', metavar: '<path>' }
+        );
+
+        args.add(
+            [ '--extension' ],
+            { help: 'Adria file extension (adria)', defaultValue: 'adria', metavar: '<ext>', required: false },
+            func(value) { return '.' + value; }
+        );
+
+        args.add(
+            [ '-t', '--target' ],
+            { help: 'Platform to generate code for (node)', action: 'store', choices: [ 'node', 'web' ], dest: 'platform', defaultValue: 'node' }
+        );
+
+        args.add(
+            [ '--header'],
+            { help: 'File to include as commentblock before output', action: 'store', dest: 'headerFile', defaultValue: '', metavar: '<file>' }
+        );
+
+        args.add(
+            [ '-D', '--define' ],
+            { help: 'Define preprocessor value, i.e. version="1.2"', metavar: '<key>=<value>', action: 'append', dest: 'defines' },
+            func(data) {
+                var result = { };
+                for (var id, value in data) {
+                    var pair = value.split('=');
+                    result[pair[0]] = (pair[1] === undefined ? true : pair[1]);
+                }
+                return result;
+            }
+        );
+
+        args.addSwitch('shellwrap', 'Wrap in shell-script and flag executable', false);
+
+        args.add(
+            [ '--shellargs'],
+            { help: 'Arguments for shellwrap to pass to runtime. Use --shellargs="..." syntax.', action: 'store', dest: 'shellargs', defaultValue: '', metavar: '<args>' }
+        );
+
+        args.addSwitch('monitor', 'Don\'t exit after compilation, watch for and rebuild on file changes', false);
+        args.addSwitch('strict', 'Compile strict Javascript', true);
+        args.addSwitch('es5', 'Compile to ES5', false);
+        args.addSwitch('assert', 'Add assert() support', false);
+        args.addSwitch('scan', 'Perform basic logic checks', true);
+        args.addSwitch('map', 'Generate source map', false);
+        args.addSwitch('link', 'Link sourcemap to output', true);
+        args.addSwitch('time', 'Report compilation duration', false);
+    },
+
+    /**
+     * process arguments to options property
+     */
+    processOptions: func() {
+
+        parent->processOptions();
+
+        this.cacheModifier = util.md5(JSON.stringify(this.options));
+        this.options['defines']['___uniqueId'] = util.uniqueId();
+    },
+
+    /**
+     * create parser from proto-parser or reuse from cache
+     *
+     * @see recurseDependencies for parameters
+     */
+    getParser: func(string moduleName, string? data = null, Set? forceReload = null) {
+
+        var parser;
+        var fullName = path.normalize(this.options['basePath'] + moduleName);
+
+        if (this.cachedParsers.has(moduleName) && forceReload !== null && forceReload.lacks(fullName)) {
+
+            parser = this.cachedParsers.get(moduleName);
+            parser.resetResult();
+            parser.reset();
+
+        } else {
+
+            if (forceReload !== null) {
+                console.log('Monitor: updating ' + moduleName);
+            }
+
+            parser = this.protoParser.clone();
+            parser.moduleName = moduleName;
+
+            if (data === null) {
+                parser.loadSource(fullName, this.cacheModifier);
+            } else {
+                parser.setSource(moduleName, data, this.cacheModifier);
+            }
+
+            this.cachedParsers.set(moduleName, parser);
+            this.numCompiled++;
         }
 
-        for (var id, currentModule in this.modules) {
-            currentModule.parser.scan({ });
+        return parser;
+    },
+
+    /**
+     * reset compilation results (for monitoring mode)
+     */
+    reset: func() {
+
+        parent->reset();
+
+        this.numCompiled        = 0;
+
+        this.globalDeclarations = new Set();
+        this.globalReservations = new Set();
+        this.globalReferences   = new Map();
+
+        this.requires           = new Set();
+        this.resources          = new Set();
+
+        this.requiresDone       = new Set();
+        this.usedBuiltins       = new Set();
+        this.modules            = [ ];
+
+        this.addInterface       = false;
+        this.addApplication     = false;
+
+        this.defineImplicits();
+    },
+
+    /**
+     * defines implicitly known references
+     */
+    defineImplicits: func() {
+
+        var transform = this;
+
+        var addReferences = func(...refs) {
+            for (var _, ref in refs) {
+                transform.globalReferences.set(ref, ref);
+                transform.globalReservations.add(ref);
+            }
+        };
+
+        addReferences(
+            'window',
+            'arguments', 'this', 'true', 'false', 'null', 'undefined', 'Infinity', 'NaN',
+            'Array', 'Boolean', 'Date', 'Intl', 'JSON', 'Function', 'Math', 'Number', 'Object', 'RegExp', 'String',
+            'ArrayBuffer', 'DataView', 'Float32Array', 'Float64Array', 'Int16Array', 'Int32Array', 'Int8Array',
+            'Uint16Array', 'Uint32Array', 'Uint8Array',
+            'Error', 'EvalError', 'RangeError', 'ReferenceError', 'SyntaxError', 'TypeError', 'URIError',
+            'decodeURI', 'decodeURIComponent', 'encodeURI', 'encodeURIComponent', 'eval',
+            'setTimeout', 'clearTimeout', 'setInterval', 'clearInterval',
+            'isFinite', 'isNaN', 'parseFloat', 'parseInt',
+            'console', 'debugger',
+            'application', 'Exception'
+        );
+
+        if (this.options['platform'] === 'node') {
+            addReferences('process', 'Buffer');
+        } else if (this.options['platform'] === 'web') {
+            addReferences('screen', 'document', 'location', 'performance', 'alert', 'XMLHttpRequest', 'Worker');
+        }
+
+        if (this.options['assert']) {
+            addReferences('AssertionFailedException');
         }
     },
 
     /**
-     * build application from modules
+     * merge modules and resources to application
      */
-    buildApplication: func() {
+    mergeAll: func() {
 
         var options = this.options;
         var node    = new SourceNode(null, null);
@@ -252,7 +474,7 @@ module AdriaTransform = proto (Transform) {
         // wrap in shell-script
 
         if (options['shellwrap']) {
-            node.add([ 
+            node.add([
                 '#!/bin/sh\n',
                 '\':\' //; exec "`command -v nodejs || command -v node`" --harmony' + (options['shellargs'] === '' ? '' : ' ' + options['shellargs']) + ' "$0" "$@"\n'
             ]);
@@ -267,7 +489,19 @@ module AdriaTransform = proto (Transform) {
 
         // wrap with application and merge
 
-        node.add(';(function(' + this.closureParams.values().join(', ') + ') {\n');
+        var closureParams = new Map();
+
+        if (this.options['platform'] === 'node') {
+            closureParams.set({
+                'module'    : '___module',
+                'require'   : '___require',
+                'global'    : 'window',
+            });
+        } else {
+            closureParams.set('self', 'window');
+        }
+
+        node.add(';(function(' + closureParams.values().join(', ') + ') {\n');
 
         // apply strict mode
 
@@ -319,152 +553,9 @@ module AdriaTransform = proto (Transform) {
             node.add('\nrequire(\'' + util.normalizeExtension(file, this.options['extension']) + '\');');
         }
 
-        node.add('\n})(' + this.closureParams.keys().join(', ') + ');');
+        node.add('\n})(' + closureParams.keys().join(', ') + ');');
 
         return node;
-    },
-
-    /**
-     * prints timing information if timing is enabled
-     *
-     * @param string? message
-     */
-    time: func(string? message = null) {
-
-        if (this.options['time'] && this.options['outFile'] !== null) {
-
-            if (message !== null) {
-                console.log(message.format(Date.now() - this.startTime));
-            }
-
-            this.startTime = Date.now();
-        }
-    },
-
-    /**
-     * initialize arguments for argument parser
-     */
-    initOptions: func() {
-
-        Transform->initOptions(this);
-
-        var args = application.args;
-
-        args.add(
-            [ 'files' ],
-            { help: 'File(s) to compile', nargs: '+' }
-        );
-
-        args.add(
-            [ '-o', '--out' ],
-            { help: 'Output file', action: 'store', dest: 'outFile', metavar: '<file>' }
-        );
-
-        args.add(
-            [ '-b', '--base' ],
-            { help: 'Base path, include paths are relative to this', defaultValue: '', dest: 'basePath', metavar: '<path>', required: false }
-        );
-
-        args.add(
-            [ '-p', '--path' ],
-            { help: 'Additional path to look for includes', action: 'append', dest: 'paths', metavar: '<path>' }
-        );
-
-        args.add(
-            [ '--extension' ],
-            { help: 'Adria file extension (adria)', defaultValue: 'adria', metavar: '<ext>', required: false },
-            func(value) { return '.' + value; }
-        );
-
-        args.add(
-            [ '-t', '--target' ],
-            { help: 'Platform to generate code for (node)', action: 'store', choices: [ 'node', 'web' ], dest: 'platform', defaultValue: 'node' }
-        );
-
-        args.add(
-            [ '--header'],
-            { help: 'File to include as commentblock before output', action: 'store', dest: 'headerFile', defaultValue: '', metavar: '<file>' }
-        );
-
-        args.add(
-            [ '-D', '--define' ],
-            { help: 'Define preprocessor value, i.e. version="1.2"', metavar: '<key>=<value>', action: 'append', dest: 'defines' },
-            func(data) {
-                var result = { };
-                for (var id, value in data) {
-                    var pair = value.split('=');
-                    result[pair[0]] = (pair[1] === undefined ? true : pair[1]);
-                }
-                return result;
-            }
-        );
-
-        args.addSwitch('shellwrap', 'Wrap in shell-script and flag executable', false);
-
-        args.add(
-            [ '--shellargs'],
-            { help: 'Arguments for shellwrap to pass to runtime. Use --shellargs="..." syntax.', action: 'store', dest: 'shellargs', defaultValue: '', metavar: '<args>' }
-        );
-
-        args.addSwitch('strict', 'Compile strict Javascript', true);
-        args.addSwitch('es5', 'Compile to ES5', false);
-        args.addSwitch('assert', 'Add assert() support', false);
-        args.addSwitch('scan', 'Perform basic logic checks', true);
-        args.addSwitch('map', 'Generate source map', false);
-        args.addSwitch('link', 'Link sourcemap to output', true);
-        args.addSwitch('time', 'Report compilation duration', false);
-    },
-
-    /**
-     * process arguments to options property
-     */
-    processOptions: func() {
-
-        parent->processOptions();
-
-        this.cacheModifier = util.md5(JSON.stringify(this.options));
-        this.options['defines']['___uniqueId'] = util.uniqueId();
-
-        this.time();
-    },
-
-    /**
-     * defines implicitly known references
-     */
-    defineImplicits: func() {
-
-        var transform = this;
-
-        var addReferences = func(...refs) {
-            for (var _, ref in refs) {
-                transform.globalReferences.set(ref, ref);
-                transform.globalReservations.add(ref);
-            }
-        };
-
-        addReferences(
-            'window',
-            'arguments', 'this', 'true', 'false', 'null', 'undefined', 'Infinity', 'NaN',
-            'Array', 'Boolean', 'Date', 'Intl', 'JSON', 'Function', 'Math', 'Number', 'Object', 'RegExp', 'String',
-            'ArrayBuffer', 'DataView', 'Float32Array', 'Float64Array', 'Int16Array', 'Int32Array', 'Int8Array',
-            'Uint16Array', 'Uint32Array', 'Uint8Array',
-            'Error', 'EvalError', 'RangeError', 'ReferenceError', 'SyntaxError', 'TypeError', 'URIError',
-            'decodeURI', 'decodeURIComponent', 'encodeURI', 'encodeURIComponent', 'eval',
-            'setTimeout', 'clearTimeout', 'setInterval', 'clearInterval',
-            'isFinite', 'isNaN', 'parseFloat', 'parseInt',
-            'console', 'debugger',
-            'application', 'Exception'
-        );
-
-        if (this.options['platform'] === 'node') {
-            addReferences('process', 'Buffer');
-        } else if (this.options['platform'] === 'web') {
-            addReferences('screen', 'document', 'location', 'performance', 'alert', 'XMLHttpRequest', 'Worker');
-        }
-
-        if (this.options['assert']) {
-            addReferences('AssertionFailedException');
-        }
     },
 
     /**
@@ -503,5 +594,41 @@ module AdriaTransform = proto (Transform) {
 
             process.stdout.write(node.toString());
         }
+    },
+
+    /**
+     * set up file monitoring
+     */
+    startMonitoring: func() {
+
+        var paths = [ this.options['basePath'] ];
+
+        for (var _, path in this.options['paths']) {
+            paths.push(this.options['basePath'] + path);
+        }
+
+        var ignore = [ ];
+
+        if (this.options['outFile'] !== null) {
+
+            var jsFile = this.options['basePath'] + this.options['outFile'];
+            ignore.push(jsFile);
+
+            if (this.options['map']) {
+                ignore.push(jsFile.stripPostfix('.js') + '.map');
+            }
+        }
+
+        var monitor = new Monitor(paths, ignore);
+
+        monitor.on('change', this, func() {
+            try {
+                this.compile();
+            } catch (Exception e) {
+                process.stderr.write('Error: ' + e.message + '\n');
+            }
+        });
+
+        monitor.start();
     },
 };

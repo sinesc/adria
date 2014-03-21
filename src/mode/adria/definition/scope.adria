@@ -26,10 +26,6 @@ var Set = require('astd/set');
 var Node = require('../node');
 var ASTException = require('../../../language_parser/ast_exception');
 
-// keep unique scope ids
-
-var scopeLocalId = 1;
-
 module Scope = proto (Node) {
 
     /**
@@ -53,6 +49,14 @@ module Scope = proto (Node) {
         this.localReferences = new Map();
         this.usages = new Map();
         Node->constructor(key, value);
+    },
+
+    reset: func(state) {
+
+        this.localDeclarations = new Set();
+        this.localReferences = new Map();
+        this.usages = new Map();
+        parent->reset(state);
     },
 
     /**
@@ -106,7 +110,7 @@ module Scope = proto (Node) {
     getRef: func(string name, boolean checkGlobals = true) {
 
         // check locally first
-    
+
         var scope = this.findRefScope(name);
 
         if (scope !== null) {
@@ -114,7 +118,7 @@ module Scope = proto (Node) {
         }
 
         // check globals
-        
+
         if (checkGlobals) {
             var globalReferences = this.parser.transform.globalReferences;
 
@@ -169,7 +173,7 @@ module Scope = proto (Node) {
         }
 
         if (refName !== null) {
-            return '___' + name + '_scp' + scopeLocalId++;
+            return '___' + name + '_scp' + transform.makeUID();
         }
 
         return name;

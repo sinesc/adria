@@ -237,7 +237,7 @@ module Node = proto {
         var children = this.children;
         var child, blockRoot, generator, result;
 
-        if (stack.length > 500) {
+        if (stack.length > 250) {
             var message = parser.errorMessage(token, this, stack);
             throw new Exception('recursion too deep. last error:\n' + message);
         }

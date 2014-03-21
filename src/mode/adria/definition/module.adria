@@ -48,6 +48,14 @@ module Module = proto (Scope) {
         Scope->constructor(key, value);
     },
 
+    reset: func(state) {
+
+        this.exports = new Map();
+        this.moduleExport = null;
+        this.isInterface = false;
+        parent->reset(state);
+    },
+
     setInterface: func() {
 
         if (this.isInterface) {
