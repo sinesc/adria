@@ -22,6 +22,7 @@
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 var ProtoLiteral = require('./proto_literal');
+var SourceNode = require('../../../source_node');
 
 module ProtoStatement = proto (ProtoLiteral) {
 

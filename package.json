@@ -1,6 +1,6 @@
 {
   "name": "adria",
-  "version": "0.1.12",
+  "version": "0.2.1",
   "description": "Adria to Javascript compiler",
   "files": [
     "bin/adria.js",

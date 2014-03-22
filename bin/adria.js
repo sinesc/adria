@@ -321,13 +321,172 @@ module('../../astdlib/astd/prototype/object.adria', function(module, resource) {
     module.exports = ObjectExtensions;
     module.exports.extend = extend;
 });
+module('../../astdlib/astd/prototype/date.adria', function(module, resource) {
+    var merge, extend, dateLocale, zeroPad, dateMarkers, DateExtensions;
+    merge = require('../../astdlib/astd/prototype/merge.adria');
+    extend = function extend() {
+        merge(DateExtensions, Date);
+        merge(DateExtensions.prototype, Date.prototype);
+    };
+    dateLocale = {
+        enGB: {
+            months: [
+                'Jan',
+                'Feb',
+                'Mar',
+                'Apr',
+                'May',
+                'Jun',
+                'Jul',
+                'Aug',
+                'Sep',
+                'Oct',
+                'Nov',
+                'Dec'
+            ],
+            days: [ 'Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat' ],
+            monthsLong: [
+                'January',
+                'February',
+                'March',
+                'April',
+                'May',
+                'June',
+                'July',
+                'August',
+                'September',
+                'October',
+                'November',
+                'December'
+            ],
+            daysLong: [
+                'Sunday',
+                'Monday',
+                'Tuesday',
+                'Wednesday',
+                'Thursday',
+                'Friday',
+                'Saturday'
+            ]
+        },
+        deDE: {
+            months: [
+                'Jan',
+                'Feb',
+                'Mrz',
+                'Apr',
+                'Mai',
+                'Jun',
+                'Jul',
+                'Aug',
+                'Sep',
+                'Okt',
+                'Nov',
+                'Dez'
+            ],
+            days: [ 'So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa' ],
+            monthsLong: [
+                'Januar',
+                'Februar',
+                'März',
+                'April',
+                'Mai',
+                'Juni',
+                'Juli',
+                'August',
+                'September',
+                'Oktober',
+                'November',
+                'Dezember'
+            ],
+            daysLong: [
+                'Sonntag',
+                'Montag',
+                'Dienstag',
+                'Mittwoch',
+                'Donnerstag',
+                'Freitag',
+                'Samstag'
+            ]
+        }
+    };
+    zeroPad = function zeroPad(number) {
+        return ('0' + number).substr(-2, 2);
+    };
+    dateMarkers = {
+        d: [
+            'getDate',
+            function(v) {
+                return zeroPad(v);
+            }
+        ],
+        m: [
+            'getMonth',
+            function(v) {
+                return zeroPad(v + 1);
+            }
+        ],
+        n: [
+            'getMonth',
+            function(v, locale) {
+                return locale.months[v];
+            }
+        ],
+        w: [
+            'getDay',
+            function(v, locale) {
+                return locale.days[v];
+            }
+        ],
+        y: [ 'getFullYear' ],
+        H: [
+            'getHours',
+            function(v) {
+                return zeroPad(v);
+            }
+        ],
+        M: [
+            'getMinutes',
+            function(v) {
+                return zeroPad(v);
+            }
+        ],
+        S: [
+            'getSeconds',
+            function(v) {
+                return zeroPad(v);
+            }
+        ],
+        i: [ 'toISOString' ]
+    };
+    DateExtensions = (function() {
+        function DateExtensions() {}
+        DateExtensions.prototype.format = function format(formatString, localeName) {
+            var _this, locale;
+            localeName = (arguments.length > 1 ? localeName : ('enGB'));
+            _this = this;
+            locale = dateLocale[localeName];
+            return formatString.replace(/%(.)/g, function(m, p) {
+                var part;
+                part = _this[dateMarkers[p][0]]();
+                if (typeof dateMarkers[p][1] === 'function') {
+                    part = dateMarkers[p][1](part, locale);
+                }
+                return part;
+            });
+        };
+        return DateExtensions;
+    })();
+    module.exports = DateExtensions;
+    module.exports.extend = extend;
+});
 module('args.adria', function(module, resource) {
     var argparse, Args, applyCallbacks;
     argparse = ___require('argparse');
     Args = (function() {
         function Args() {
             this.parser = new argparse.ArgumentParser({
-                version: '0.1.12',
+                version: '0.2.1',
                 addHelp: false,
                 epilog: 'Use --no-... to invert option switches, i.e. --no-strict'
             });
@@ -759,6 +918,15 @@ module('language_parser/capture_node.adria', function(module, resource) {
                 }
             }
         };
+        CaptureNode.prototype.reset = function reset(state) {
+            if (this.children instanceof Array) {
+                var id, child;
+                for (id in this.children) {
+                    child = this.children[id];
+                    child.reset(state);
+                }
+            }
+        };
         return CaptureNode;
     })();
     CaptureNode.prototype.dummy = new CaptureNode('', '');
@@ -949,24 +1117,6 @@ module('../../astdlib/astd/set.adria', function(module, resource) {
                 this.add(value);
             }
         }
-        Set.prototype.merge = function merge() {
-            var result;
-            var sets = Array.prototype.slice.call(arguments, 0);
-            result = new Set();
-            var key;
-            for (key in this.data) {
-                result.data[key] = true;
-            }
-            var _, set;
-            for (_ in sets) {
-                set = sets[_];
-                var key;
-                for (key in set.data) {
-                    result.data[key] = true;
-                }
-            }
-            return result;
-        };
         Set.prototype.add = function add(value) {
             var data;
             data = this.data;
@@ -1030,29 +1180,59 @@ module('../../astdlib/astd/set.adria', function(module, resource) {
         Set.prototype.lacks = function lacks(value) {
             return this.has(value) === false;
         };
-        Set.prototype.missing = function missing(value) {
-            var result, data;
+        Set.prototype.difference = function difference() {
+            var result;
+            var sets = Array.prototype.slice.call(arguments, 0);
             result = new Set();
-            data = this.data;
-            if (value instanceof Array) {
-                var _, key;
-                for (_ in value) {
-                    key = value[_];
-                    if (data[key] !== true) {
-                        result.add(key);
+            var key, add;
+            for (key in this.data) {
+                add = true;
+                var _, set;
+                for (_ in sets) {
+                    set = sets[_];
+                    if (key in set.data) {
+                        add = false;
+                        break ;
                     }
                 }
-            } else if (value instanceof Set) {
-                var other;
-                other = value.data;
+                result.add(key);
+            }
+            return result;
+        };
+        Set.prototype.intersect = function intersect() {
+            var result;
+            var sets = Array.prototype.slice.call(arguments, 0);
+            result = new Set();
+            var key, add;
+            for (key in this.data) {
+                add = true;
+                var _, set;
+                for (_ in sets) {
+                    set = sets[_];
+                    if (key in set.data !== true) {
+                        add = false;
+                        break ;
+                    }
+                }
+                result.add(key);
+            }
+            return result;
+        };
+        Set.prototype.union = function union() {
+            var result;
+            var sets = Array.prototype.slice.call(arguments, 0);
+            result = new Set();
+            var key;
+            for (key in this.data) {
+                result.data[key] = true;
+            }
+            var _, set;
+            for (_ in sets) {
+                set = sets[_];
                 var key;
-                for (key in other) {
-                    if (data[key] !== true) {
-                        result.add(key);
-                    }
+                for (key in set.data) {
+                    result.data[key] = true;
                 }
-            } else {
-                throw new Error('invalid argument');
             }
             return result;
         };
@@ -1370,7 +1550,7 @@ module('cache.adria', function(module, resource) {
         function Cache() {
             this.checkBaseDir();
         }
-        Cache.prototype.version = "oils0o8yrkw72vafmfu80ayh8ourlb03fj25tc1n7vpu216vskdmkked0dqjowxt";
+        Cache.prototype.version = "1ajbdop3dgk8qpixsuc1ubotkmmxctlqyi0taf628u60pg3vz5v58vqdtr3cxomz";
         Cache.prototype.baseDir = util.home() + '/.adria/cache/';
         Cache.prototype.checkBaseDir = function checkBaseDir() {
             var parts, path;
@@ -1466,11 +1646,18 @@ module('transform.adria', function(module, resource) {
         Transform.prototype.options = null;
         Transform.prototype.stdin = null;
         Transform.prototype.cache = null;
+        Transform.prototype.uid = 1;
+        Transform.prototype.reset = function reset() {
+            this.uid = 1;
+        };
         Transform.prototype.initOptions = function initOptions() {
             application.args.addSwitch('cache', 'Cache generated code', true);
         };
         Transform.prototype.processOptions = function processOptions() {
             this.options = application.args.parseAll();
+        };
+        Transform.prototype.makeUID = function makeUID() {
+            return this.uid++;
         };
         Transform.prototype.run = function run() {
         };
@@ -1665,7 +1852,7 @@ module('parser/definition/node.adria', function(module, resource) {
         Node.prototype.filter = function* filter(parser, token, stack) {
             var children, child, blockRoot, generator, result;
             children = this.children;
-            if (stack.length > 500) {
+            if (stack.length > 250) {
                 var message;
                 message = parser.errorMessage(token, this, stack);
                 throw new Exception('recursion too deep. last error:\n' + message);
@@ -1855,8 +2042,8 @@ module('parser.adria', function(module, resource) {
                 }
                 try {
                     result.next();
-                } catch (___exc1) {
-                    var e = ___exc1;
+                } catch (___exc164) {
+                    var e = ___exc164;
                     if (e.message === 'nothing to yield') {
                         break ;
                     } else {
@@ -2437,14 +2624,11 @@ module('language_parser.adria', function(module, resource) {
             return data.replace('\r\n', '\n');
         };
         LanguageParser.prototype.preprocess = function preprocess(state) {
-            var InitialType;
-            InitialType = this.mapType('', this.definition.initialBlock);
-            InitialType.prototype.preprocess.call(this.captureTree, state);
+            this.captureTree.preprocess(state);
         };
         LanguageParser.prototype.process = function process() {
-            var result, InitialType;
-            InitialType = this.mapType('', this.definition.initialBlock);
-            result = InitialType.prototype[this.processMethod].call(this.captureTree);
+            var result;
+            result = this.captureTree[this.processMethod]();
             if (this.transform.options['cache'] && this.cacheData === null && fs.existsSync(this.file)) {
                 if (this.forceNoCache) {
                     application.log('LanguageParser', 'caching of ' + this.file + ' explicitly disabled');
@@ -2455,14 +2639,13 @@ module('language_parser.adria', function(module, resource) {
             return result;
         };
         LanguageParser.prototype.prescan = function prescan(state) {
-            var InitialType;
-            InitialType = this.mapType('', this.definition.initialBlock);
-            InitialType.prototype.prescan.call(this.captureTree, state);
+            this.captureTree.prescan(state);
         };
         LanguageParser.prototype.scan = function scan(state) {
-            var InitialType;
-            InitialType = this.mapType('', this.definition.initialBlock);
-            InitialType.prototype.scan.call(this.captureTree, state);
+            this.captureTree.scan(state);
+        };
+        LanguageParser.prototype.reset = function reset(state) {
+            this.captureTree.reset(state);
         };
         return LanguageParser;
     })(Parser);
@@ -2657,17 +2840,15 @@ module('mode/adria/definition/ident.adria', function(module, resource) {
     module.exports = Ident;
 });
 module('mode/adria/definition/function_literal.adria', function(module, resource) {
-    var SourceNode, Scope, ASTException, Name, thisId, FunctionLiteral;
+    var SourceNode, Scope, ASTException, Name, FunctionLiteral;
     SourceNode = require('source_node.adria');
     Scope = require('mode/adria/definition/scope.adria');
     ASTException = require('language_parser/ast_exception.adria');
     Name = require('mode/adria/name.adria');
-    thisId = 1;
     FunctionLiteral = (function(___parent) {
         function FunctionLiteral(key, value) {
             this.specialArgs = [  ];
             Scope.prototype.constructor.call(this, key, value);
-            this.thisId = thisId++;
         }
         FunctionLiteral.prototype = Object.create(___parent.prototype);
         FunctionLiteral.prototype.constructor = FunctionLiteral;
@@ -2678,6 +2859,17 @@ module('mode/adria/definition/function_literal.adria', function(module, resource
         FunctionLiteral.prototype.name = null;
         FunctionLiteral.prototype.registerWithParent = false;
         FunctionLiteral.prototype.specialArgs = null;
+        FunctionLiteral.prototype.reset = function reset(state) {
+            var ___p, ___s, ___c, ___c0 = ___c = ___s = (this === this.constructor.prototype ? this : Object.getPrototypeOf(this));
+            while (___c !== null && (___c.reset !== reset || ___c.hasOwnProperty('reset') === false)) {
+                ___s = ___c,
+                ___c = Object.getPrototypeOf(___c);
+            }
+            ___s = ___s.constructor,
+            ___p = (___c !== null ? Object.getPrototypeOf(___c).constructor : ___c0);
+            this.specialArgs = [  ];
+            ___p.prototype.reset.call(this, state);
+        };
         FunctionLiteral.prototype.scan = function scan(state) {
             var ___p, ___s, ___c, ___c0 = ___c = ___s = (this === this.constructor.prototype ? this : Object.getPrototypeOf(this));
             while (___c !== null && (___c.scan !== scan || ___c.hasOwnProperty('scan') === false)) {
@@ -2701,6 +2893,7 @@ module('mode/adria/definition/function_literal.adria', function(module, resource
         };
         FunctionLiteral.prototype.toSourceNode = function toSourceNode() {
             var result, body;
+            this.thisId = this.parser.transform.makeUID();
             this.nl(1);
             result = this.csn();
             this.setLocalName();
@@ -2783,12 +2976,11 @@ module('mode/adria/definition/function_literal.adria', function(module, resource
     module.exports = FunctionLiteral;
 });
 module('mode/adria/definition/scope.adria', function(module, resource) {
-    var Map, Set, Node, ASTException, scopeLocalId, Scope;
+    var Map, Set, Node, ASTException, Scope;
     Map = require('../../astdlib/astd/map.adria');
     Set = require('../../astdlib/astd/set.adria');
     Node = require('mode/adria/node.adria');
     ASTException = require('language_parser/ast_exception.adria');
-    scopeLocalId = 1;
     Scope = (function(___parent) {
         function Scope(key, value) {
             this.localDeclarations = new Set();
@@ -2801,6 +2993,19 @@ module('mode/adria/definition/scope.adria', function(module, resource) {
         Scope.prototype.localDeclarations = null;
         Scope.prototype.localReferences = null;
         Scope.prototype.usages = null;
+        Scope.prototype.reset = function reset(state) {
+            var ___p, ___s, ___c, ___c0 = ___c = ___s = (this === this.constructor.prototype ? this : Object.getPrototypeOf(this));
+            while (___c !== null && (___c.reset !== reset || ___c.hasOwnProperty('reset') === false)) {
+                ___s = ___c,
+                ___c = Object.getPrototypeOf(___c);
+            }
+            ___s = ___s.constructor,
+            ___p = (___c !== null ? Object.getPrototypeOf(___c).constructor : ___c0);
+            this.localDeclarations = new Set();
+            this.localReferences = new Map();
+            this.usages = new Map();
+            ___p.prototype.reset.call(this, state);
+        };
         Scope.prototype.addLocal = function addLocal(name, declare, ignore) {
             var localName;
             declare = (arguments.length > 1 ? declare : (true));
@@ -2865,7 +3070,7 @@ module('mode/adria/definition/scope.adria', function(module, resource) {
                 } while (scope instanceof FunctionLiteral === false && (scope = scope.findProto(Scope, FunctionLiteral, true, null)) !== null);
             }
             if (refName !== null) {
-                return '___' + name + '_scp' + scopeLocalId++;
+                return '___' + name + '_scp' + transform.makeUID();
             }
             return name;
         };
@@ -2889,6 +3094,19 @@ module('mode/adria/definition/module.adria', function(module, resource) {
         Module.prototype.moduleExport = null;
         Module.prototype.exports = null;
         Module.prototype.isInterface = false;
+        Module.prototype.reset = function reset(state) {
+            var ___p, ___s, ___c, ___c0 = ___c = ___s = (this === this.constructor.prototype ? this : Object.getPrototypeOf(this));
+            while (___c !== null && (___c.reset !== reset || ___c.hasOwnProperty('reset') === false)) {
+                ___s = ___c,
+                ___c = Object.getPrototypeOf(___c);
+            }
+            ___s = ___s.constructor,
+            ___p = (___c !== null ? Object.getPrototypeOf(___c).constructor : ___c0);
+            this.exports = new Map();
+            this.moduleExport = null;
+            this.isInterface = false;
+            ___p.prototype.reset.call(this, state);
+        };
         Module.prototype.setInterface = function setInterface() {
             var parser;
             if (this.isInterface) {
@@ -3259,6 +3477,19 @@ module('mode/adria/definition/function_param_list.adria', function(module, resou
         FunctionParamList.prototype.optionalPermutations = null;
         FunctionParamList.prototype.optionalGroups = null;
         FunctionParamList.prototype.types = new Set([ 'boolean', 'number', 'finite', 'string', 'scalar', 'func', 'object' ]);
+        FunctionParamList.prototype.reset = function reset(state) {
+            var ___p, ___s, ___c, ___c0 = ___c = ___s = (this === this.constructor.prototype ? this : Object.getPrototypeOf(this));
+            while (___c !== null && (___c.reset !== reset || ___c.hasOwnProperty('reset') === false)) {
+                ___s = ___c,
+                ___c = Object.getPrototypeOf(___c);
+            }
+            ___s = ___s.constructor,
+            ___p = (___c !== null ? Object.getPrototypeOf(___c).constructor : ___c0);
+            this.numParams = 0;
+            this.optionalPermutations = null;
+            this.optionalGroups = null;
+            ___p.prototype.reset.call(this, state);
+        };
         FunctionParamList.prototype.toSourceNode = function toSourceNode() {
             var result, functionNode, scope;
             result = this.csn();
@@ -3443,6 +3674,17 @@ module('mode/adria/definition/function_params_optional.adria', function(module, 
         FunctionParamsOptional.prototype = Object.create(___parent.prototype);
         FunctionParamsOptional.prototype.constructor = FunctionParamsOptional;
         FunctionParamsOptional.prototype.optionalIsActive = true;
+        FunctionParamsOptional.prototype.reset = function reset(state) {
+            var ___p, ___s, ___c, ___c0 = ___c = ___s = (this === this.constructor.prototype ? this : Object.getPrototypeOf(this));
+            while (___c !== null && (___c.reset !== reset || ___c.hasOwnProperty('reset') === false)) {
+                ___s = ___c,
+                ___c = Object.getPrototypeOf(___c);
+            }
+            ___s = ___s.constructor,
+            ___p = (___c !== null ? Object.getPrototypeOf(___c).constructor : ___c0);
+            this.optionalIsActive = true;
+            ___p.prototype.reset.call(this, state);
+        };
         FunctionParamsOptional.prototype.setOptionalActive = function setOptionalActive(tryStatus) {
             var container;
             container = this.findProto(FunctionParamsOptional, FunctionParamList);
@@ -3696,10 +3938,9 @@ module('mode/adria/definition/object_literal.adria', function(module, resource) 
     module.exports = ObjectLiteral;
 });
 module('mode/adria/definition/property_literal.adria', function(module, resource) {
-    var ObjectLiteral, SourceNode, storageId, PropertyLiteral;
+    var ObjectLiteral, SourceNode, PropertyLiteral;
     ObjectLiteral = require('mode/adria/definition/object_literal.adria');
     SourceNode = require('source_node.adria');
-    storageId = 1;
     PropertyLiteral = (function(___parent) {
         function PropertyLiteral() {
             ___parent.apply(this, arguments);
@@ -3761,7 +4002,7 @@ module('mode/adria/definition/property_literal.adria', function(module, resource
                 var name;
                 name = this.findName();
                 if (name === null) {
-                    this.storageName = '\'___psf' + (storageId++) + '\'';
+                    this.storageName = '\'___psf' + this.parser.transform.makeUID() + '\'';
                 } else {
                     this.storageName = '\'_' + name.getPlain() + '\'';
                 }
@@ -3868,8 +4109,9 @@ module('mode/adria/definition/proto_literal.adria', function(module, resource) {
     module.exports = ProtoLiteral;
 });
 module('mode/adria/definition/proto_statement.adria', function(module, resource) {
-    var ProtoLiteral, ProtoStatement;
+    var ProtoLiteral, SourceNode, ProtoStatement;
     ProtoLiteral = require('mode/adria/definition/proto_literal.adria');
+    SourceNode = require('source_node.adria');
     ProtoStatement = (function(___parent) {
         function ProtoStatement() {
             ___parent.apply(this, arguments);
@@ -3987,10 +4229,9 @@ module('mode/adria/definition/proto_body_constructor.adria', function(module, re
     module.exports = ProtoBodyConstructor;
 });
 module('mode/adria/definition/try_statement.adria', function(module, resource) {
-    var Node, Scope, catchId, Try, Catch, CatchAll, CatchSpecific, Finally;
+    var Node, Scope, Try, Catch, CatchAll, CatchSpecific, Finally;
     Node = require('mode/adria/node.adria');
     Scope = require('mode/adria/definition/scope.adria');
-    catchId = 1;
     Try = (function(___parent) {
         function Try() {
             ___parent.apply(this, arguments);
@@ -4018,7 +4259,7 @@ module('mode/adria/definition/try_statement.adria', function(module, resource) {
         Catch.prototype.exceptionName = '';
         Catch.prototype.toSourceNode = function toSourceNode() {
             var result;
-            this.exceptionName = '___exc' + (catchId++);
+            this.exceptionName = '___exc' + this.parser.transform.makeUID();
             result = this.csn();
             result.add(' catch (' + this.exceptionName + ') {' + this.nl(1));
             this.each(function(node, first, last) {
@@ -5041,12 +5282,12 @@ module('mode/adria/definition/flow_statement.adria', function(module, resource) 
     module.exports = FlowStatement;
 });
 module('mode/adria/definition.adria', function(module, resource) {
-    var Node, ValueType, Ident, Name, ___String_scp3, Numeric, Scope, Module, RequireLiteral, ResourceLiteral, FunctionLiteral, GeneratorLiteral, AsyncLiteral, FunctionStatement, GeneratorStatement, AsyncStatement, FunctionParamsOptional, FunctionParamList, AsyncParamList, Expression, ObjectLiteral, PropertyLiteral, ProtoLiteral, ProtoStatement, ProtoBodyItem, ProtoBodyConstructor, TryStatement, Try, Catch, CatchAll, CatchSpecific, Finally, ForCountStatement, ImportStatement, ApplicationStatement, AccessOperationProtocall, ConstLiteral, InvokeOperation, AsyncWrapOperation, BaseLiteral, DoWhileStatement, WhileStatement, SwitchStatement, ForInStatement, IfBlock, IfStatement, IfConditional, IfUnconditional, ArrayLiteral, NewProtoLiteral, ReturnStatement, YieldLiteral, AwaitLiteral, ThrowStatement, AssertStatement, Statement, InterfaceStatement, ModuleStatement, ExportStatement, GlobalStatement, VarStatement, StorageLiteral, ParentLiteral, SelfLiteral, FlowStatement;
+    var Node, ValueType, Ident, Name, ___String_scp370, Numeric, Scope, Module, RequireLiteral, ResourceLiteral, FunctionLiteral, GeneratorLiteral, AsyncLiteral, FunctionStatement, GeneratorStatement, AsyncStatement, FunctionParamsOptional, FunctionParamList, AsyncParamList, Expression, ObjectLiteral, PropertyLiteral, ProtoLiteral, ProtoStatement, ProtoBodyItem, ProtoBodyConstructor, TryStatement, Try, Catch, CatchAll, CatchSpecific, Finally, ForCountStatement, ImportStatement, ApplicationStatement, AccessOperationProtocall, ConstLiteral, InvokeOperation, AsyncWrapOperation, BaseLiteral, DoWhileStatement, WhileStatement, SwitchStatement, ForInStatement, IfBlock, IfStatement, IfConditional, IfUnconditional, ArrayLiteral, NewProtoLiteral, ReturnStatement, YieldLiteral, AwaitLiteral, ThrowStatement, AssertStatement, Statement, InterfaceStatement, ModuleStatement, ExportStatement, GlobalStatement, VarStatement, StorageLiteral, ParentLiteral, SelfLiteral, FlowStatement;
     Node = require('mode/adria/node.adria');
     ValueType = require('mode/adria/value_type.adria');
     Ident = require('mode/adria/definition/ident.adria');
     Name = Ident;
-    ___String_scp3 = (function(___parent) {
+    ___String_scp370 = (function(___parent) {
         var ___String = function String() {
             ___parent.apply(this, arguments);
         };
@@ -5148,7 +5389,7 @@ module('mode/adria/definition.adria', function(module, resource) {
     module.exports.Node = Node;
     module.exports.Ident = Ident;
     module.exports.Name = Name;
-    module.exports.String = ___String_scp3;
+    module.exports.String = ___String_scp370;
     module.exports.Numeric = Numeric;
     module.exports.Scope = Scope;
     module.exports.Module = Module;
@@ -5220,14 +5461,7 @@ module('mode/adria/parser.adria', function(module, resource) {
     AdriaParser = (function(___parent) {
         function AdriaParser(transform) {
             LanguageParser.prototype.constructor.call(this, transform);
-            this.resultData = {
-                globalDeclarations: new Set(),
-                globalReservations: new Set(),
-                globalReferences: new Map(),
-                requires: new Set(),
-                resources: new Set(),
-                isInterface: false
-            };
+            this.resetResult();
         }
         AdriaParser.prototype = Object.create(___parent.prototype);
         AdriaParser.prototype.constructor = AdriaParser;
@@ -5237,7 +5471,11 @@ module('mode/adria/parser.adria', function(module, resource) {
         AdriaParser.prototype.clone = function clone() {
             var parser;
             parser = LanguageParser.prototype.clone.call(this);
-            parser.resultData = {
+            parser.resetResult();
+            return parser;
+        };
+        AdriaParser.prototype.resetResult = function resetResult() {
+            this.resultData = {
                 globalDeclarations: new Set(),
                 globalReservations: new Set(),
                 globalReferences: new Map(),
@@ -5245,7 +5483,6 @@ module('mode/adria/parser.adria', function(module, resource) {
                 resources: new Set(),
                 isInterface: false
             };
-            return parser;
         };
         AdriaParser.prototype.preprocessRaw = function preprocessRaw(data) {
             var defines, that;
@@ -5367,8 +5604,414 @@ module('mode/adria/parser.adria', function(module, resource) {
     })(LanguageParser);
     module.exports = AdriaParser;
 });
+module('../../astdlib/astd/util.adria', function(module, resource) {
+    var defer;
+    defer = (function defer() {
+        var asap;
+        if (typeof ___process_scp382 === 'object' && typeof ___process_scp382.nextTick === 'function') {
+            asap = function asap(context, params, callback) {
+                ___process_scp382.nextTick(function() {
+                    callback.apply(context, params);
+                });
+            };
+        } else {
+            asap = function asap(context, params, callback) {
+                setTimeout(function() {
+                    callback.apply(context, params);
+                }, 0);
+            };
+        }
+        return function(context, params, callback) {
+            if (params === undefined) {
+                callback = context;
+                context = null;
+                params = [  ];
+            } else if (callback === undefined) {
+                callback = params;
+                params = [  ];
+            }
+            asap(context, params, callback);
+        };
+    })();
+    module.exports.defer = defer;
+});
+module('../../astdlib/astd/exceptions.adria', function(module, resource) {
+    var InvalidArgumentException, LogicException;
+    InvalidArgumentException = (function(___parent) {
+        function InvalidArgumentException() {
+            ___parent.apply(this, arguments);
+        }
+        InvalidArgumentException.prototype = Object.create(___parent.prototype);
+        InvalidArgumentException.prototype.constructor = InvalidArgumentException;
+        return InvalidArgumentException;
+    })(Exception);
+    LogicException = (function(___parent) {
+        function LogicException() {
+            ___parent.apply(this, arguments);
+        }
+        LogicException.prototype = Object.create(___parent.prototype);
+        LogicException.prototype.constructor = LogicException;
+        return LogicException;
+    })(Exception);
+    module.exports.InvalidArgumentException = InvalidArgumentException;
+    module.exports.LogicException = LogicException;
+});
+module('../../astdlib/astd/prototype/array.adria', function(module, resource) {
+    var merge, extend, ArrayExtensions;
+    merge = require('../../astdlib/astd/prototype/merge.adria');
+    extend = function extend() {
+        merge(ArrayExtensions, Array);
+        merge(ArrayExtensions.prototype, Array.prototype);
+    };
+    ArrayExtensions = (function() {
+        function ArrayExtensions() {}
+        Object.defineProperty(ArrayExtensions.prototype, "first", {
+            get: function first() {
+                var i;
+                for (i in this) {
+                    return parseInt(i);
+                }
+                return null;
+            }
+        });
+        Object.defineProperty(ArrayExtensions.prototype, "insert", {
+            value: function insert(value) {
+                return this.push(value) - 1;
+            }
+        });
+        Object.defineProperty(ArrayExtensions.prototype, "remove", {
+            value: function remove(id) {
+                this[id] = this[this.length - 1];
+                return --this.length;
+            }
+        });
+        Object.defineProperty(ArrayExtensions.prototype, "unique", {
+            value: function unique(arr) {
+                var hash, result;
+                hash = {  };
+                result = [  ];
+                var i, l;
+                for (i = 0, l = this.length; i < l;++i) {
+                    if (!hash.hasOwnProperty(this[i])) {
+                        hash[this[i]] = true;
+                        result.push(this[i]);
+                    }
+                }
+                return result;
+            }
+        });
+        return ArrayExtensions;
+    })();
+    module.exports = ArrayExtensions;
+    module.exports.extend = extend;
+});
+module('../../astdlib/astd/listenable.adria', function(module, resource) {
+    var util, InvalidArgumentException, ArrayExtensions, Listenable, Listener, expand, initListener, offListener, offCallback;
+    util = require('../../astdlib/astd/util.adria');
+    InvalidArgumentException = require('../../astdlib/astd/exceptions.adria').InvalidArgumentException;
+    ArrayExtensions = require('../../astdlib/astd/prototype/array.adria');
+    Listenable = (function() {
+        function Listenable() {}
+        Object.defineProperty(Listenable.prototype, "_listener", { value: null, writable: true });
+        Listenable.prototype.subscribe = function subscribe(listenable) {
+            var listener;
+            initListener.call(listenable, '_');
+            listener = new Listener([  ], this, null, false);
+            listenable._listener['_'].push(listener);
+            return listener;
+        };
+        Listenable.prototype.unsubscribe = function unsubscribe(listenable) {
+            offCallback(listenable._listener['_'], this, null);
+        };
+        Listenable.prototype.execute = function execute(eventName) {
+            var eventListener;
+            var args = Array.prototype.slice.call(arguments, 1);
+            if (this._listener === null || (this._listener[eventName] === undefined && this._listener['_'] === undefined)) {
+                return ;
+            }
+            eventListener = this._listener[eventName];
+            if (eventListener !== undefined) {
+                var id;
+                id = eventListener.length;
+                while (id--) {
+                    var listener;
+                    listener = eventListener[id];
+                    listener.callback.apply(listener.context, listener.params.concat(args));
+                    if (listener.once) {
+                        this.off(eventName, listener.context, listener.callback);
+                    }
+                }
+            }
+            eventListener = this._listener['_'];
+            if (eventListener !== undefined) {
+                var methodName, method;
+                methodName = 'on' + eventName.charAt(0).toUpperCase() + eventName.slice(1);
+                var id, listener;
+                for (id in eventListener) {
+                    listener = eventListener[id];
+                    method = listener.context[methodName];
+                    if (typeof method === 'function') {
+                        method.apply(listener.context, args);
+                    }
+                }
+            }
+        };
+        Listenable.prototype.trigger = function trigger(eventName) {
+            util.defer(this, arguments, this.execute);
+        };
+        Listenable.prototype.on = function on() {
+            var eventName, params, context, callback;
+            if (arguments.length === 3) {
+                eventName = arguments[0];
+                params = [  ];
+                context = arguments[1];
+                callback = arguments[2];
+            } else if (arguments.length === 4) {
+                eventName = arguments[0];
+                params = arguments[1];
+                context = arguments[2];
+                callback = arguments[3];
+            } else if (arguments.length === 2) {
+                eventName = arguments[0];
+                params = [  ];
+                context = this;
+                callback = arguments[1];
+            } else {
+                throw new Exception('invalid number of arguments');
+            }
+            if (expand.call(this, this.on, arguments, 0)) {
+                return ;
+            }
+            initListener.call(this, eventName);
+            this._listener[eventName].push(new Listener(params, context, callback, false));
+        };
+        Listenable.prototype.once = function once() {
+            var eventName, params, context, callback;
+            if (arguments.length === 3) {
+                eventName = arguments[0];
+                params = [  ];
+                context = arguments[1];
+                callback = arguments[2];
+            } else if (arguments.length === 4) {
+                eventName = arguments[0];
+                params = arguments[1];
+                context = arguments[2];
+                callback = arguments[3];
+            } else if (arguments.length === 2) {
+                eventName = arguments[0];
+                params = [  ];
+                context = this;
+                callback = arguments[1];
+            } else {
+                throw new Exception('invalid number of arguments');
+            }
+            if (expand.call(this, this.once, arguments, 0)) {
+                return ;
+            }
+            initListener.call(this, eventName);
+            this._listener[eventName].push(new Listener(params, context, callback, true));
+        };
+        Listenable.prototype.off = function off(eventName, context, callback) {
+            if (expand.call(this, this.off, arguments, 0)) {
+                return ;
+            }
+            if (this._listener === null || this._listener[eventName] === undefined) {
+                return false;
+            }
+            if (callback === undefined) {
+                if (context instanceof Listener) {
+                    return offListener(this._listener[eventName], context);
+                } else if (typeof context === 'function') {
+                    return offCallback(this._listener[eventName], this, context);
+                } else if (context === undefined) {
+                    delete this._listener[eventName];
+                    return true;
+                } else {
+                    throw new InvalidArgumentException('expected Listener or Function as argument 2');
+                }
+            } else {
+                return offCallback(this._listener[eventName], context, callback);
+            }
+        };
+        return Listenable;
+    })();
+    Listener = (function() {
+        function Listener(params, context, callback, once) {
+            this.params = params;
+            this.context = context;
+            this.callback = callback;
+            this.once = once;
+        }
+        Listener.prototype.params = null;
+        Listener.prototype.context = null;
+        Listener.prototype.callback = null;
+        Listener.prototype.once = false;
+        return Listener;
+    })();
+    expand = function expand(fn, args, argId) {
+        var expansionArg;
+        expansionArg = args[argId];
+        if (expansionArg instanceof Array) {
+            args = Array.prototype.slice.call(args);
+            var _, value;
+            for (_ in expansionArg) {
+                value = expansionArg[_];
+                args[argId] = value;
+                fn.apply(this, args);
+            }
+            return true;
+        }
+        return false;
+    };
+    initListener = function initListener(eventName) {
+        if (this._listener === null) {
+            this._listener = {  };
+        }
+        if (this._listener[eventName] === undefined) {
+            this._listener[eventName] = [  ];
+        }
+    };
+    offListener = function offListener(eventListener, listener) {
+        var id;
+        id = eventListener.length;
+        while (id--) {
+            if (eventListener[id] === listener) {
+                ArrayExtensions.prototype.remove.call(eventListener, id);
+                return true;
+            }
+        }
+        return false;
+    };
+    offCallback = function offCallback(eventListener, context, callback) {
+        var id;
+        id = eventListener.length;
+        while (id--) {
+            if (eventListener[id].context === context && eventListener[id].callback === callback) {
+                ArrayExtensions.prototype.remove.call(eventListener, id);
+                return true;
+            }
+        }
+        return false;
+    };
+    module.exports = Listenable;
+    module.exports.Listener = Listener;
+});
+module('monitor.adria', function(module, resource) {
+    var Set, Listenable, fs, fspath, Monitor, recursePath;
+    Set = require('../../astdlib/astd/set.adria');
+    Listenable = require('../../astdlib/astd/listenable.adria');
+    fs = ___require('fs');
+    fspath = ___require('path');
+    Monitor = (function(___parent) {
+        function Monitor(paths, ignoreFiles, delay) {
+            paths = (arguments.length > 0 ? paths : ([  ]));
+            ignoreFiles = (arguments.length > 1 ? ignoreFiles : ([  ]));
+            delay = (arguments.length > 2 ? delay : (250));
+            this.paths = paths;
+            this.delay = delay;
+            this.ignoreFiles = new Set();
+            var _, file;
+            for (_ in ignoreFiles) {
+                file = ignoreFiles[_];
+                this.ignoreFiles.add(fspath.normalize(file));
+            }
+        }
+        Monitor.prototype = Object.create(___parent.prototype);
+        Monitor.prototype.constructor = Monitor;
+        Monitor.prototype.paths = null;
+        Monitor.prototype.ignoreFiles = null;
+        Monitor.prototype.delay = 0;
+        Monitor.prototype.diff = null;
+        Monitor.prototype.rescan = false;
+        Monitor.prototype.timeout = null;
+        Monitor.prototype.watcher = null;
+        Monitor.prototype.getPaths = function getPaths(paths) {
+            var result;
+            result = [  ];
+            var _, path;
+            for (_ in paths) {
+                path = paths[_];
+                result.push.apply(result, recursePath(path));
+            }
+            return result;
+        };
+        Monitor.prototype.start = function start() {
+            var paths;
+            this.stop();
+            this.watcher = [  ];
+            this.rescan = false;
+            this.diff = new Set();
+            paths = this.getPaths(this.paths);
+            var _, path, watcher;
+            for (_ in paths) {
+                path = paths[_];
+                watcher = fs.watch(path, this.compounder.bind(this, path));
+                this.watcher.push(watcher);
+            }
+        };
+        Monitor.prototype.stop = function stop() {
+            if (this.watcher !== null) {
+                var _, watcher;
+                for (_ in this.watcher) {
+                    watcher = this.watcher[_];
+                    watcher.close();
+                }
+                this.watcher = null;
+            }
+        };
+        Monitor.prototype.compounder = function compounder(path, event, file) {
+            var fullName;
+            fullName = fspath.normalize(path + '/' + file);
+            if (path.hasPostfix(file) && fs.existsSync(fullName) === false) {
+                return ;
+            }
+            if (this.ignoreFiles.has(fullName)) {
+                return ;
+            }
+            this.diff.add(fullName);
+            if (event === 'rename') {
+                this.rescan = true;
+            }
+            clearTimeout(this.timeout);
+            this.timeout = setTimeout(this.handler.bind(this), this.delay);
+        };
+        Monitor.prototype.handler = function handler() {
+            var diff;
+            diff = this.diff;
+            if (this.rescan) {
+                this.stop();
+                this.start();
+            } else {
+                this.diff = new Set();
+            }
+            this.execute('change', diff);
+        };
+        return Monitor;
+    })(Listenable);
+    recursePath = function recursePath(path, includeHidden) {
+        var files, result;
+        path = (arguments.length > 0 ? path : ('.'));
+        includeHidden = (arguments.length > 1 ? includeHidden : (false));
+        files = fs.readdirSync(path);
+        result = [  ];
+        path = path.replace(/\/$/, '');
+        result.push(path);
+        var file;
+        for (file in files) {
+            if (includeHidden === true || files[file].substr(0, 1) !== '.') {
+                var stat;
+                stat = fs.statSync(path + '/' + files[file]);
+                if (stat.isDirectory()) {
+                    result.push.apply(result, recursePath(path + '/' + files[file], includeHidden));
+                }
+            }
+        }
+        return result;
+    };
+    module.exports = Monitor;
+});
 module('mode/adria/transform.adria', function(module, resource) {
-    var fs, path, util, Set, Map, SourceNode, Template, Transform, AdriaParser, ASTException, AdriaTransform;
+    var fs, path, util, Set, Map, SourceNode, Template, Transform, AdriaParser, ASTException, Monitor, AdriaTransform;
     fs = ___require('fs');
     path = ___require('path');
     util = require('util.adria');
@@ -5379,9 +6022,40 @@ module('mode/adria/transform.adria', function(module, resource) {
     Transform = require('transform.adria');
     AdriaParser = require('mode/adria/parser.adria');
     ASTException = require('language_parser/ast_exception.adria');
+    Monitor = require('monitor.adria');
     AdriaTransform = (function(___parent) {
         function AdriaTransform(stdin) {
             Transform.prototype.constructor.call(this, stdin);
+            this.cachedParsers = new Map();
+        }
+        AdriaTransform.prototype = Object.create(___parent.prototype);
+        AdriaTransform.prototype.constructor = AdriaTransform;
+        AdriaTransform.prototype.globalDeclarations = null;
+        AdriaTransform.prototype.globalReservations = null;
+        AdriaTransform.prototype.globalReferences = null;
+        AdriaTransform.prototype.requires = null;
+        AdriaTransform.prototype.requiresDone = null;
+        AdriaTransform.prototype.modules = null;
+        AdriaTransform.prototype.resources = null;
+        AdriaTransform.prototype.usedBuiltins = null;
+        AdriaTransform.prototype.addInterface = false;
+        AdriaTransform.prototype.addApplication = false;
+        AdriaTransform.prototype.protoParser = null;
+        AdriaTransform.prototype.cachedParsers = null;
+        AdriaTransform.prototype.cacheModifier = null;
+        AdriaTransform.prototype.startTime = 0;
+        AdriaTransform.prototype.numCompiled = 0;
+        AdriaTransform.prototype.builtins = { 'async.adria': resource('../templates/adria/async.tpl') };
+        AdriaTransform.prototype.reset = function reset() {
+            var ___p, ___s, ___c, ___c0 = ___c = ___s = (this === this.constructor.prototype ? this : Object.getPrototypeOf(this));
+            while (___c !== null && (___c.reset !== reset || ___c.hasOwnProperty('reset') === false)) {
+                ___s = ___c,
+                ___c = Object.getPrototypeOf(___c);
+            }
+            ___s = ___s.constructor,
+            ___p = (___c !== null ? Object.getPrototypeOf(___c).constructor : ___c0);
+            ___p.prototype.reset.call(this);
+            this.numCompiled = 0;
             this.globalDeclarations = new Set();
             this.globalReservations = new Set();
             this.globalReferences = new Map();
@@ -5389,86 +6063,89 @@ module('mode/adria/transform.adria', function(module, resource) {
             this.resources = new Set();
             this.requiresDone = new Set();
             this.usedBuiltins = new Set();
-            this.closureParams = new Map();
             this.modules = [  ];
-            this.sourceCode = {  };
+            this.addInterface = false;
+            this.addApplication = false;
             this.defineImplicits();
-        }
-        AdriaTransform.prototype = Object.create(___parent.prototype);
-        AdriaTransform.prototype.constructor = AdriaTransform;
-        AdriaTransform.prototype.globalDeclarations = null;
-        AdriaTransform.prototype.globalReservations = null;
-        AdriaTransform.prototype.globalReferences = null;
-        AdriaTransform.prototype.cacheModifier = null;
-        AdriaTransform.prototype.startTime = 0;
-        AdriaTransform.prototype.requires = null;
-        AdriaTransform.prototype.modules = null;
-        AdriaTransform.prototype.resources = null;
-        AdriaTransform.prototype.usedBuiltins = null;
-        AdriaTransform.prototype.requiresDone = null;
-        AdriaTransform.prototype.sourceCode = null;
-        AdriaTransform.prototype.protoParser = null;
-        AdriaTransform.prototype.addInterface = false;
-        AdriaTransform.prototype.addApplication = false;
-        AdriaTransform.prototype.builtins = { 'async.adria': resource('../templates/adria/async.tpl') };
+        };
         AdriaTransform.prototype.run = function run() {
-            var files, code;
+            this.time();
             this.protoParser = new AdriaParser(this);
             this.protoParser.trainSelf();
-            this.time('Setup duration: $0.ms');
+            this.time('Setup $0.ms');
+            if (this.options['monitor']) {
+                this.startMonitoring();
+            }
+            this.compile();
+        };
+        AdriaTransform.prototype.compile = function compile(forceReload, resourceChanges) {
+            var files, code;
+            forceReload = (arguments.length > 0 ? forceReload : (null));
+            resourceChanges = (arguments.length > 1 ? resourceChanges : (true));
+            this.reset();
+            if (forceReload !== null) {
+                console.log((new Date()).format('Monitor: [%H:%M:%S] recompiling changed files...'));
+                this.time();
+            }
             if (this.stdin !== null) {
-                this.preprocessModule('main' + this.options['extension'], this.stdin);
+                this.recurseDependencies('main' + this.options['extension'], this.stdin, forceReload);
             }
             files = this.options['files'];
             var id;
             for (id in files) {
-                this.preprocessModule(util.normalizeExtension(files[id], this.options['extension']));
+                this.recurseDependencies(util.normalizeExtension(files[id], this.options['extension']), null, forceReload);
             }
-            this.time('Load/preprocess duration: $0.ms');
-            this.process();
-            this.time('Process duration: $0.ms');
+            this.time('Load/preprocess $0.ms');
+            var id, currentModule;
+            for (id in this.modules) {
+                currentModule = this.modules[id];
+                currentModule.result = currentModule.parser.process();
+            }
+            this.time('Process $0.ms');
             if (this.options['scan']) {
-                this.scan();
-                this.time('Scan duration: $0.ms');
+                var id, currentModule;
+                for (id in this.modules) {
+                    currentModule = this.modules[id];
+                    currentModule.parser.prescan({  });
+                }
+                var id, currentModule;
+                for (id in this.modules) {
+                    currentModule = this.modules[id];
+                    currentModule.parser.scan({  });
+                }
+                this.time('Scan $0.ms');
             }
-            if (this.options['platform'] === 'node') {
-                this.closureParams.set({
-                    'module': '___module',
-                    'require': '___require',
-                    'global': 'window'
-                });
-            } else {
-                this.closureParams.set('self', 'window');
+            if (this.options['monitor'] && this.numCompiled === 0 && resourceChanges === false) {
+                console.log((new Date()).format('Monitor: [%H:%M:%S] no changes. ready.'));
+                return ;
             }
-            code = this.buildApplication();
-            this.time('Merge duration: $0.ms');
+            code = this.mergeAll();
+            this.time('Merge $0.ms');
             this.output(code);
-            this.time('Write duration: $0.ms');
+            this.time('Write $0.ms');
+            if (this.options['monitor']) {
+                console.log((new Date()).format('Monitor: [%H:%M:%S] ready.'));
+            }
         };
-        AdriaTransform.prototype.preprocessModule = function preprocessModule(moduleName, data) {
+        AdriaTransform.prototype.recurseDependencies = function recurseDependencies(moduleName, data, forceReload) {
             var parser, requires;
             data = (arguments.length > 1 ? data : (null));
-            parser = this.protoParser.clone();
-            parser.moduleName = moduleName;
-            if (data === null) {
-                parser.loadSource(this.options['basePath'] + moduleName, this.cacheModifier);
-            } else {
-                parser.setSource(moduleName, data, this.cacheModifier);
-            }
+            forceReload = (arguments.length > 2 ? forceReload : (null));
+            parser = this.getParser(moduleName, data, forceReload);
             parser.preprocess({  });
             requires = parser.resultData.requires;
             this.requiresDone.add(moduleName);
             var name;
             for (name in requires.data) {
                 if (this.requiresDone.has(name) === false) {
-                    this.preprocessModule(name);
+                    this.recurseDependencies(name, null, forceReload);
                 }
             }
-            this.globalDeclarations = this.globalDeclarations.merge(parser.resultData.globalDeclarations);
-            this.globalReservations = this.globalReservations.merge(parser.resultData.globalReservations);
+            this.globalDeclarations = this.globalDeclarations.union(parser.resultData.globalDeclarations);
+            this.globalReservations = this.globalReservations.union(parser.resultData.globalReservations);
             this.globalReferences = this.globalReferences.merge(parser.resultData.globalReferences);
-            this.requires = this.requires.merge(parser.resultData.requires);
-            this.resources = this.resources.merge(parser.resultData.resources);
+            this.requires = this.requires.union(parser.resultData.requires);
+            this.resources = this.resources.union(parser.resultData.resources);
             if (parser.resultData.isInterface) {
                 if (this.addInterface) {
                     throw new ASTException('Interface already defined', parser);
@@ -5477,94 +6154,11 @@ module('mode/adria/transform.adria', function(module, resource) {
             }
             this.modules.push({ parser: parser, result: null });
         };
-        AdriaTransform.prototype.process = function process() {
-            var id, currentModule;
-            for (id in this.modules) {
-                currentModule = this.modules[id];
-                currentModule.result = currentModule.parser.process();
-            }
-        };
-        AdriaTransform.prototype.scan = function scan() {
-            var id, currentModule;
-            for (id in this.modules) {
-                currentModule = this.modules[id];
-                currentModule.parser.prescan({  });
-            }
-            var id, currentModule;
-            for (id in this.modules) {
-                currentModule = this.modules[id];
-                currentModule.parser.scan({  });
-            }
-        };
-        AdriaTransform.prototype.buildApplication = function buildApplication() {
-            var options, node, tpl, fw, moduleSN, usedBuiltins;
-            options = this.options;
-            node = new SourceNode(null, null);
-            tpl = new Template();
-            tpl.debug = this.options['debug'];
-            tpl.assign('globals', this.globalDeclarations.toArray());
-            tpl.assign('builtins', this.usedBuiltins.toArray());
-            tpl.assign('enableAssert', options['assert']);
-            tpl.assign('enableApplication', this.addApplication);
-            tpl.assign('platform', options['platform']);
-            if (options['shellwrap']) {
-                node.add([
-                    '#!/bin/sh\n',
-                    '\':\' //; exec "`command -v nodejs || command -v node`" --harmony' + (options['shellargs'] === '' ? '' : ' ' + options['shellargs']) + ' "$0" "$@"\n'
-                ]);
-            }
-            if (options['headerFile'] !== '') {
-                var header;
-                header = fs.readFileSync(options['basePath'] + options['headerFile'], 'UTF-8');
-                node.add('/**\n * ' + header.trim().replace(/\r?\n/g, '\n * ') + '\n */\n');
-            }
-            node.add(';(function(' + this.closureParams.values().join(', ') + ') {\n');
-            if (options['strict']) {
-                node.add('"use strict";\n');
-            }
-            fw = tpl.fetch(resource('../templates/adria/framework.tpl'));
-            moduleSN = node.add(new SourceNode(1, 0, 'adria-framework.js', fw));
-            moduleSN.setSourceContent('adria-framework.js', fw);
-            var id, currentModule, ___moduleSN_scp5;
-            for (id in this.modules) {
-                currentModule = this.modules[id];
-                ___moduleSN_scp5 = node.add(new SourceNode(null, null, currentModule.parser.file, currentModule.result));
-                ___moduleSN_scp5.setSourceContent(currentModule.parser.file, currentModule.parser.sourceCode);
-            }
-            usedBuiltins = this.usedBuiltins.toArray();
-            var id, name, builtIn, ___moduleSN_scp6;
-            for (id in usedBuiltins) {
-                name = usedBuiltins[id];
-                builtIn = tpl.fetch(this.builtins[name]);
-                ___moduleSN_scp6 = node.add(new SourceNode(1, 0, name.replace('.adria', '.js'), builtIn));
-                ___moduleSN_scp6.setSourceContent(name.replace('.adria', '.js'), builtIn);
-            }
-            var fileName, contents, wrapped, ___moduleSN_scp7;
-            for (fileName in this.resources.data) {
-                contents = fs.readFileSync(options['basePath'] + fileName, 'UTF-8');
-                wrapped = 'resource(\'' + fileName + '\', \'' + contents.jsify("'") + '\');\n';
-                ___moduleSN_scp7 = node.add(new SourceNode(null, null, fileName, wrapped));
-                ___moduleSN_scp7.setSourceContent(fileName, contents);
-            }
-            node.trim();
-            var id, name;
-            for (id in usedBuiltins) {
-                name = usedBuiltins[id];
-                node.add('\nrequire(\'' + name + '\');');
-            }
-            var id, file;
-            for (id in options['files']) {
-                file = options['files'][id];
-                node.add('\nrequire(\'' + util.normalizeExtension(file, this.options['extension']) + '\');');
-            }
-            node.add('\n})(' + this.closureParams.keys().join(', ') + ');');
-            return node;
-        };
         AdriaTransform.prototype.time = function time(message) {
             message = (arguments.length > 0 ? message : (null));
             if (this.options['time'] && this.options['outFile'] !== null) {
                 if (message !== null) {
-                    console.log(message.format(Date.now() - this.startTime));
+                    console.log('Timing: ' + message.format(Date.now() - this.startTime));
                 }
                 this.startTime = Date.now();
             }
@@ -5582,7 +6176,7 @@ module('mode/adria/transform.adria', function(module, resource) {
             });
             args.add([ '-b', '--base' ], {
                 help: 'Base path, include paths are relative to this',
-                defaultValue: '',
+                defaultValue: './',
                 dest: 'basePath',
                 metavar: '<path>',
                 required: false
@@ -5639,6 +6233,7 @@ module('mode/adria/transform.adria', function(module, resource) {
                 defaultValue: '',
                 metavar: '<args>'
             });
+            args.addSwitch('monitor', 'Don\'t exit after compilation, watch for and rebuild on file changes', false);
             args.addSwitch('strict', 'Compile strict Javascript', true);
             args.addSwitch('es5', 'Compile to ES5', false);
             args.addSwitch('assert', 'Add assert() support', false);
@@ -5658,7 +6253,31 @@ module('mode/adria/transform.adria', function(module, resource) {
             ___p.prototype.processOptions.call(this);
             this.cacheModifier = util.md5(JSON.stringify(this.options));
             this.options['defines']['___uniqueId'] = util.uniqueId();
-            this.time();
+        };
+        AdriaTransform.prototype.getParser = function getParser(moduleName, data, forceReload) {
+            var parser, fullName;
+            data = (arguments.length > 1 ? data : (null));
+            forceReload = (arguments.length > 2 ? forceReload : (null));
+            fullName = path.normalize(this.options['basePath'] + moduleName);
+            if (this.cachedParsers.has(moduleName) && forceReload !== null && forceReload.lacks(fullName)) {
+                parser = this.cachedParsers.get(moduleName);
+                parser.resetResult();
+                parser.reset();
+            } else {
+                if (forceReload !== null) {
+                    console.log('Monitor: updating ' + moduleName);
+                }
+                parser = this.protoParser.clone();
+                parser.moduleName = moduleName;
+                if (data === null) {
+                    parser.loadSource(fullName, this.cacheModifier);
+                } else {
+                    parser.setSource(moduleName, data, this.cacheModifier);
+                }
+                this.cachedParsers.set(moduleName, parser);
+                this.numCompiled++;
+            }
+            return parser;
         };
         AdriaTransform.prototype.defineImplicits = function defineImplicits() {
             var transform, addReferences;
@@ -5682,6 +6301,80 @@ module('mode/adria/transform.adria', function(module, resource) {
                 addReferences('AssertionFailedException');
             }
         };
+        AdriaTransform.prototype.mergeAll = function mergeAll() {
+            var options, node, tpl, closureParams, fw, moduleSN, usedBuiltins;
+            options = this.options;
+            node = new SourceNode(null, null);
+            tpl = new Template();
+            tpl.debug = this.options['debug'];
+            tpl.assign('globals', this.globalDeclarations.toArray());
+            tpl.assign('builtins', this.usedBuiltins.toArray());
+            tpl.assign('enableAssert', options['assert']);
+            tpl.assign('enableApplication', this.addApplication);
+            tpl.assign('platform', options['platform']);
+            if (options['shellwrap']) {
+                node.add([
+                    '#!/bin/sh\n',
+                    '\':\' //; exec "`command -v nodejs || command -v node`" --harmony' + (options['shellargs'] === '' ? '' : ' ' + options['shellargs']) + ' "$0" "$@"\n'
+                ]);
+            }
+            if (options['headerFile'] !== '') {
+                var header;
+                header = fs.readFileSync(options['basePath'] + options['headerFile'], 'UTF-8');
+                node.add('/**\n * ' + header.trim().replace(/\r?\n/g, '\n * ') + '\n */\n');
+            }
+            closureParams = new Map();
+            if (this.options['platform'] === 'node') {
+                closureParams.set({
+                    'module': '___module',
+                    'require': '___require',
+                    'global': 'window'
+                });
+            } else {
+                closureParams.set('self', 'window');
+            }
+            node.add(';(function(' + closureParams.values().join(', ') + ') {\n');
+            if (options['strict']) {
+                node.add('"use strict";\n');
+            }
+            fw = tpl.fetch(resource('../templates/adria/framework.tpl'));
+            moduleSN = node.add(new SourceNode(1, 0, 'adria-framework.js', fw));
+            moduleSN.setSourceContent('adria-framework.js', fw);
+            var id, currentModule, ___moduleSN_scp426;
+            for (id in this.modules) {
+                currentModule = this.modules[id];
+                ___moduleSN_scp426 = node.add(new SourceNode(null, null, currentModule.parser.file, currentModule.result));
+                ___moduleSN_scp426.setSourceContent(currentModule.parser.file, currentModule.parser.sourceCode);
+            }
+            usedBuiltins = this.usedBuiltins.toArray();
+            var id, name, builtIn, ___moduleSN_scp427;
+            for (id in usedBuiltins) {
+                name = usedBuiltins[id];
+                builtIn = tpl.fetch(this.builtins[name]);
+                ___moduleSN_scp427 = node.add(new SourceNode(1, 0, name.replace('.adria', '.js'), builtIn));
+                ___moduleSN_scp427.setSourceContent(name.replace('.adria', '.js'), builtIn);
+            }
+            var fileName, contents, wrapped, ___moduleSN_scp428;
+            for (fileName in this.resources.data) {
+                contents = fs.readFileSync(options['basePath'] + fileName, 'UTF-8');
+                wrapped = 'resource(\'' + fileName + '\', \'' + contents.jsify("'") + '\');\n';
+                ___moduleSN_scp428 = node.add(new SourceNode(null, null, fileName, wrapped));
+                ___moduleSN_scp428.setSourceContent(fileName, contents);
+            }
+            node.trim();
+            var id, name;
+            for (id in usedBuiltins) {
+                name = usedBuiltins[id];
+                node.add('\nrequire(\'' + name + '\');');
+            }
+            var id, file;
+            for (id in options['files']) {
+                file = options['files'][id];
+                node.add('\nrequire(\'' + util.normalizeExtension(file, this.options['extension']) + '\');');
+            }
+            node.add('\n})(' + closureParams.keys().join(', ') + ');');
+            return node;
+        };
         AdriaTransform.prototype.output = function output(node) {
             if (this.options['outFile'] !== null) {
                 var jsFile;
@@ -5704,6 +6397,38 @@ module('mode/adria/transform.adria', function(module, resource) {
             } else {
                 process.stdout.write(node.toString());
             }
+        };
+        AdriaTransform.prototype.startMonitoring = function startMonitoring() {
+            var paths, ignore, monitor;
+            paths = [ this.options['basePath'] ];
+            var _, path;
+            for (_ in this.options['paths']) {
+                path = this.options['paths'][_];
+                paths.push(this.options['basePath'] + path);
+            }
+            ignore = [  ];
+            if (this.options['outFile'] !== null) {
+                var jsFile;
+                jsFile = this.options['basePath'] + this.options['outFile'];
+                ignore.push(jsFile);
+                if (this.options['map']) {
+                    ignore.push(jsFile.stripPostfix('.js') + '.map');
+                }
+            }
+            monitor = new Monitor(paths, ignore);
+            monitor.on('change', this, function(forceReload) {
+                try {
+                    this.compile(forceReload, forceReload.intersect(this.resources).empty === false);
+                } catch (___exc432) {
+                    if (___exc432 instanceof Exception) {
+                        var e = ___exc432;
+                        process.stderr.write('Error: ' + e.message + '\n');
+                    } else { 
+                        throw ___exc432;
+                    }
+                }
+            });
+            monitor.start();
         };
         return AdriaTransform;
     })(Transform);
@@ -5824,12 +6549,12 @@ module('application.adria', function(module, resource) {
                 } else {
                     try {
                         this.handle(options['mode'], stdin);
-                    } catch (___exc2) {
-                        if (___exc2 instanceof ASTException) {
-                            var e = ___exc2;
+                    } catch (___exc438) {
+                        if (___exc438 instanceof ASTException) {
+                            var e = ___exc438;
                             this.error(e.message);
                         } else { 
-                            throw ___exc2;
+                            throw ___exc438;
                         }
                     }
                 }
@@ -5882,6 +6607,7 @@ module('main.adria', function(module, resource) {
     require('../../astdlib/astd/prototype/string.adria').extend();
     require('../../astdlib/astd/prototype/regexp.adria').extend();
     require('../../astdlib/astd/prototype/object.adria').extend();
+    require('../../astdlib/astd/prototype/date.adria').extend();
     Application = require('application.adria');
     application(Application);
     application.run();

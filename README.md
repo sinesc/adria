@@ -49,8 +49,8 @@ Installation/Use
 
 Use `adria --help` for more help.
 
-Basic application
------------------
+Getting started
+---------------
 
 Create a new file `main.adria`:
 
@@ -81,7 +81,13 @@ root@ubuntuvbox:~/dev/adria/stuff# ./hello.js
 ```
 
 In `main.adria`, `require('./log')` returns the `Log` constructor exported by `log.adria` (as the module). `Log::write(...)` accesses the constructor's prototype
-and invokes its `write` method with the given arguments. `write` uses the rest parameter operator to gather all parameters into a new array `args` and the loops
+and invokes its `write` method with the given arguments. `write` uses the rest parameter syntax to gather all parameters into a new array `args` and then loops
 through the array using Adria's extended for-in syntax.
 
 `log.adria` was not specified at the compiler command line. It was added because it was `require`d by `main.adria`.
+
+#### Monitoring mode
+
+Manual recompilation can be avoided by using the `--monitor` option. In this mode, the compiler will watch the given file arguments and their dependencies for
+changes and recompile the application as required. For the above example, `adria main.adria -o hello.js --shellwrap --monitor` would keep `hello.js` up-to-date
+while you make changes to `main.adria`, `log.adria` or any additional `require`s you might add.

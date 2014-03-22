@@ -56,13 +56,40 @@ module AdriaTransform = proto (Transform) {
      */
     globalReferences: null,
 
-    requires        : null,
-    modules         : null,
-    resources       : null,
+    /**
+     * @var Set discovered but not necessarily loaded requires
+     */
+    requires: null,
+    
+    /**
+     * @var Set loaded requires
+     */
+    requiresDone: null,
+    
+    /**
+     * @var Set known modules
+     */
+    modules: null,
+    
+    /**
+     * @var Set required resources
+     */
+    resources: null,
+    
+    /**
+     * @var Set builtin modules used by application
+     */
     usedBuiltins    : null,
-    requiresDone    : null,
-    addInterface    : false,
-    addApplication  : false,
+    
+    /**
+     * @var boolean application has a CommonJS interface, used to detect illegal use of multiple interfaces
+     */
+    addInterface: false,
+    
+    /**
+     * @var boolean application makes use of the application() feature
+     */
+    addApplication: false,
 
     /**
      * @var AdriaParser trained parser to use as cloning source
@@ -107,6 +134,32 @@ module AdriaTransform = proto (Transform) {
     },
 
     /**
+     * reset compilation results (for monitoring mode)
+     */
+    reset: func() {
+
+        parent->reset();
+
+        this.numCompiled        = 0;
+
+        this.globalDeclarations = new Set();
+        this.globalReservations = new Set();
+        this.globalReferences   = new Map();
+
+        this.requires           = new Set();
+        this.resources          = new Set();
+
+        this.requiresDone       = new Set();
+        this.usedBuiltins       = new Set();
+        this.modules            = [ ];
+
+        this.addInterface       = false;
+        this.addApplication     = false;
+
+        this.defineImplicits();
+    },
+
+    /**
      * triggers transformation
      */
     run: func() {
@@ -132,9 +185,10 @@ module AdriaTransform = proto (Transform) {
     /**
      * runs transformation on the given input
      *
-     * @param Array? forceReload in monitoring mode contains list of changed files
+     * @param Set? forceReload in monitoring mode contains list of changed files
+     * @param boolean resourceChanges
      */
-    compile: func(Array? forceReload = null) {
+    compile: func(Set? forceReload = null, boolean resourceChanges = true) {
 
         this.reset();
 
@@ -181,7 +235,7 @@ module AdriaTransform = proto (Transform) {
 
         // only write if files changed
 
-        if (this.options['monitor'] && this.numCompiled === 0) {
+        if (this.options['monitor'] && this.numCompiled === 0 && resourceChanges === false) {
             console.log((new Date()).format('Monitor: [%H:%M:%S] no changes. ready.'));
             return;
         }
@@ -231,11 +285,11 @@ module AdriaTransform = proto (Transform) {
 
         // these are used in the template
 
-        this.globalDeclarations = this.globalDeclarations.merge(parser.resultData.globalDeclarations);
-        this.globalReservations = this.globalReservations.merge(parser.resultData.globalReservations);
+        this.globalDeclarations = this.globalDeclarations.union(parser.resultData.globalDeclarations);
+        this.globalReservations = this.globalReservations.union(parser.resultData.globalReservations);
         this.globalReferences = this.globalReferences.merge(parser.resultData.globalReferences);
-        this.requires = this.requires.merge(parser.resultData.requires);
-        this.resources = this.resources.merge(parser.resultData.resources);
+        this.requires = this.requires.union(parser.resultData.requires);
+        this.resources = this.resources.union(parser.resultData.resources);
 
         if (parser.resultData.isInterface) {
             if (this.addInterface) {
@@ -388,32 +442,6 @@ module AdriaTransform = proto (Transform) {
         }
 
         return parser;
-    },
-
-    /**
-     * reset compilation results (for monitoring mode)
-     */
-    reset: func() {
-
-        parent->reset();
-
-        this.numCompiled        = 0;
-
-        this.globalDeclarations = new Set();
-        this.globalReservations = new Set();
-        this.globalReferences   = new Map();
-
-        this.requires           = new Set();
-        this.resources          = new Set();
-
-        this.requiresDone       = new Set();
-        this.usedBuiltins       = new Set();
-        this.modules            = [ ];
-
-        this.addInterface       = false;
-        this.addApplication     = false;
-
-        this.defineImplicits();
     },
 
     /**
@@ -621,9 +649,9 @@ module AdriaTransform = proto (Transform) {
 
         var monitor = new Monitor(paths, ignore);
 
-        monitor.on('change', this, func() {
+        monitor.on('change', this, func(forceReload) {
             try {
-                this.compile();
+                this.compile(forceReload, forceReload.intersect(this.resources).empty === false);
             } catch (Exception e) {
                 process.stderr.write('Error: ' + e.message + '\n');
             }
