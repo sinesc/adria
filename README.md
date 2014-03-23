@@ -5,6 +5,7 @@ adria
 - <a href="//github.com/sinesc/adria/blob/master/doc/overview.md">Language overview</a>
 - <a href="//github.com/sinesc/adria/blob/master/doc/modules.md">Module handling</a>
 - <a href="//github.com/sinesc/adria/blob/master/doc/commandline.md">Commandline options</a>
+- <a href="//github.com/sinesc/adria/blob/master/doc/config.md">Build configurations</a>
 
 About
 -----
@@ -99,4 +100,5 @@ has been saved, it can later be used with the `-c [ <file> ]` option. Config fil
 
 `adria main.adria -o hello.js --shellwrap --write-config` would compile the above example and write a build configuration for it.
 
-`adria -c` would recompile the example with the saved configuration.
+`adria -c` would recompile the example with the saved configuration. See <a href="//github.com/sinesc/adria/blob/master/doc/config.md">Build configurations</a>
+for more details.

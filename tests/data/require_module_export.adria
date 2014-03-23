@@ -1,0 +1,5 @@
+
+export requireExport = require('./require_export');
+export RequireModuleMangled = require('./require_module_mangled');
+
+module RequireModule = require('./require_module');

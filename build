@@ -1,28 +1,18 @@
 #!/bin/bash
 set -e
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-ASTD_PATH="../../astdlib/"
-BASE_PARAMS="--shellwrap -t node --no-map --path $ASTD_PATH -D version=0.2.2"
-BUILD_PARAMS="$@ $BASE_PARAMS --time --base src/ --header ../LICENSE --out ../bin/ngadria.js main.adria"
-TEST_PARAMS="$@ $BASE_PARAMS --base tests/ --assert --out test_all.js test_all.adria";
-
 echo "== build == changing working directory to $DIR"
 cd $DIR
 chmod +x ./bin/adria.js
 
 echo "== build == adria compiling ngadria..."
-./bin/adria.js $BUILD_PARAMS
+./bin/adria.js -c dist
 
 echo "== build == ngadria compiling ngadria (assertive)..."
-./bin/ngadria.js $BUILD_PARAMS --assert
+./bin/ngadria.js -c dev
 
 echo "== build == ok. again..."
-./bin/ngadria.js $BUILD_PARAMS
-#--shellargs="--debug-brk"
+./bin/ngadria.js -c dist
 
 echo "== build == unit testing...";
-./bin/ngadria.js $TEST_PARAMS
-./tests/test_all.js
-
-
-#./bin/ngadria.js $@ $BASE_PARAMS --base src/ --header ../LICENSE --out ../bin/ngadria.js main.adria --path ../definition --monitor --assert
+./bin/ngadria.js -c tests && ./bin/test.js

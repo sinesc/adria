@@ -24,6 +24,8 @@
 var fs = require('fs');
 var Cache = require('./cache');
 var util = require('./util');
+var Set = require('astd/set');
+var Map = require('astd/map');
 
 /**
  * Base for language transformation file handling. Transforms a set of input
@@ -112,16 +114,72 @@ module Transform = proto {
     },
 
     /**
+     * merges options from depend with those from base. merges contained objects arrays (unique)
+     *
+     * @param object base
+     * @param object depend
+     * @return object
+     */
+    mergeOptions: func(object base, object depend) {
+
+        var result = { };
+
+        // copy values from depend
+
+        for (var key, value in depend) {
+            result[key] = value;
+        }
+
+        // overwrite/merge with current values
+
+        for (var key, value in base) {
+
+            if (value instanceof Array && result[key] instanceof Array) {
+
+                result[key] = (new Set(depend[key])).add(value).toArray();
+
+            } else if (typeof value === 'object' && typeof result[key] === 'object') {
+
+                result[key] = (new Map(depend[key])).set(value).data;
+
+            } else {
+
+                result[key] = value;
+            }
+        }
+
+        return result;
+    },
+
+    /**
+     * recursively read option file and its dependencies
+     *
+     * @param string file
+     * @return object
+     */
+    readOptions: func(string file) {
+
+        var options = JSON.parse(fs.readFileSync(file));
+
+        if (typeof options['depend'] === 'string') {
+            options = this.mergeOptions(options, this.readOptions(options['depend']));
+        }
+
+        return options;
+    },
+
+    /**
      * either load or save options from file or processes given command-line arguments
      */
     processOptions: func() {
 
         if (this.readOptionFile !== null) {
-            this.options = JSON.parse(fs.readFileSync(this.readOptionFile));
+            this.options = this.readOptions(this.readOptionFile);
         } else {
             this.options = application.args.parseAll();
         }
 
+        delete this.options['depend'];
         delete this.options['readConfig'];
         delete this.options['writeConfig'];
 
@@ -131,9 +189,9 @@ module Transform = proto {
     },
 
     /**
-     * returns continuously increasing unique id
+     * returns continuously increasing unique id (base 36)
      *
-     * @return integer
+     * @return string
      */
     makeUID: func() {
         return (this.uid++).toString(36);

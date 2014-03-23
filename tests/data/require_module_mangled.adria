@@ -1,0 +1,4 @@
+
+module window = proto {
+    value: 'mangled module proto value',
+};

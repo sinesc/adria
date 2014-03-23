@@ -1,0 +1,10 @@
+
+var someVar = 'var assigned value';
+export varValue = someVar;
+
+global reqExpSomeGlobal = 'global assign value';
+export someGlobal = reqExpSomeGlobal;
+
+export directValue = 'direct value';
+
+export window = 'mangled export';

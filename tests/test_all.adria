@@ -25,6 +25,7 @@ var test = require('./test');
 test.noSummary = true;
 
 require('./test_assert');
+require('./test_module');
 require('./test_exception');
 require('./test_func');
 require('./test_proto');

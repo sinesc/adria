@@ -1,0 +1,28 @@
+{
+    "depend": "version.inc",
+	"debug": false,
+	"mode": "adria",
+	"stdin": false,
+	"cache": true,
+	"files": [
+		"test_all.adria"
+	],
+	"outFile": "../bin/test.js",
+	"basePath": "tests/",
+	"paths": [
+		"../../astdlib/"
+	],
+	"extension": ".adria",
+	"platform": "node",
+	"headerFile": "../LICENSE",
+	"shellwrap": true,
+	"shellargs": "",
+	"monitor": false,
+	"strict": true,
+	"es5": false,
+	"assert": true,
+	"scan": true,
+	"map": false,
+	"link": true,
+	"time": false
+}

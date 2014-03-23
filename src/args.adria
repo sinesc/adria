@@ -32,7 +32,7 @@ module Args = proto {
     constructor: func() {
 
         this.parser = new argparse.ArgumentParser({
-            version : '{{version}}',
+            version : '{{version}}{{tag}}',
             addHelp : false,
             epilog  : 'Use --no-... to invert option switches, i.e. --no-strict',
         });

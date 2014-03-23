@@ -1166,7 +1166,7 @@ module('cache.adria', function(module, resource) {
         function Cache() {
             this.checkBaseDir();
         }
-        Cache.prototype.version = "zqjrrjw6vzokwvcbvo64fus4av6h03o7daaw82vmhid5qqeqh8vwj0g30j85e8un";
+        Cache.prototype.version = "7cra4d0qcx1ozxdslsk5kxy5nilspb0zg9os93xrxoufxiplu19oz7g9oe66to5v";
         Cache.prototype.baseDir = util.home() + '/.adria/cache/';
         Cache.prototype.checkBaseDir = function checkBaseDir() {
             var parts, path;
@@ -1247,10 +1247,12 @@ module('cache.adria', function(module, resource) {
     module.exports = Cache;
 });
 module('transform.adria', function(module, resource) {
-    var fs, Cache, util, Transform;
+    var fs, Cache, util, Set, Map, Transform;
     fs = ___require('fs');
     Cache = require('cache.adria');
     util = require('util.adria');
+    Set = require('../../astdlib/astd/set.adria');
+    Map = require('../../astdlib/astd/map.adria');
     Transform = (function() {
         function Transform(stdin) {
             stdin = (arguments.length > 0 ? stdin : (null));
@@ -1295,12 +1297,42 @@ module('transform.adria', function(module, resource) {
             this.readOptionFile = options['readConfig'];
             this.writeOptionFile = options['writeConfig'];
         };
+        Transform.prototype.mergeOptions = function mergeOptions(base, depend) {
+            var result;
+            result = {  };
+            var key, value;
+            for (key in depend) {
+                value = depend[key];
+                result[key] = value;
+            }
+            var key, value;
+            for (key in base) {
+                value = base[key];
+                if (value instanceof Array && result[key] instanceof Array) {
+                    result[key] = (new Set(depend[key])).add(value).toArray();
+                } else if (typeof value === 'object' && typeof result[key] === 'object') {
+                    result[key] = (new Map(depend[key])).set(value).data;
+                } else {
+                    result[key] = value;
+                }
+            }
+            return result;
+        };
+        Transform.prototype.readOptions = function readOptions(file) {
+            var options;
+            options = JSON.parse(fs.readFileSync(file));
+            if (typeof options['depend'] === 'string') {
+                options = this.mergeOptions(options, this.readOptions(options['depend']));
+            }
+            return options;
+        };
         Transform.prototype.processOptions = function processOptions() {
             if (this.readOptionFile !== null) {
-                this.options = JSON.parse(fs.readFileSync(this.readOptionFile));
+                this.options = this.readOptions(this.readOptionFile);
             } else {
                 this.options = application.args.parseAll();
             }
+            delete this.options['depend'];
             delete this.options['readConfig'];
             delete this.options['writeConfig'];
             if (this.writeOptionFile !== null) {
@@ -5438,12 +5470,12 @@ module('mode/adria/definition/flow_statement.adria', function(module, resource) 
     module.exports = FlowStatement;
 });
 module('mode/adria/definition.adria', function(module, resource) {
-    var Node, ValueType, Ident, Name, ___String$ac, Numeric, Scope, Module, RequireLiteral, ResourceLiteral, FunctionLiteral, GeneratorLiteral, AsyncLiteral, FunctionStatement, GeneratorStatement, AsyncStatement, FunctionParamsOptional, FunctionParamList, AsyncParamList, Expression, ObjectLiteral, PropertyLiteral, ProtoLiteral, ProtoStatement, ProtoBodyItem, ProtoBodyConstructor, TryStatement, Try, Catch, CatchAll, CatchSpecific, Finally, ForCountStatement, ImportStatement, ApplicationStatement, AccessOperationProtocall, ConstLiteral, InvokeOperation, AsyncWrapOperation, BaseLiteral, DoWhileStatement, WhileStatement, SwitchStatement, ForInStatement, IfBlock, IfStatement, IfConditional, IfUnconditional, ArrayLiteral, NewProtoLiteral, ReturnStatement, YieldLiteral, AwaitLiteral, ThrowStatement, AssertStatement, Statement, InterfaceStatement, ModuleStatement, ExportStatement, GlobalStatement, VarStatement, StorageLiteral, ParentLiteral, SelfLiteral, FlowStatement;
+    var Node, ValueType, Ident, Name, ___String$ae, Numeric, Scope, Module, RequireLiteral, ResourceLiteral, FunctionLiteral, GeneratorLiteral, AsyncLiteral, FunctionStatement, GeneratorStatement, AsyncStatement, FunctionParamsOptional, FunctionParamList, AsyncParamList, Expression, ObjectLiteral, PropertyLiteral, ProtoLiteral, ProtoStatement, ProtoBodyItem, ProtoBodyConstructor, TryStatement, Try, Catch, CatchAll, CatchSpecific, Finally, ForCountStatement, ImportStatement, ApplicationStatement, AccessOperationProtocall, ConstLiteral, InvokeOperation, AsyncWrapOperation, BaseLiteral, DoWhileStatement, WhileStatement, SwitchStatement, ForInStatement, IfBlock, IfStatement, IfConditional, IfUnconditional, ArrayLiteral, NewProtoLiteral, ReturnStatement, YieldLiteral, AwaitLiteral, ThrowStatement, AssertStatement, Statement, InterfaceStatement, ModuleStatement, ExportStatement, GlobalStatement, VarStatement, StorageLiteral, ParentLiteral, SelfLiteral, FlowStatement;
     Node = require('mode/adria/node.adria');
     ValueType = require('mode/adria/value_type.adria');
     Ident = require('mode/adria/definition/ident.adria');
     Name = Ident;
-    ___String$ac = (function(___parent) {
+    ___String$ae = (function(___parent) {
         var ___String = function String() {
             ___parent.apply(this, arguments);
         };
@@ -5545,7 +5577,7 @@ module('mode/adria/definition.adria', function(module, resource) {
     module.exports.Node = Node;
     module.exports.Ident = Ident;
     module.exports.Name = Name;
-    module.exports.String = ___String$ac;
+    module.exports.String = ___String$ae;
     module.exports.Numeric = Numeric;
     module.exports.Scope = Scope;
     module.exports.Module = Module;
@@ -5764,9 +5796,9 @@ module('../../astdlib/astd/util.adria', function(module, resource) {
     var defer;
     defer = (function defer() {
         var asap;
-        if (typeof ___process$ao === 'object' && typeof ___process$ao.nextTick === 'function') {
+        if (typeof ___process$aq === 'object' && typeof ___process$aq.nextTick === 'function') {
             asap = function asap(context, params, callback) {
-                ___process$ao.nextTick(function() {
+                ___process$aq.nextTick(function() {
                     callback.apply(context, params);
                 });
             };
@@ -5844,13 +5876,14 @@ module('../../astdlib/astd/prototype/array.adria', function(module, resource) {
         Object.defineProperty(ArrayExtensions.prototype, "unique", {
             value: function unique(arr) {
                 var hash, result;
-                hash = {  };
+                hash = Object.create(null);
                 result = [  ];
-                var i, l;
+                var i, l, value;
                 for (i = 0, l = this.length; i < l;++i) {
-                    if (!hash.hasOwnProperty(this[i])) {
-                        hash[this[i]] = true;
-                        result.push(this[i]);
+                    value = this[i];
+                    if (value in hash === false) {
+                        hash[value] = true;
+                        result.push(value);
                     }
                 }
                 return result;
@@ -6497,26 +6530,26 @@ module('mode/adria/transform.adria', function(module, resource) {
             fw = tpl.fetch(resource('../templates/adria/framework.tpl'));
             moduleSN = node.add(new SourceNode(1, 0, 'adria-framework.js', fw));
             moduleSN.setSourceContent('adria-framework.js', fw);
-            var id, currentModule, ___moduleSN$bw;
+            var id, currentModule, ___moduleSN$by;
             for (id in this.modules) {
                 currentModule = this.modules[id];
-                ___moduleSN$bw = node.add(new SourceNode(null, null, currentModule.parser.file, currentModule.result));
-                ___moduleSN$bw.setSourceContent(currentModule.parser.file, currentModule.parser.sourceCode);
+                ___moduleSN$by = node.add(new SourceNode(null, null, currentModule.parser.file, currentModule.result));
+                ___moduleSN$by.setSourceContent(currentModule.parser.file, currentModule.parser.sourceCode);
             }
             usedBuiltins = this.usedBuiltins.toArray();
-            var id, name, builtIn, ___moduleSN$bx;
+            var id, name, builtIn, ___moduleSN$bz;
             for (id in usedBuiltins) {
                 name = usedBuiltins[id];
                 builtIn = tpl.fetch(this.builtins[name]);
-                ___moduleSN$bx = node.add(new SourceNode(1, 0, name.replace('.adria', '.js'), builtIn));
-                ___moduleSN$bx.setSourceContent(name.replace('.adria', '.js'), builtIn);
+                ___moduleSN$bz = node.add(new SourceNode(1, 0, name.replace('.adria', '.js'), builtIn));
+                ___moduleSN$bz.setSourceContent(name.replace('.adria', '.js'), builtIn);
             }
-            var fileName, contents, wrapped, ___moduleSN$by;
+            var fileName, contents, wrapped, ___moduleSN$c0;
             for (fileName in this.resources.data) {
                 contents = fs.readFileSync(options['basePath'] + fileName, 'UTF-8');
                 wrapped = 'resource(\'' + fileName + '\', \'' + contents.jsify("'") + '\');\n';
-                ___moduleSN$by = node.add(new SourceNode(null, null, fileName, wrapped));
-                ___moduleSN$by.setSourceContent(fileName, contents);
+                ___moduleSN$c0 = node.add(new SourceNode(null, null, fileName, wrapped));
+                ___moduleSN$c0.setSourceContent(fileName, contents);
             }
             node.trim();
             var id, name;
@@ -6576,12 +6609,12 @@ module('mode/adria/transform.adria', function(module, resource) {
             monitor.on('change', this, function(forceReload) {
                 try {
                     this.compile(forceReload, forceReload.intersect(this.resources).empty === false);
-                } catch (___exc$c2) {
-                    if (___exc$c2 instanceof BaseException) {
-                        var e = ___exc$c2;
+                } catch (___exc$c4) {
+                    if (___exc$c4 instanceof BaseException) {
+                        var e = ___exc$c4;
                         process.stderr.write('Error: ' + e.message + '\n');
                     } else { 
-                        throw ___exc$c2;
+                        throw ___exc$c4;
                     }
                 }
             });
@@ -6706,12 +6739,12 @@ module('application.adria', function(module, resource) {
                 } else {
                     try {
                         this.handle(options['mode'], stdin);
-                    } catch (___exc$c8) {
-                        if (___exc$c8 instanceof BaseException) {
-                            var e = ___exc$c8;
+                    } catch (___exc$ca) {
+                        if (___exc$ca instanceof BaseException) {
+                            var e = ___exc$ca;
                             this.error(e.message);
                         } else { 
-                            throw ___exc$c8;
+                            throw ___exc$ca;
                         }
                     }
                 }

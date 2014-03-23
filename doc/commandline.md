@@ -5,6 +5,7 @@ adria
 - <a href="//github.com/sinesc/adria/blob/master/doc/overview.md">Language overview</a>
 - <a href="//github.com/sinesc/adria/blob/master/doc/modules.md">Module handling</a>
 - <a href="//github.com/sinesc/adria/blob/master/doc/commandline.md">Commandline options</a>
+- <a href="//github.com/sinesc/adria/blob/master/doc/config.md">Build configurations</a>
 
 Commandline options
 -------------------

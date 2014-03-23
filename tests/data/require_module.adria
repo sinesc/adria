@@ -1,0 +1,6 @@
+
+global RequireModule = proto {
+    value: 'proto value',
+};
+
+module RM = RequireModule;
