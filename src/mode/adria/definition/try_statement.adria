@@ -46,7 +46,7 @@ export Catch = proto (Node) {
 
     toSourceNode: func() {
 
-        this.exceptionName = '___exc' + this.parser.transform.makeUID();
+        this.exceptionName = '___exc$' + this.parser.transform.makeUID();
 
         var result = this.csn();
         result.add(' catch (' + this.exceptionName + ') {' + this.nl(1));

@@ -28,17 +28,19 @@ module AsyncLiteral = proto (GeneratorLiteral) {
 
     useCallback: false,
 
-    preprocess: func() {
+    preprocess: func(object state) {
 
         var parser = this.parser;
         parser.resultData.globalDeclarations.add('___Async');
         parser.transform.usedBuiltins.add('async.adria');
+
+        parent->preprocess(state);
     },
 
     storeCallback: func() {
 
         this.useCallback = true;
-        return '___cbh' + this.thisId;
+        return '___cbh$' + this.thisId;
     },
 
     preParamList: func(SourceNode result) {
@@ -58,8 +60,9 @@ module AsyncLiteral = proto (GeneratorLiteral) {
     postBody: func(SourceNode result) {
 
         if (this.useCallback) {
+            var name = '___aex$' + this.thisId;
             result.add([ this.storeCallback() + '(null, undefined);', this.nl(-1) + '}' ]);
-            result.add([ ' catch (___exc) {' + this.nl(1) + this.storeCallback() + '(___exc, undefined);', this.nl(-1) + '}' ]);
+            result.add([ ' catch (' + name + ') {' + this.nl(1) + this.storeCallback() + '(' + name + ', undefined);', this.nl(-1) + '}' ]);
         }
 
         parent->postBody(result);

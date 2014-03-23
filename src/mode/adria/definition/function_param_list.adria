@@ -38,7 +38,7 @@ module FunctionParamList = proto (ParamsNode) {
 
     types: new Set([ 'boolean', 'number', 'finite', 'string', 'scalar', 'func', 'object' ]),
 
-    reset: func(state) {
+    reset: func(object state) {
         this.numParams = 0;
         this.optionalPermutations = null;
         this.optionalGroups = null;

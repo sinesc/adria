@@ -28,7 +28,7 @@ module GlobalStatement = proto (Node) {
     /**
      * need to handle globals during preprocess so that all modules have access to them
      */
-    preprocess: func() {
+    preprocess: func(object state) {
 
         var resultData = this.parser.resultData;
 
@@ -54,6 +54,8 @@ module GlobalStatement = proto (Node) {
                 resultData.globalReferences.set(nameNode.value, nameNode.value);
             }
         });
+
+        parent->preprocess(state);
     },
 
     toSourceNode: func() {

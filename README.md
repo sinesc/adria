@@ -91,3 +91,12 @@ through the array using Adria's extended for-in syntax.
 Manual recompilation can be avoided by using the `--monitor` option. In this mode, the compiler will watch the given file arguments and their dependencies for
 changes and recompile the application as required. For the above example, `adria main.adria -o hello.js --shellwrap --monitor` would keep `hello.js` up-to-date
 while you make changes to `main.adria`, `log.adria` or any additional `require`s you might add.
+
+#### Build configuration
+
+The option `--write-config [ <file> ]` causes the compiler to write the current command line configuration to given file (default build.abc). Once a configuration
+has been saved, it can later be used with the `-c [ <file> ]` option. Config files are stored in JSON format and can easily be edited.
+
+`adria main.adria -o hello.js --shellwrap --write-config` would compile the above example and write a build configuration for it.
+
+`adria -c` would recompile the example with the saved configuration.

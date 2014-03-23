@@ -51,7 +51,7 @@ module Scope = proto (Node) {
         Node->constructor(key, value);
     },
 
-    reset: func(state) {
+    reset: func(object state) {
 
         this.localDeclarations = new Set();
         this.localReferences = new Map();
@@ -173,7 +173,7 @@ module Scope = proto (Node) {
         }
 
         if (refName !== null) {
-            return '___' + name + '_scp' + transform.makeUID();
+            return '___' + name + '$' + transform.makeUID();
         }
 
         return name;

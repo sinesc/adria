@@ -29,7 +29,7 @@ module VarStatement = proto (Node) {
     /**
      * locate imports and reserve their reference names
      */
-    preprocess: func(state) {
+    preprocess: func(object state) {
 
         var resultData = this.parser.resultData;
 

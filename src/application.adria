@@ -22,7 +22,7 @@
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 var Args = require('./args');
-var ASTException = require('./language_parser/ast_exception');
+var BaseException = require('./base_exception');
 var log = require('./log');
 
 module Application = proto {
@@ -76,7 +76,7 @@ module Application = proto {
             stdin = await this.readStdIn(#);
         }
 
-        // do not catch ASTExceptions in debug mode
+        // do not catch exceptions in debug mode
 
         if (options['debug']) {
 
@@ -86,7 +86,7 @@ module Application = proto {
 
             try {
                 this.handle(options['mode'], stdin);
-            } catch (ASTException e) {
+            } catch (BaseException e) {
                 this.error(e.message);
             }
         }
@@ -114,7 +114,7 @@ module Application = proto {
 
         } else {
 
-            throw new Exception('Unsupported mode "' + mode + '".');
+            this.error('Unsupported mode "' + mode + '".');
         }
 
         transform.run();

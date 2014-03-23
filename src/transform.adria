@@ -21,7 +21,9 @@
  * IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
+var fs = require('fs');
 var Cache = require('./cache');
+var util = require('./util');
 
 /**
  * Base for language transformation file handling. Transforms a set of input
@@ -33,6 +35,16 @@ module Transform = proto {
      * @var Array command line options
      */
     options: null,
+
+    /**
+     * @var string option file to load command line options from
+     */
+    readOptionFile: null,
+
+    /**
+     * @var string option file to write command line options to
+     */
+    writeOptionFile: null,
 
     /**
      * @var string? data received via stdin
@@ -77,14 +89,45 @@ module Transform = proto {
      * initialize options definition, extend with own options
      */
     initOptions: func() {
+
         application.args.addSwitch('cache', 'Cache generated code', true);
+
+        // handle option file now because the specific transform might add required options
+
+        application.args.add(
+            [ '-c', '--config' ],
+            { help: 'Use build configuration', dest: 'readConfig', metavar: '<file>', defaultValue: '*', nargs: '?' },
+            func(value) { return value === '*' ? null : (value === null ? 'build.abc' : util.normalizeExtension(value, '.abc')); }
+        );
+
+        application.args.add(
+            [ '--write-config' ],
+            { help: 'Write build configuration', dest: 'writeConfig', metavar: '<file>', defaultValue: '*', nargs: '?' },
+            func(value) { return value === '*' ? null : (value === null ? 'build.abc' : util.normalizeExtension(value, '.abc')); }
+        );
+
+        var options = application.args.parseKnown();
+        this.readOptionFile = options['readConfig'];
+        this.writeOptionFile = options['writeConfig'];
     },
 
     /**
-     * processes options definition into options
+     * either load or save options from file or processes given command-line arguments
      */
     processOptions: func() {
-        this.options = application.args.parseAll();
+
+        if (this.readOptionFile !== null) {
+            this.options = JSON.parse(fs.readFileSync(this.readOptionFile));
+        } else {
+            this.options = application.args.parseAll();
+        }
+
+        delete this.options['readConfig'];
+        delete this.options['writeConfig'];
+
+        if (this.writeOptionFile !== null) {
+            fs.writeFileSync(this.writeOptionFile, JSON.stringify(this.options, null, '\t'));
+        }
     },
 
     /**
@@ -93,7 +136,7 @@ module Transform = proto {
      * @return integer
      */
     makeUID: func() {
-        return this.uid++;
+        return (this.uid++).toString(36);
     },
 
     /**

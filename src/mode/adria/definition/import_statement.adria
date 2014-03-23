@@ -25,13 +25,15 @@ var Node = require('../node');
 
 module ImportStatement = proto (Node) {
 
-    preprocess: func() {
+    preprocess: func(object state) {
 
         var resultData = this.parser.resultData;
 
         this.eachKey('item', func(Node node) {
             resultData.globalReservations.add(node.value);
         });
+        
+        parent->preprocess(state);
     },
 
     toSourceNode: func() {

@@ -32,6 +32,7 @@ var Transform = require('../../transform');
 var AdriaParser = require('./parser');
 var ASTException = require('../../language_parser/ast_exception');
 var Monitor = require('../../monitor');
+var BaseException = require('../../base_exception');
 
 /**
  * Transforms a set of input files into one or more output files using the
@@ -60,32 +61,32 @@ module AdriaTransform = proto (Transform) {
      * @var Set discovered but not necessarily loaded requires
      */
     requires: null,
-    
+
     /**
      * @var Set loaded requires
      */
     requiresDone: null,
-    
+
     /**
      * @var Set known modules
      */
     modules: null,
-    
+
     /**
      * @var Set required resources
      */
     resources: null,
-    
+
     /**
      * @var Set builtin modules used by application
      */
     usedBuiltins    : null,
-    
+
     /**
      * @var boolean application has a CommonJS interface, used to detect illegal use of multiple interfaces
      */
     addInterface: false,
-    
+
     /**
      * @var boolean application makes use of the application() feature
      */
@@ -652,7 +653,7 @@ module AdriaTransform = proto (Transform) {
         monitor.on('change', this, func(forceReload) {
             try {
                 this.compile(forceReload, forceReload.intersect(this.resources).empty === false);
-            } catch (Exception e) {
+            } catch (BaseException e) {
                 process.stderr.write('Error: ' + e.message + '\n');
             }
         });

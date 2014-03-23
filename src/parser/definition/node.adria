@@ -23,6 +23,7 @@
  */
 var Enum = require('../../util').Enum;
 var Token = require('../../tokenizer/token');
+var SyntaxException = require('../syntax_exception');
 
 /**
  * Parser.Definition.Node constructor
@@ -235,16 +236,16 @@ module Node = proto {
     filter: func*(parser, Token token, Array stack) {
 
         var children = this.children;
-        var child, blockRoot, generator, result;
+        var result;
 
         if (stack.length > 250) {
-            var message = parser.errorMessage(token, this, stack);
-            throw new Exception('recursion too deep. last error:\n' + message);
+            var message = SyntaxException::unexpectedTokenMessage(true, parser, token, this, stack);
+            throw new Exception('recursion too deep. last error:\n' + message + '\n');
         }
 
         for (var id = 0, len = children.length; id < len; id++) {
 
-            child = children[id];
+            var child = children[id];
 
             if (child.type === Type.JUMP) {
 
@@ -256,8 +257,8 @@ module Node = proto {
 
                 // push current child onto stack before recursing into another block and forward-yield its matches
 
-                blockRoot = parser.definition.getBlock(child.match);
-                generator = blockRoot.filter(parser, token, stack.concat(new StackItem(child, token)));
+                var blockRoot = parser.definition.getBlock(child.match);
+                var generator = blockRoot.filter(parser, token, stack.concat(new StackItem(child, token)));
 
                 while ((result = generator.next()).done === false) {
                     yield result.value;
@@ -265,16 +266,16 @@ module Node = proto {
 
             } else if (child.type === Type.RETURN) {
 
-                // there was an error, nothing to yield
+                // reached bottom of the stack
 
                 if (stack.length === 0) {
-                    throw new Error('nothing to yield');
+                    break;
                 }
 
                 // return to previous node on stack
 
                 var top = stack[stack.length -1].node;
-                generator = top.filter(parser, token, stack.slice(0, -1));
+                var generator = top.filter(parser, token, stack.slice(0, -1));
 
                 while ((result = generator.next()).done === false) {
                     result.value.minStack = Math.min(result.value.minStack, stack.length -1);

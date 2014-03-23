@@ -60,7 +60,7 @@ module FunctionLiteral = proto (Scope) {
         Scope->constructor(key, value);
     },
 
-    reset: func(state) {
+    reset: func(object state) {
         this.specialArgs = [ ];
         parent->reset(state);
     },
@@ -70,7 +70,7 @@ module FunctionLiteral = proto (Scope) {
      *
      * @param any state user-defined scan state object passed to every child
      */
-    scan: func(state) {
+    scan: func(object state) {
 
         if (this.name.valid) {
             var transform = this.parser.transform;
@@ -186,7 +186,7 @@ module FunctionLiteral = proto (Scope) {
     storeContext: func() {
 
         this.provideContext = true;
-        return '___ths' + this.thisId;
+        return '___ths$' + this.thisId;
     },
 
     /**

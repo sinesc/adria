@@ -13,12 +13,13 @@ Command line help is available via the --help switch. By default this will print
 help for `<mode>`
 
 ```
-usage: adria [-v] [-d] [-m {adria,adriadebug}] [--stdin] [--cache] [-o <file>]
-             [-b <path>] [-p <path>] [--extension <ext>] [-t {node,web}]
-             [--header <file>] [-D <key>=<value>] [--shellwrap]
-             [--shellargs <args>] [--monitor] [--strict] [--es5] [--assert]
-             [--scan] [--map] [--link] [--time] [-h]
-             files [files ...]
+usage: ngadria [-v] [-d] [-m {adria,adriadebug}] [--stdin] [--cache]
+               [-c [<file>]] [--write-config [<file>]] [-o <file>] [-b <path>]
+               [-p <path>] [--extension <ext>] [-t {node,web}]
+               [--header <file>] [-D <key>=<value>] [--shellwrap]
+               [--shellargs <args>] [--monitor] [--strict] [--es5] [--assert]
+               [--scan] [--map] [--link] [--time] [-h]
+               files [files ...]
 
 Positional arguments:
   files                 File(s) to compile
@@ -30,6 +31,10 @@ Optional arguments:
                         Translation mode (adria)
   --stdin               Read from stdin (false)
   --cache               Cache generated code (true)
+  -c [<file>], --config [<file>]
+                        Use build configuration
+  --write-config [<file>]
+                        Write build configuration
   -o <file>, --out <file>
                         Output file
   -b <path>, --base <path>

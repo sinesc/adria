@@ -28,7 +28,7 @@ module ResourceLiteral = proto (FileNode) {
 
     resolvedName: '',
 
-    preprocess: func() {
+    preprocess: func(object state) {
     
         var fileName = this.get('file').toString().slice(1, -1);
 
@@ -39,6 +39,8 @@ module ResourceLiteral = proto (FileNode) {
         } else {
             throw new ASTException('Could not find resource "' + fileName + '"', this);
         }
+        
+        parent->preprocess(state);
     },
 
     toSourceNode: func() {

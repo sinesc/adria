@@ -48,7 +48,7 @@ module Module = proto (Scope) {
         Scope->constructor(key, value);
     },
 
-    reset: func(state) {
+    reset: func(object state) {
 
         this.exports = new Map();
         this.moduleExport = null;

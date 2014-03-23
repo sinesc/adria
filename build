@@ -2,7 +2,7 @@
 set -e
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 ASTD_PATH="../../astdlib/"
-BASE_PARAMS="--shellwrap -t node --no-map --path $ASTD_PATH -D version=0.2.1"
+BASE_PARAMS="--shellwrap -t node --no-map --path $ASTD_PATH -D version=0.2.2"
 BUILD_PARAMS="$@ $BASE_PARAMS --time --base src/ --header ../LICENSE --out ../bin/ngadria.js main.adria"
 TEST_PARAMS="$@ $BASE_PARAMS --base tests/ --assert --out test_all.js test_all.adria";
 
@@ -23,3 +23,6 @@ echo "== build == ok. again..."
 echo "== build == unit testing...";
 ./bin/ngadria.js $TEST_PARAMS
 ./tests/test_all.js
+
+
+#./bin/ngadria.js $@ $BASE_PARAMS --base src/ --header ../LICENSE --out ../bin/ngadria.js main.adria --path ../definition --monitor --assert

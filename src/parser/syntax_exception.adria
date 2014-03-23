@@ -1,0 +1,131 @@
+/*
+ * Adria transcompiler
+ *
+ * Copyright (C) 2014 Dennis Möhlmann <mail@dennismoehlmann.de>
+ * Licensed under the MIT license.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of
+ * this software and associated documentation files (the "Software"), to deal in
+ * the Software without restriction, including without limitation the rights to
+ * use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of
+ * the Software, and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+ * FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+ * COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
+ * IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+ * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ */
+var BaseException = require('../base_exception');
+//var Node = require('../parser/definition/node');
+var Token = require('../tokenizer/token');
+var path = require('path');
+
+module SyntaxException = proto (BaseException) {
+
+    file: '',
+    token: null,
+    definition: null,
+    node: null,
+    stack: null,
+
+    /**
+     * construct new syntax exception
+     *
+     * @param Parser parser source parser
+     * @param boolean includeTrace include definition trace in error message
+     * @param Token token token where the error occurred
+     * @param Node node last node to actually match the token
+     * @param Array stack stack at the time of the match
+     * @param string message to use
+     */
+    constructor: func(
+        parser,
+        [ boolean includeTrace = false, Token token = null, /*Node*/ node = null, Array stack = null ],
+        [ string message = null ]
+    ) {
+
+        this.file = parser.file;
+        this.token = token;
+        this.definition = parser.definition;
+        this.node = node;
+        this.stack = stack;
+
+        if (message === null) {
+            message = this.unexpectedTokenMessage(includeTrace, parser, token, node, stack);
+        } else {
+            message = this.file + ': ' + message;
+        }
+
+        BaseException->constructor(message);
+    },
+
+    /**
+     * returns an error message based on current token, node and state of the stack
+     *
+     * @return string error
+     */
+    unexpectedTokenMessage: func(includeTrace, parser, token, node, stack) {
+
+        var trace;
+        var message = '$file: Unexpected token "$tokenData" $position. Expected: $validNodes';
+
+        if (includeTrace) {
+            trace = this.definitionTrace(token, node, stack);
+            message += '\n\nTrace:\n$trace';
+        }
+
+        return message.format({
+            file        : path.normalize(parser.file),
+            tokenData   : token.data,
+            position    : token.pos.toString(),
+            validNodes  : node.toString(parser.definition, stack),
+            trace       : trace
+        });
+    },
+
+    /**
+     * returns debug trace of the definition node stack
+     *
+     * @return string
+     */
+    definitionTrace: func(token, node, traceStack) {
+
+        // for output simplicity, add current node to stack
+
+        var stack = traceStack.slice();
+        stack.push({ node: node, token: token });
+
+        var id = stack.length -1;
+        var result = '';
+        var done = 0;
+        var levelNode, levelToken;
+
+        while (id--) {
+            levelNode = stack[id].node;
+            levelToken = stack[id].token;
+
+            if (levelNode instanceof Object) {
+                result += (id + 1) + '. ' + levelNode.name + (levelNode.capture !== '' ? ':' + levelNode.capture : '') + (levelNode.label !== '' ? '[' + levelNode.label + ']' : '');
+            } else {
+                result += 'null entry on stack';
+            }
+
+            result += ' at ' + levelToken.pos.toString() + ': ' + levelToken.data + '\n';
+
+            // if after 15 items there are still more than 15 items on the stack, skip ahead to item 15
+
+            if (done++ > 15 && id > 15) {
+                id = 15;
+                result += '...\n';
+            }
+        }
+
+        return result.trim();
+    },
+};

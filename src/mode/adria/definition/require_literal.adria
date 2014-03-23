@@ -30,7 +30,7 @@ module RequireLiteral = proto (FileNode) {
     moduleName: '',
     requireFunction: '',
 
-    preprocess: func() {
+    preprocess: func(object state) {
     
         var parser = this.parser;
         var options = parser.transform.options;
@@ -77,6 +77,8 @@ module RequireLiteral = proto (FileNode) {
                 throw new ASTException('Could not find require "' + this.moduleName + '"', this);
             }
         }
+        
+        parent->preprocess(state);
     },
 
     toSourceNode: func() {

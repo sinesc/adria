@@ -25,13 +25,15 @@ var Node = require('../node');
 
 module ApplicationStatement = proto (Node) {
 
-    preprocess: func() {
+    preprocess: func(object state) {
 
         // check if application was user-defined. if it is not, enable application support
 
         if (this.findScope().getRef('application', false) === null) {
             this.parser.transform.addApplication = true;
         }
+        
+        parent->preprocess(state);
     },
 
     toSourceNode: func() {

@@ -97,7 +97,7 @@ module PropertyLiteral = proto (ObjectLiteral) {
             var name = this.findName();
 
             if (name === null) {
-                this.storageName = '\'___psf' + this.parser.transform.makeUID() + '\'';
+                this.storageName = '\'___psf$' + this.parser.transform.makeUID() + '\'';
             } else {
                 this.storageName = '\'_' + name.getPlain() + '\'';
             }
