@@ -405,6 +405,8 @@ module AdriaTransform = proto (Transform) {
 
         this.cacheModifier = util.md5(JSON.stringify(this.options));
         this.options['defines']['___uniqueId'] = util.uniqueId();
+        this.options['defines']['___date'] = (new Date()).format('%y-%m-%d');
+        this.options['defines']['___time'] = (new Date()).format('%H:%M:%S');
     },
 
     /**

@@ -119,12 +119,16 @@ unary_operator {
     entry -> "+":unary_op -> return
     entry -> "-":unary_op -> return
     entry -> "!":unary_op -> return
+    entry -> "~":unary_op -> return
     entry -> "new":unary_op -> return
     entry -> "typeof":unary_op -> return
     entry -> "delete":unary_op -> return
 }
 
 binary_operator {
+    entry -> "===":binary_op -> return
+    entry -> "!==":binary_op -> return
+
     entry -> "+":binary_op -> return
     entry -> "-":binary_op -> return
     entry -> "*":binary_op -> return
@@ -132,9 +136,7 @@ binary_operator {
     entry -> "%":binary_op -> return
 
     entry -> "==":binary_op -> return
-    entry -> "===":binary_op -> return
     entry -> "!=":binary_op -> return
-    entry -> "!==":binary_op -> return
     entry -> "<":binary_op -> return
     entry -> ">":binary_op -> return
     entry -> "<=":binary_op -> return
@@ -147,6 +149,7 @@ binary_operator {
     entry -> "^":binary_op -> return
     entry -> "<<":binary_op -> return
     entry -> ">>":binary_op -> return
+    entry -> ">>>":binary_op -> return
     entry -> "instanceof":binary_op -> return
     entry -> "in":binary_op -> return
 }

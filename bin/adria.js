@@ -137,6 +137,9 @@ module('../../astdlib/astd/prototype/string.adria', function(module, resource) {
             len = prefix.length;
             return (this.substr(0, len) === prefix ? this.substr(len) : this.valueOf());
         };
+        StringExtensions.prototype.addPrefix = function addPrefix(prefix) {
+            return this.hasPrefix(prefix) ? this.valueOf() : prefix + this.valueOf();
+        };
         StringExtensions.prototype.hasPostfix = function hasPostfix(postfix) {
             return (this.substr(-postfix.length) === postfix);
         };
@@ -154,6 +157,9 @@ module('../../astdlib/astd/prototype/string.adria', function(module, resource) {
             }
             len = postfix.length;
             return (this.substr(-len) === postfix ? this.substr(0, this.length - len) : this.valueOf());
+        };
+        StringExtensions.prototype.addPostfix = function addPostfix(postfix) {
+            return this.hasPostfix(postfix) ? this.valueOf() : this.valueOf() + postfix;
         };
         StringExtensions.prototype.format = function format() {
             var args = Array.prototype.slice.call(arguments, 0);
@@ -1166,7 +1172,7 @@ module('cache.adria', function(module, resource) {
         function Cache() {
             this.checkBaseDir();
         }
-        Cache.prototype.version = "7cra4d0qcx1ozxdslsk5kxy5nilspb0zg9os93xrxoufxiplu19oz7g9oe66to5v";
+        Cache.prototype.version = "3s1316ifknzziko5zbxms00ukkvyu1dtvpxl6isjcnlnv64ngnsavxbe2nstbbpi";
         Cache.prototype.baseDir = util.home() + '/.adria/cache/';
         Cache.prototype.checkBaseDir = function checkBaseDir() {
             var parts, path;
@@ -5470,12 +5476,12 @@ module('mode/adria/definition/flow_statement.adria', function(module, resource) 
     module.exports = FlowStatement;
 });
 module('mode/adria/definition.adria', function(module, resource) {
-    var Node, ValueType, Ident, Name, ___String$ae, Numeric, Scope, Module, RequireLiteral, ResourceLiteral, FunctionLiteral, GeneratorLiteral, AsyncLiteral, FunctionStatement, GeneratorStatement, AsyncStatement, FunctionParamsOptional, FunctionParamList, AsyncParamList, Expression, ObjectLiteral, PropertyLiteral, ProtoLiteral, ProtoStatement, ProtoBodyItem, ProtoBodyConstructor, TryStatement, Try, Catch, CatchAll, CatchSpecific, Finally, ForCountStatement, ImportStatement, ApplicationStatement, AccessOperationProtocall, ConstLiteral, InvokeOperation, AsyncWrapOperation, BaseLiteral, DoWhileStatement, WhileStatement, SwitchStatement, ForInStatement, IfBlock, IfStatement, IfConditional, IfUnconditional, ArrayLiteral, NewProtoLiteral, ReturnStatement, YieldLiteral, AwaitLiteral, ThrowStatement, AssertStatement, Statement, InterfaceStatement, ModuleStatement, ExportStatement, GlobalStatement, VarStatement, StorageLiteral, ParentLiteral, SelfLiteral, FlowStatement;
+    var Node, ValueType, Ident, Name, ___String$ag, Numeric, Scope, Module, RequireLiteral, ResourceLiteral, FunctionLiteral, GeneratorLiteral, AsyncLiteral, FunctionStatement, GeneratorStatement, AsyncStatement, FunctionParamsOptional, FunctionParamList, AsyncParamList, Expression, ObjectLiteral, PropertyLiteral, ProtoLiteral, ProtoStatement, ProtoBodyItem, ProtoBodyConstructor, TryStatement, Try, Catch, CatchAll, CatchSpecific, Finally, ForCountStatement, ImportStatement, ApplicationStatement, AccessOperationProtocall, ConstLiteral, InvokeOperation, AsyncWrapOperation, BaseLiteral, DoWhileStatement, WhileStatement, SwitchStatement, ForInStatement, IfBlock, IfStatement, IfConditional, IfUnconditional, ArrayLiteral, NewProtoLiteral, ReturnStatement, YieldLiteral, AwaitLiteral, ThrowStatement, AssertStatement, Statement, InterfaceStatement, ModuleStatement, ExportStatement, GlobalStatement, VarStatement, StorageLiteral, ParentLiteral, SelfLiteral, FlowStatement;
     Node = require('mode/adria/node.adria');
     ValueType = require('mode/adria/value_type.adria');
     Ident = require('mode/adria/definition/ident.adria');
     Name = Ident;
-    ___String$ae = (function(___parent) {
+    ___String$ag = (function(___parent) {
         var ___String = function String() {
             ___parent.apply(this, arguments);
         };
@@ -5577,7 +5583,7 @@ module('mode/adria/definition.adria', function(module, resource) {
     module.exports.Node = Node;
     module.exports.Ident = Ident;
     module.exports.Name = Name;
-    module.exports.String = ___String$ae;
+    module.exports.String = ___String$ag;
     module.exports.Numeric = Numeric;
     module.exports.Scope = Scope;
     module.exports.Module = Module;
@@ -5678,7 +5684,7 @@ module('mode/adria/parser.adria', function(module, resource) {
             defines = this.transform.options.defines;
             that = this;
             return data.replace(/\{\{([_a-zA-Z][_a-zA-Z_0-9]*)\}\}/g, function(matches, key) {
-                if (key === '___uniqueId') {
+                if (key.slice(0, 3) === '___') {
                     that.forceNoCache = true;
                 }
                 return (defines[key] === undefined ? '' : defines[key]);
@@ -5735,9 +5741,10 @@ module('mode/adria/parser.adria', function(module, resource) {
                 Tokenizer.prefabs.regex(null, /^\/\/.*/),
                 Tokenizer.prefabs.breaker(),
                 Tokenizer.prefabs.regex('REGEXP', /^\/(?:(?=(\\?))\1.)*?\/[a-z]*/, /^(\(|=|==|===|\+|!=|!==|,|;|&&|\|\||!|\:)$/),
-                Tokenizer.prefabs.set('DELIM', [ ';', '...', '.', ',', '(', ')', '[', ']', '{', '}', '!==', '!=', '!', '++', '--', '#' ]),
+                Tokenizer.prefabs.set('DELIM', [ ';', '...', '.', ',', '(', ')', '[', ']', '{', '}', '!==', '!=', '!', '++', '--', '~', '#' ]),
                 Tokenizer.prefabs.group('DELIM', [ '=', '&', '|', '<', '>', ':', '?', '+', '-', '*', '/', '%' ]),
                 Tokenizer.prefabs.regex('IDENT', /^[a-zA-Z_\$][a-zA-Z0-9_\$]*/, null, matchKeywords),
+                Tokenizer.prefabs.regex('NUMERIC', /^0x[a-fA-F0-9]+/),
                 Tokenizer.prefabs.number('NUMERIC'),
                 Tokenizer.prefabs.regex('STRING', /^(["'])(?:(?=(\\?))\2[\s\S])*?\1/)
             ], [ 'KEYWORD' ]);
@@ -5796,9 +5803,9 @@ module('../../astdlib/astd/util.adria', function(module, resource) {
     var defer;
     defer = (function defer() {
         var asap;
-        if (typeof ___process$aq === 'object' && typeof ___process$aq.nextTick === 'function') {
+        if (typeof ___process$as === 'object' && typeof ___process$as.nextTick === 'function') {
             asap = function asap(context, params, callback) {
-                ___process$aq.nextTick(function() {
+                ___process$as.nextTick(function() {
                     callback.apply(context, params);
                 });
             };
@@ -5945,8 +5952,16 @@ module('../../astdlib/astd/listenable.adria', function(module, resource) {
                 }
             }
         };
-        Listenable.prototype.trigger = function trigger(eventName) {
-            util.defer(this, arguments, this.execute);
+        Listenable.prototype.forward = function forward(eventName) {
+            var bindArgs;
+            var args = Array.prototype.slice.call(arguments, 1);
+            bindArgs = [ this, eventName ];
+            bindArgs.push.apply(bindArgs, args);
+            return this.execute.bind.apply(this.execute, bindArgs);
+        };
+        Listenable.prototype.trigger = function trigger() {
+            var args = Array.prototype.slice.call(arguments, 0);
+            util.defer(this, args, this.execute);
         };
         Listenable.prototype.on = function on() {
             var eventName, params, context, callback;
@@ -6443,6 +6458,8 @@ module('mode/adria/transform.adria', function(module, resource) {
             ___p.prototype.processOptions.call(this);
             this.cacheModifier = util.md5(JSON.stringify(this.options));
             this.options['defines']['___uniqueId'] = util.uniqueId();
+            this.options['defines']['___date'] = (new Date()).format('%y-%m-%d');
+            this.options['defines']['___time'] = (new Date()).format('%H:%M:%S');
         };
         AdriaTransform.prototype.getParser = function getParser(moduleName, data, forceReload) {
             var parser, fullName;
@@ -6530,26 +6547,26 @@ module('mode/adria/transform.adria', function(module, resource) {
             fw = tpl.fetch(resource('../templates/adria/framework.tpl'));
             moduleSN = node.add(new SourceNode(1, 0, 'adria-framework.js', fw));
             moduleSN.setSourceContent('adria-framework.js', fw);
-            var id, currentModule, ___moduleSN$by;
+            var id, currentModule, ___moduleSN$c1;
             for (id in this.modules) {
                 currentModule = this.modules[id];
-                ___moduleSN$by = node.add(new SourceNode(null, null, currentModule.parser.file, currentModule.result));
-                ___moduleSN$by.setSourceContent(currentModule.parser.file, currentModule.parser.sourceCode);
+                ___moduleSN$c1 = node.add(new SourceNode(null, null, currentModule.parser.file, currentModule.result));
+                ___moduleSN$c1.setSourceContent(currentModule.parser.file, currentModule.parser.sourceCode);
             }
             usedBuiltins = this.usedBuiltins.toArray();
-            var id, name, builtIn, ___moduleSN$bz;
+            var id, name, builtIn, ___moduleSN$c2;
             for (id in usedBuiltins) {
                 name = usedBuiltins[id];
                 builtIn = tpl.fetch(this.builtins[name]);
-                ___moduleSN$bz = node.add(new SourceNode(1, 0, name.replace('.adria', '.js'), builtIn));
-                ___moduleSN$bz.setSourceContent(name.replace('.adria', '.js'), builtIn);
+                ___moduleSN$c2 = node.add(new SourceNode(1, 0, name.replace('.adria', '.js'), builtIn));
+                ___moduleSN$c2.setSourceContent(name.replace('.adria', '.js'), builtIn);
             }
-            var fileName, contents, wrapped, ___moduleSN$c0;
+            var fileName, contents, wrapped, ___moduleSN$c3;
             for (fileName in this.resources.data) {
                 contents = fs.readFileSync(options['basePath'] + fileName, 'UTF-8');
                 wrapped = 'resource(\'' + fileName + '\', \'' + contents.jsify("'") + '\');\n';
-                ___moduleSN$c0 = node.add(new SourceNode(null, null, fileName, wrapped));
-                ___moduleSN$c0.setSourceContent(fileName, contents);
+                ___moduleSN$c3 = node.add(new SourceNode(null, null, fileName, wrapped));
+                ___moduleSN$c3.setSourceContent(fileName, contents);
             }
             node.trim();
             var id, name;
@@ -6609,12 +6626,12 @@ module('mode/adria/transform.adria', function(module, resource) {
             monitor.on('change', this, function(forceReload) {
                 try {
                     this.compile(forceReload, forceReload.intersect(this.resources).empty === false);
-                } catch (___exc$c4) {
-                    if (___exc$c4 instanceof BaseException) {
-                        var e = ___exc$c4;
+                } catch (___exc$c7) {
+                    if (___exc$c7 instanceof BaseException) {
+                        var e = ___exc$c7;
                         process.stderr.write('Error: ' + e.message + '\n');
                     } else { 
-                        throw ___exc$c4;
+                        throw ___exc$c7;
                     }
                 }
             });
@@ -6739,12 +6756,12 @@ module('application.adria', function(module, resource) {
                 } else {
                     try {
                         this.handle(options['mode'], stdin);
-                    } catch (___exc$ca) {
-                        if (___exc$ca instanceof BaseException) {
-                            var e = ___exc$ca;
+                    } catch (___exc$cd) {
+                        if (___exc$cd instanceof BaseException) {
+                            var e = ___exc$cd;
                             this.error(e.message);
                         } else { 
-                            throw ___exc$ca;
+                            throw ___exc$cd;
                         }
                     }
                 }
@@ -7180,12 +7197,16 @@ unary_operator {\n\
     entry -> "+":unary_op -> return\n\
     entry -> "-":unary_op -> return\n\
     entry -> "!":unary_op -> return\n\
+    entry -> "~":unary_op -> return\n\
     entry -> "new":unary_op -> return\n\
     entry -> "typeof":unary_op -> return\n\
     entry -> "delete":unary_op -> return\n\
 }\n\
 \n\
 binary_operator {\n\
+    entry -> "===":binary_op -> return\n\
+    entry -> "!==":binary_op -> return\n\
+\n\
     entry -> "+":binary_op -> return\n\
     entry -> "-":binary_op -> return\n\
     entry -> "*":binary_op -> return\n\
@@ -7193,9 +7214,7 @@ binary_operator {\n\
     entry -> "%":binary_op -> return\n\
 \n\
     entry -> "==":binary_op -> return\n\
-    entry -> "===":binary_op -> return\n\
     entry -> "!=":binary_op -> return\n\
-    entry -> "!==":binary_op -> return\n\
     entry -> "<":binary_op -> return\n\
     entry -> ">":binary_op -> return\n\
     entry -> "<=":binary_op -> return\n\
@@ -7208,6 +7227,7 @@ binary_operator {\n\
     entry -> "^":binary_op -> return\n\
     entry -> "<<":binary_op -> return\n\
     entry -> ">>":binary_op -> return\n\
+    entry -> ">>>":binary_op -> return\n\
     entry -> "instanceof":binary_op -> return\n\
     entry -> "in":binary_op -> return\n\
 }\n\
