@@ -55,7 +55,7 @@ module FileNode = proto (Node) {
      * @param string filename
      * @param Parser parser
      */
-    resolvePath: func(string filename, object parser) {
+    resolvePath: func(string filename, object parser, scanNodePaths = false) {
 
         var options = parser.transform.options;
         var relname;
@@ -82,8 +82,56 @@ module FileNode = proto (Node) {
                     return path.normalize(relname);
                 }
             }
+
+            // try nodejs paths
+
+            if (scanNodePaths) {
+                return this.resolveNodePath(filename, parser);
+            }
         }
 
         return null;
     },
+
+    resolveNodePath: func(filename, object parser, extension = '.js') {
+
+        var basePath = parser.transform.options['basePath'];
+        var currentLevel = process.cwd() + '/' + basePath;
+
+        var split, rootName = path.basename(filename, extension);
+
+        if ((split = filename.indexOf('/')) > -1) {
+            rootName = filename.slice(0, split);
+        }
+
+        do {
+
+            var nodeModules = currentLevel + 'node_modules/';
+
+            if (fs.existsSync(nodeModules)) {
+
+                if (rootName + '.js' === filename) {
+
+                    if (fs.existsSync(nodeModules + rootName + '/index.js')) {
+                        return path.relative(basePath, nodeModules + rootName + '/index.js');
+                    } else if (fs.existsSync(nodeModules + rootName + '/package.json')) {
+                        var json = JSON.parse(fs.readFileSync(nodeModules + rootName + '/package.json'));
+                        if (json.main) {
+                            return path.relative(basePath, nodeModules + rootName + '/' + json.main);
+                        }
+                    }
+
+                } else if (fs.existsSync(nodeModules + filename)) {
+                    return path.relative(basePath, nodeModules + '/' + filename);
+                }
+            }
+
+            if (currentLevel !== '/') {
+                currentLevel = path.normalize(currentLevel + '../');
+            }
+
+        } while (currentLevel !== '/');
+
+        return null;
+    }
 };

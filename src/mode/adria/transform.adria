@@ -68,6 +68,11 @@ module AdriaTransform = proto (Transform) {
     requiresDone: null,
 
     /**
+     * @var Set javascript required to be included
+     */
+    jsRequires: null,
+
+    /**
      * @var Set known modules
      */
     modules: null,
@@ -149,6 +154,7 @@ module AdriaTransform = proto (Transform) {
 
         this.requires           = new Set();
         this.resources          = new Set();
+        this.jsRequires         = new Set();
 
         this.requiresDone       = new Set();
         this.usedBuiltins       = new Set();
@@ -290,6 +296,7 @@ module AdriaTransform = proto (Transform) {
         this.globalReservations = this.globalReservations.union(parser.resultData.globalReservations);
         this.globalReferences = this.globalReferences.merge(parser.resultData.globalReferences);
         this.requires = this.requires.union(parser.resultData.requires);
+        this.jsRequires = this.jsRequires.union(parser.resultData.jsRequires);
         this.resources = this.resources.union(parser.resultData.resources);
 
         if (parser.resultData.isInterface) {
@@ -544,6 +551,15 @@ module AdriaTransform = proto (Transform) {
         var moduleSN = node.add(new SourceNode(1, 0, 'adria-framework.js', fw));
         moduleSN.setSourceContent('adria-framework.js', fw);
 
+        // merge javascript requires
+
+        for (var fileName in this.jsRequires.data) {
+            var contents = fs.readFileSync(options['basePath'] + fileName, 'UTF-8');
+            var wrapped = 'module(\'' + fileName + '\', function(module, resource) {\nvar exports = module.exports ;\n' + contents + '\n});\n';
+            /*var moduleSN =*/ node.add(new SourceNode(null, null, fileName, wrapped));
+            //moduleSN.setSourceContent(fileName, contents);
+        }
+
         // merge modules
 
         for (var id, currentModule in this.modules) {
@@ -557,8 +573,8 @@ module AdriaTransform = proto (Transform) {
 
         for (var id, name in usedBuiltins) {
             var builtIn = tpl.fetch(this.builtins[name]);
-            var moduleSN = node.add(new SourceNode(1, 0, name.replace('.adria', '.js'), builtIn));
-            moduleSN.setSourceContent(name.replace('.adria', '.js'), builtIn);
+            /*var moduleSN =*/ node.add(new SourceNode(1, 0, name.replace('.adria', '.js'), builtIn));
+            //moduleSN.setSourceContent(name.replace('.adria', '.js'), builtIn);
         }
 
         // merge resources
@@ -566,8 +582,8 @@ module AdriaTransform = proto (Transform) {
         for (var fileName in this.resources.data) {
             var contents = fs.readFileSync(options['basePath'] + fileName, 'UTF-8');
             var wrapped = 'resource(\'' + fileName + '\', \'' + contents.jsify("'") + '\');\n';
-            var moduleSN = node.add(new SourceNode(null, null, fileName, wrapped));
-            moduleSN.setSourceContent(fileName, contents);
+            /*var moduleSN =*/ node.add(new SourceNode(null, null, fileName, wrapped));
+            //moduleSN.setSourceContent(fileName, contents);
         }
 
         node.trim();

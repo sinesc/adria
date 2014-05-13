@@ -65,6 +65,7 @@ module AdriaParser = proto(LanguageParser) {
             globalReservations  : new Set(),
             globalReferences    : new Map(),
             requires            : new Set(),
+            jsRequires          : new Set(),
             resources           : new Set(),
             isInterface         : false,
         };

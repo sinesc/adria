@@ -1172,7 +1172,7 @@ module('cache.adria', function(module, resource) {
         function Cache() {
             this.checkBaseDir();
         }
-        Cache.prototype.version = "3s1316ifknzziko5zbxms00ukkvyu1dtvpxl6isjcnlnv64ngnsavxbe2nstbbpi";
+        Cache.prototype.version = "nq5qdt20jlwu3ab1vo4bt3fdk88n60abrgj2ba2eyobq25ffeljo6t5h022v5swx";
         Cache.prototype.baseDir = util.home() + '/.adria/cache/';
         Cache.prototype.checkBaseDir = function checkBaseDir() {
             var parts, path;
@@ -3338,8 +3338,9 @@ module('mode/adria/file_node.adria', function(module, resource) {
             absName = path.dirname(parser.file) + '/' + filename;
             return path.relative(parser.transform.options['basePath'], absName);
         };
-        FileNode.prototype.resolvePath = function resolvePath(filename, parser) {
+        FileNode.prototype.resolvePath = function resolvePath(filename, parser, scanNodePaths) {
             var options, relname;
+            scanNodePaths = (arguments.length > 2 ? scanNodePaths : (false));
             options = parser.transform.options;
             if (this.isRelativePath(filename)) {
                 relname = this.makeBaseRelative(filename, parser);
@@ -3355,7 +3356,43 @@ module('mode/adria/file_node.adria', function(module, resource) {
                         return path.normalize(relname);
                     }
                 }
+                if (scanNodePaths) {
+                    return this.resolveNodePath(filename, parser);
+                }
             }
+            return null;
+        };
+        FileNode.prototype.resolveNodePath = function resolveNodePath(filename, parser, extension) {
+            var basePath, currentLevel, split, rootName;
+            extension = (arguments.length > 2 ? extension : ('.js'));
+            basePath = parser.transform.options['basePath'];
+            currentLevel = process.cwd() + '/' + basePath;
+            rootName = path.basename(filename, extension);
+            if ((split = filename.indexOf('/')) > -1) {
+                rootName = filename.slice(0, split);
+            }
+            do {
+                var nodeModules;
+                nodeModules = currentLevel + 'node_modules/';
+                if (fs.existsSync(nodeModules)) {
+                    if (rootName + '.js' === filename) {
+                        if (fs.existsSync(nodeModules + rootName + '/index.js')) {
+                            return path.relative(basePath, nodeModules + rootName + '/index.js');
+                        } else if (fs.existsSync(nodeModules + rootName + '/package.json')) {
+                            var json;
+                            json = JSON.parse(fs.readFileSync(nodeModules + rootName + '/package.json'));
+                            if (json.main) {
+                                return path.relative(basePath, nodeModules + rootName + '/' + json.main);
+                            }
+                        }
+                    } else if (fs.existsSync(nodeModules + filename)) {
+                        return path.relative(basePath, nodeModules + '/' + filename);
+                    }
+                }
+                if (currentLevel !== '/') {
+                    currentLevel = path.normalize(currentLevel + '../');
+                }
+            } while (currentLevel !== '/');
             return null;
         };
         return FileNode;
@@ -3396,12 +3433,23 @@ module('mode/adria/definition/require_literal.adria', function(module, resource)
                     parser.resultData.globalDeclarations.add('___Async');
                 }
             } else {
-                resolvedName = this.resolvePath(util.normalizeExtension(this.moduleName, options['extension']), parser);
-                if (resolvedName !== null) {
-                    this.moduleName = resolvedName;
+                var resolvedPath;
+                resolvedPath = this.resolvePath(resolvedName, parser);
+                if (resolvedPath !== null) {
+                    this.moduleName = resolvedPath;
                     parser.resultData.requires.add(this.moduleName);
-                } else if (options['platform'] === 'node' && this.moduleName.hasPostfix(options['extension']) === false) {
-                    this.requireFunction = '___require';
+                } else if (this.moduleName.hasPostfix(options['extension']) === false) {
+                    if (options['platform'] === 'node') {
+                        this.requireFunction = '___require';
+                    } else {
+                        var resolvedJsPath;
+                        resolvedJsPath = this.resolvePath(util.normalizeExtension(this.moduleName, '.js'), parser, true);
+                        if (resolvedJsPath === null) {
+                            throw new ASTException('Could not find require "' + this.moduleName + '"', this);
+                        }
+                        this.moduleName = resolvedJsPath;
+                        parser.resultData.jsRequires.add(this.moduleName);
+                    }
                 } else {
                     throw new ASTException('Could not find require "' + this.moduleName + '"', this);
                 }
@@ -5476,12 +5524,12 @@ module('mode/adria/definition/flow_statement.adria', function(module, resource) 
     module.exports = FlowStatement;
 });
 module('mode/adria/definition.adria', function(module, resource) {
-    var Node, ValueType, Ident, Name, ___String$ag, Numeric, Scope, Module, RequireLiteral, ResourceLiteral, FunctionLiteral, GeneratorLiteral, AsyncLiteral, FunctionStatement, GeneratorStatement, AsyncStatement, FunctionParamsOptional, FunctionParamList, AsyncParamList, Expression, ObjectLiteral, PropertyLiteral, ProtoLiteral, ProtoStatement, ProtoBodyItem, ProtoBodyConstructor, TryStatement, Try, Catch, CatchAll, CatchSpecific, Finally, ForCountStatement, ImportStatement, ApplicationStatement, AccessOperationProtocall, ConstLiteral, InvokeOperation, AsyncWrapOperation, BaseLiteral, DoWhileStatement, WhileStatement, SwitchStatement, ForInStatement, IfBlock, IfStatement, IfConditional, IfUnconditional, ArrayLiteral, NewProtoLiteral, ReturnStatement, YieldLiteral, AwaitLiteral, ThrowStatement, AssertStatement, Statement, InterfaceStatement, ModuleStatement, ExportStatement, GlobalStatement, VarStatement, StorageLiteral, ParentLiteral, SelfLiteral, FlowStatement;
+    var Node, ValueType, Ident, Name, ___String$ah, Numeric, Scope, Module, RequireLiteral, ResourceLiteral, FunctionLiteral, GeneratorLiteral, AsyncLiteral, FunctionStatement, GeneratorStatement, AsyncStatement, FunctionParamsOptional, FunctionParamList, AsyncParamList, Expression, ObjectLiteral, PropertyLiteral, ProtoLiteral, ProtoStatement, ProtoBodyItem, ProtoBodyConstructor, TryStatement, Try, Catch, CatchAll, CatchSpecific, Finally, ForCountStatement, ImportStatement, ApplicationStatement, AccessOperationProtocall, ConstLiteral, InvokeOperation, AsyncWrapOperation, BaseLiteral, DoWhileStatement, WhileStatement, SwitchStatement, ForInStatement, IfBlock, IfStatement, IfConditional, IfUnconditional, ArrayLiteral, NewProtoLiteral, ReturnStatement, YieldLiteral, AwaitLiteral, ThrowStatement, AssertStatement, Statement, InterfaceStatement, ModuleStatement, ExportStatement, GlobalStatement, VarStatement, StorageLiteral, ParentLiteral, SelfLiteral, FlowStatement;
     Node = require('mode/adria/node.adria');
     ValueType = require('mode/adria/value_type.adria');
     Ident = require('mode/adria/definition/ident.adria');
     Name = Ident;
-    ___String$ag = (function(___parent) {
+    ___String$ah = (function(___parent) {
         var ___String = function String() {
             ___parent.apply(this, arguments);
         };
@@ -5583,7 +5631,7 @@ module('mode/adria/definition.adria', function(module, resource) {
     module.exports.Node = Node;
     module.exports.Ident = Ident;
     module.exports.Name = Name;
-    module.exports.String = ___String$ag;
+    module.exports.String = ___String$ah;
     module.exports.Numeric = Numeric;
     module.exports.Scope = Scope;
     module.exports.Module = Module;
@@ -5674,6 +5722,7 @@ module('mode/adria/parser.adria', function(module, resource) {
                 globalReservations: new Set(),
                 globalReferences: new Map(),
                 requires: new Set(),
+                jsRequires: new Set(),
                 resources: new Set(),
                 isInterface: false
             };
@@ -5803,9 +5852,9 @@ module('../../astdlib/astd/util.adria', function(module, resource) {
     var defer;
     defer = (function defer() {
         var asap;
-        if (typeof ___process$as === 'object' && typeof ___process$as.nextTick === 'function') {
+        if (typeof ___process$at === 'object' && typeof ___process$at.nextTick === 'function') {
             asap = function asap(context, params, callback) {
-                ___process$as.nextTick(function() {
+                ___process$at.nextTick(function() {
                     callback.apply(context, params);
                 });
             };
@@ -6240,6 +6289,7 @@ module('mode/adria/transform.adria', function(module, resource) {
         AdriaTransform.prototype.globalReferences = null;
         AdriaTransform.prototype.requires = null;
         AdriaTransform.prototype.requiresDone = null;
+        AdriaTransform.prototype.jsRequires = null;
         AdriaTransform.prototype.modules = null;
         AdriaTransform.prototype.resources = null;
         AdriaTransform.prototype.usedBuiltins = null;
@@ -6266,6 +6316,7 @@ module('mode/adria/transform.adria', function(module, resource) {
             this.globalReferences = new Map();
             this.requires = new Set();
             this.resources = new Set();
+            this.jsRequires = new Set();
             this.requiresDone = new Set();
             this.usedBuiltins = new Set();
             this.modules = [  ];
@@ -6350,6 +6401,7 @@ module('mode/adria/transform.adria', function(module, resource) {
             this.globalReservations = this.globalReservations.union(parser.resultData.globalReservations);
             this.globalReferences = this.globalReferences.merge(parser.resultData.globalReferences);
             this.requires = this.requires.union(parser.resultData.requires);
+            this.jsRequires = this.jsRequires.union(parser.resultData.jsRequires);
             this.resources = this.resources.union(parser.resultData.resources);
             if (parser.resultData.isInterface) {
                 if (this.addInterface) {
@@ -6547,26 +6599,30 @@ module('mode/adria/transform.adria', function(module, resource) {
             fw = tpl.fetch(resource('../templates/adria/framework.tpl'));
             moduleSN = node.add(new SourceNode(1, 0, 'adria-framework.js', fw));
             moduleSN.setSourceContent('adria-framework.js', fw);
-            var id, currentModule, ___moduleSN$c1;
+            var fileName, contents, wrapped;
+            for (fileName in this.jsRequires.data) {
+                contents = fs.readFileSync(options['basePath'] + fileName, 'UTF-8');
+                wrapped = 'module(\'' + fileName + '\', function(module, resource) {\nvar exports = module.exports ;\n' + contents + '\n});\n';
+                node.add(new SourceNode(null, null, fileName, wrapped));
+            }
+            var id, currentModule, ___moduleSN$c2;
             for (id in this.modules) {
                 currentModule = this.modules[id];
-                ___moduleSN$c1 = node.add(new SourceNode(null, null, currentModule.parser.file, currentModule.result));
-                ___moduleSN$c1.setSourceContent(currentModule.parser.file, currentModule.parser.sourceCode);
+                ___moduleSN$c2 = node.add(new SourceNode(null, null, currentModule.parser.file, currentModule.result));
+                ___moduleSN$c2.setSourceContent(currentModule.parser.file, currentModule.parser.sourceCode);
             }
             usedBuiltins = this.usedBuiltins.toArray();
-            var id, name, builtIn, ___moduleSN$c2;
+            var id, name, builtIn;
             for (id in usedBuiltins) {
                 name = usedBuiltins[id];
                 builtIn = tpl.fetch(this.builtins[name]);
-                ___moduleSN$c2 = node.add(new SourceNode(1, 0, name.replace('.adria', '.js'), builtIn));
-                ___moduleSN$c2.setSourceContent(name.replace('.adria', '.js'), builtIn);
+                node.add(new SourceNode(1, 0, name.replace('.adria', '.js'), builtIn));
             }
-            var fileName, contents, wrapped, ___moduleSN$c3;
+            var fileName, contents, wrapped;
             for (fileName in this.resources.data) {
                 contents = fs.readFileSync(options['basePath'] + fileName, 'UTF-8');
                 wrapped = 'resource(\'' + fileName + '\', \'' + contents.jsify("'") + '\');\n';
-                ___moduleSN$c3 = node.add(new SourceNode(null, null, fileName, wrapped));
-                ___moduleSN$c3.setSourceContent(fileName, contents);
+                node.add(new SourceNode(null, null, fileName, wrapped));
             }
             node.trim();
             var id, name;
@@ -6626,12 +6682,12 @@ module('mode/adria/transform.adria', function(module, resource) {
             monitor.on('change', this, function(forceReload) {
                 try {
                     this.compile(forceReload, forceReload.intersect(this.resources).empty === false);
-                } catch (___exc$c7) {
-                    if (___exc$c7 instanceof BaseException) {
-                        var e = ___exc$c7;
+                } catch (___exc$c6) {
+                    if (___exc$c6 instanceof BaseException) {
+                        var e = ___exc$c6;
                         process.stderr.write('Error: ' + e.message + '\n');
                     } else { 
-                        throw ___exc$c7;
+                        throw ___exc$c6;
                     }
                 }
             });
@@ -6756,12 +6812,12 @@ module('application.adria', function(module, resource) {
                 } else {
                     try {
                         this.handle(options['mode'], stdin);
-                    } catch (___exc$cd) {
-                        if (___exc$cd instanceof BaseException) {
-                            var e = ___exc$cd;
+                    } catch (___exc$cc) {
+                        if (___exc$cc instanceof BaseException) {
+                            var e = ___exc$cc;
                             this.error(e.message);
                         } else { 
-                            throw ___exc$cd;
+                            throw ___exc$cc;
                         }
                     }
                 }

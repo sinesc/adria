@@ -31,10 +31,10 @@ module RequireLiteral = proto (FileNode) {
     requireFunction: '',
 
     preprocess: func(object state) {
-    
+
         var parser = this.parser;
         var options = parser.transform.options;
-        
+
         this.moduleName = this.get('file').toString().slice(1, -1);
         this.requireFunction = 'require';
 
@@ -57,27 +57,43 @@ module RequireLiteral = proto (FileNode) {
 
             // check if the require is an Adria module and needs to be included
 
-            resolvedName = this.resolvePath(util.normalizeExtension(this.moduleName, options['extension']), parser);
+            var resolvedPath = this.resolvePath(resolvedName, parser);
 
-            if (resolvedName !== null) {
+            if (resolvedPath !== null) {
 
                 // resolved to an adria file, include in application
 
-                this.moduleName = resolvedName;
+                this.moduleName = resolvedPath;
                 parser.resultData.requires.add(this.moduleName);
 
-            } else if (options['platform'] === 'node' && this.moduleName.hasPostfix(options['extension']) === false) {
+            } else if (this.moduleName.hasPostfix(options['extension']) === false) {
 
-                // seems to be a node module, use node require function
+                // use node require for node modules, include js for web
 
-                this.requireFunction = '___require';
+                if (options['platform'] === 'node') {
+
+                    this.requireFunction = '___require';
+
+                } else {
+
+                    // locate javascript file to include
+
+                    var resolvedJsPath = this.resolvePath(util.normalizeExtension(this.moduleName, '.js'), parser, true);
+
+                    if (resolvedJsPath === null) {
+                        throw new ASTException('Could not find require "' + this.moduleName + '"', this);
+                    }
+
+                    this.moduleName = resolvedJsPath;
+                    parser.resultData.jsRequires.add(this.moduleName);
+                }
 
             } else {
 
                 throw new ASTException('Could not find require "' + this.moduleName + '"', this);
             }
         }
-        
+
         parent->preprocess(state);
     },
 
