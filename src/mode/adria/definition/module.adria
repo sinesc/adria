@@ -38,9 +38,9 @@ module Module = proto (Scope) {
     exports: null,
 
     /**
-     * @var boolean whether or not this module is to act as CommonJS interface module of the application
+     * @var string? interface name when use in browser without module loader
      */
-    isInterface: false,
+    interfaceName: null,
 
     constructor: func(string key, string value) {
 
@@ -52,19 +52,20 @@ module Module = proto (Scope) {
 
         this.exports = new Map();
         this.moduleExport = null;
-        this.isInterface = false;
+        this.interfaceName = null;
         parent->reset(state);
     },
 
-    setInterface: func() {
+    setInterface: func(string name) {
 
-        if (this.isInterface) {
+        if (this.interfaceName !== null) {
             throw new ASTException('Duplicate interface declaration', this);
         }
 
         var parser = this.parser;
-        parser.resultData.isInterface = true;
-        this.isInterface = true;
+
+        parser.resultData.interfaceName = name;
+        this.interfaceName = name;
     },
 
     setModuleExport: func(string name) {
@@ -134,7 +135,7 @@ module Module = proto (Scope) {
 
         // publish as application interface
 
-        if (this.isInterface) {
+        if (this.interfaceName !== null) {
             result.add('___module.exports = module.exports;' + this.nl());
         }
 

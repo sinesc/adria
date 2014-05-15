@@ -83,6 +83,7 @@ assert_statement {
 
 interface_statement {
     entry -> "interface" -> ";" -> return
+    "interface" -> ident:publish_as -> ";"
 }
 
 

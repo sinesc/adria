@@ -85,12 +85,12 @@ module AdriaTransform = proto (Transform) {
     /**
      * @var Set builtin modules used by application
      */
-    usedBuiltins    : null,
+    usedBuiltins: null,
 
     /**
-     * @var boolean application has a CommonJS interface, used to detect illegal use of multiple interfaces
+     * @var string application interface name (or null for no interface, '' for unnamed interface)
      */
-    addInterface: false,
+    interfaceName: null,
 
     /**
      * @var boolean application makes use of the application() feature
@@ -160,7 +160,7 @@ module AdriaTransform = proto (Transform) {
         this.usedBuiltins       = new Set();
         this.modules            = [ ];
 
-        this.addInterface       = false;
+        this.interfaceName      = null;
         this.addApplication     = false;
 
         this.defineImplicits();
@@ -299,11 +299,12 @@ module AdriaTransform = proto (Transform) {
         this.jsRequires = this.jsRequires.union(parser.resultData.jsRequires);
         this.resources = this.resources.union(parser.resultData.resources);
 
-        if (parser.resultData.isInterface) {
-            if (this.addInterface) {
-                throw new ASTException('Interface already defined', parser); //!todo where
+        if (parser.resultData.interfaceName !== null) {
+
+            if (this.interfaceName !== null) {
+                throw new ASTException('Interface already defined (' + this.interfaceName + ')', parser); //!todo where
             }
-            this.addInterface = true;
+            this.interfaceName = parser.resultData.interfaceName;
         }
 
         // push module after all dependencies have been resolved
@@ -507,6 +508,7 @@ module AdriaTransform = proto (Transform) {
         tpl.assign('builtins', this.usedBuiltins.toArray());
         tpl.assign('enableAssert', options['assert']);
         tpl.assign('enableApplication', this.addApplication);
+        tpl.assign('interfaceName', this.interfaceName);
         tpl.assign('platform', options['platform']);
 
         // wrap in shell-script
@@ -531,12 +533,16 @@ module AdriaTransform = proto (Transform) {
 
         if (this.options['platform'] === 'node') {
             closureParams.set({
+                'global'    : 'window',
                 'module'    : '___module',
                 'require'   : '___require',
-                'global'    : 'window',
             });
         } else {
             closureParams.set('self', 'window');
+            if (this.interfaceName !== null) {
+                closureParams.set('typeof define === "undefined" ? null : define', '___define');
+                closureParams.set('typeof module !== "object" ? { ___nomodule: true } : module', '___module');
+            }
         }
 
         node.add(';(function(' + closureParams.values().join(', ') + ') {\n');
@@ -548,14 +554,14 @@ module AdriaTransform = proto (Transform) {
         }
 
         var fw = tpl.fetch(resource('../../../templates/adria/framework.tpl'));
-        var moduleSN = node.add(new SourceNode(1, 0, 'adria-framework.js', fw));
-        moduleSN.setSourceContent('adria-framework.js', fw);
+        /*var moduleSN =*/ node.add(new SourceNode(1, 0, 'adria-framework.js', fw));
+        //moduleSN.setSourceContent('adria-framework.js', fw);
 
         // merge javascript requires
 
         for (var fileName in this.jsRequires.data) {
             var contents = fs.readFileSync(options['basePath'] + fileName, 'UTF-8');
-            var wrapped = 'module(\'' + fileName + '\', function(module, resource) {\nvar exports = module.exports ;\n' + contents + '\n});\n';
+            var wrapped = 'module(\'' + fileName + '\', function(module, resource) {\nvar exports = module.exports;\n' + contents + '\n});\n';
             /*var moduleSN =*/ node.add(new SourceNode(null, null, fileName, wrapped));
             //moduleSN.setSourceContent(fileName, contents);
         }
@@ -598,6 +604,13 @@ module AdriaTransform = proto (Transform) {
 
         for (var id, file in options['files']) {
             node.add('\nrequire(\'' + util.normalizeExtension(file, this.options['extension']) + '\');');
+        }
+
+        // register interface with outside module loader
+
+        if (this.interfaceName !== null) {
+            var interfaceTpl = tpl.fetch(resource('../../../templates/adria/interface.tpl'));
+            node.add(new SourceNode(1, 0, 'adria-interface.js', interfaceTpl));
         }
 
         node.add('\n})(' + closureParams.keys().join(', ') + ');');

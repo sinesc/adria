@@ -26,9 +26,21 @@ var Module = require('./module');
 
 module InterfaceStatement = proto (Node) {
 
+    preprocess: func(object state) {
+    
+        // get interface name - will be an empty string if non was given
+
+        var publishAs = this.get('publish_as').value;
+
+        // set the interface, empty string means we have an interface, it's just unnamed and won't work without module loader
+
+        this.findProto(Module).setInterface(publishAs);
+        
+        parent->preprocess(state);
+    },
+    
     toSourceNode: func() {
 
-        this.findProto(Module).setInterface();
         return this.csn();
     },
 };

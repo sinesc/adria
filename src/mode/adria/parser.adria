@@ -67,7 +67,7 @@ module AdriaParser = proto(LanguageParser) {
             requires            : new Set(),
             jsRequires          : new Set(),
             resources           : new Set(),
-            isInterface         : false,
+            interfaceName       : null,
         };
     },
 

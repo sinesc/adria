@@ -3,6 +3,7 @@ var application;{! endif !}{! if (enableAssert): !}
 var assert;{! endif !}{! if (globals.length != 0): !}
 var {% globals.join(', ') %};{! endif !}
 var Exception{! if (enableAssert): !}, AssertionFailedException{! endif !};
+
 (function() {
     var resources = { };
     var modules = { };
