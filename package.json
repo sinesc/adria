@@ -32,6 +32,9 @@
     "source-map": ">=0.1.27",
     "argparse": ">=0.1.15"
   },
+  "devDependencies": {
+    "astdlib": "0.1.x"
+  },
   "engines": {
     "node": ">=0.11.4"
   },
