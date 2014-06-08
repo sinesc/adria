@@ -492,7 +492,7 @@ module('args.adria', function(module, resource) {
     Args = (function() {
         function Args() {
             this.parser = new argparse.ArgumentParser({
-                version: '0.2.2',
+                version: '0.3.0',
                 addHelp: false,
                 epilog: 'Use --no-... to invert option switches, i.e. --no-strict'
             });
@@ -800,7 +800,9 @@ module('../../astdlib/astd/set.adria', function(module, resource) {
                         break ;
                     }
                 }
-                result.add(key);
+                if (add) {
+                    result.add(key);
+                }
             }
             return result;
         };
@@ -1172,7 +1174,7 @@ module('cache.adria', function(module, resource) {
         function Cache() {
             this.checkBaseDir();
         }
-        Cache.prototype.version = "v8gdrlcp81g8dimtxo3o2blbmnx44na60xg48c2hop06haq0arcmkkyjeg6ahnbp";
+        Cache.prototype.version = "00sct8h7amea7kre06pj1t3n50mph03972oro3urge6u272w3cgoltj9atoprxur";
         Cache.prototype.baseDir = util.home() + '/.adria/cache/';
         Cache.prototype.checkBaseDir = function checkBaseDir() {
             var parts, path;
