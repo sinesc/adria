@@ -1174,7 +1174,7 @@ module('cache.adria', function(module, resource) {
         function Cache() {
             this.checkBaseDir();
         }
-        Cache.prototype.version = "00sct8h7amea7kre06pj1t3n50mph03972oro3urge6u272w3cgoltj9atoprxur";
+        Cache.prototype.version = "8qor4svo1rsa4rgvsoyaq1xsdw817vgdatl381qy1569yecefzvr3z9qwibhctll";
         Cache.prototype.baseDir = util.home() + '/.adria/cache/';
         Cache.prototype.checkBaseDir = function checkBaseDir() {
             var parts, path;
@@ -7705,16 +7705,23 @@ proto_body {\n\
 }\n\
 \n\
 proto_body_item {\n\
-    entry -> "constructor":key -> ":"[constructor] -> proto_body_constructor:value -> return\n\
+    entry -> proto_access -> "constructor":key -> ":"[constructor] -> proto_body_constructor:value -> return\n\
 \n\
-    entry -> name:key -> ":"\n\
-    entry -> string:key -> ":"\n\
+    entry -> proto_access -> name:key -> ":"\n\
+    entry -> proto_access -> string:key -> ":"\n\
     ":" -> literal_expression:value -> return\n\
     ":" -> property_literal:value -> return\n\
 }\n\
 \n\
 proto_body_constructor {\n\
     entry -> function_literal -> return\n\
+}\n\
+\n\
+proto_access {\n\
+    entry -> return\n\
+    entry -> "public" -> return\n\
+    entry -> "protected" -> return\n\
+    entry -> "private" -> return\n\
 }');
 resource('../definition/adria/root.sdt', '/*\n\
  * defined in DefinitionParser\n\

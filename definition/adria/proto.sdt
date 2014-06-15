@@ -29,14 +29,21 @@ proto_body {
 }
 
 proto_body_item {
-    entry -> "constructor":key -> ":"[constructor] -> proto_body_constructor:value -> return
+    entry -> proto_access -> "constructor":key -> ":"[constructor] -> proto_body_constructor:value -> return
 
-    entry -> name:key -> ":"
-    entry -> string:key -> ":"
+    entry -> proto_access -> name:key -> ":"
+    entry -> proto_access -> string:key -> ":"
     ":" -> literal_expression:value -> return
     ":" -> property_literal:value -> return
 }
 
 proto_body_constructor {
     entry -> function_literal -> return
+}
+
+proto_access {
+    entry -> return
+    entry -> "public" -> return
+    entry -> "protected" -> return
+    entry -> "private" -> return
 }
