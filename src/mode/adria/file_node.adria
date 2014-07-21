@@ -110,7 +110,7 @@ module FileNode = proto (Node) {
 
             if (fs.existsSync(nodeModules)) {
 
-                if (rootName + '.js' === filename) {
+                if (rootName + extension === filename) {
 
                     if (fs.existsSync(nodeModules + rootName + '/index.js')) {
                         return path.relative(basePath, nodeModules + rootName + '/index.js');

@@ -59,7 +59,7 @@ module RequireLiteral = proto (FileNode) {
 
             var resolvedPath = this.resolvePath(resolvedName, parser);
 
-            if (resolvedPath !== null) {
+            if (resolvedPath !== null && resolvedPath.hasPostfix(options['extension'])) {
 
                 // resolved to an adria file, include in application
 

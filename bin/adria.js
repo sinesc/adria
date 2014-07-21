@@ -1174,7 +1174,7 @@ module('cache.adria', function(module, resource) {
         function Cache() {
             this.checkBaseDir();
         }
-        Cache.prototype.version = "8qor4svo1rsa4rgvsoyaq1xsdw817vgdatl381qy1569yecefzvr3z9qwibhctll";
+        Cache.prototype.version = "8zizfgnk95jxpnt1fx54y080uulovewdg1jw8icfi0tw55ya31d3fio2f68wnoxj";
         Cache.prototype.baseDir = util.home() + '/.adria/cache/';
         Cache.prototype.checkBaseDir = function checkBaseDir() {
             var parts, path;
@@ -3377,7 +3377,7 @@ module('mode/adria/file_node.adria', function(module, resource) {
                 var nodeModules;
                 nodeModules = currentLevel + 'node_modules/';
                 if (fs.existsSync(nodeModules)) {
-                    if (rootName + '.js' === filename) {
+                    if (rootName + extension === filename) {
                         if (fs.existsSync(nodeModules + rootName + '/index.js')) {
                             return path.relative(basePath, nodeModules + rootName + '/index.js');
                         } else if (fs.existsSync(nodeModules + rootName + '/package.json')) {
@@ -3437,7 +3437,7 @@ module('mode/adria/definition/require_literal.adria', function(module, resource)
             } else {
                 var resolvedPath;
                 resolvedPath = this.resolvePath(resolvedName, parser);
-                if (resolvedPath !== null) {
+                if (resolvedPath !== null && resolvedPath.hasPostfix(options['extension'])) {
                     this.moduleName = resolvedPath;
                     parser.resultData.requires.add(this.moduleName);
                 } else if (this.moduleName.hasPostfix(options['extension']) === false) {
