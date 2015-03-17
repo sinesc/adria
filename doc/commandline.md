@@ -14,7 +14,7 @@ Command line help is available via the --help switch. By default this will print
 help for `<mode>`
 
 ```
-usage: ngadria [-v] [-d] [-m {adria,adriadebug}] [--stdin] [--cache]
+usage: adria [-v] [-d] [-m {adria,adriadebug}] [--stdin] [--cache]
                [-c [<file>]] [--write-config [<file>]] [-o <file>] [-b <path>]
                [-p <path>] [--extension <ext>] [-t {node,web}]
                [--header <file>] [-D <key>=<value>] [--shellwrap]

@@ -29,7 +29,7 @@ This is a short overview of the differences between Javascript and Adria
 
 `var <name> import <èxternal name>`
 
-Adria's `var` statment creates a block scoped reference. It also support a sepcial syntax used to
+Adria's `var` statment creates a block scoped reference. It also support a special syntax used to
 [import external references](https://github.com/sinesc/adria/blob/master/doc/modules.md#import).
 
 ### Default parameters
