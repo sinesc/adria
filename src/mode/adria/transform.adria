@@ -381,7 +381,7 @@ module AdriaTransform = proto (Transform) {
                 var result = { };
                 for (var id, value in data) {
                     var pair = value.split('=');
-                    result[pair[0]] = (pair[1] === undefined ? true : pair[1]);
+                    result[pair[0]] = (pair[1] === undefined ? true : pair[1]); //!todo join all remaining (value might have contained =)
                 }
                 return result;
             }
@@ -395,6 +395,7 @@ module AdriaTransform = proto (Transform) {
         );
 
         args.addSwitch('monitor', 'Don\'t exit after compilation, watch for and rebuild on file changes', false);
+        args.addSwitch('poll', 'Use polling instead of inotify to monitor file changes (has issues)', false);
         args.addSwitch('strict', 'Compile strict Javascript', true);
         args.addSwitch('es5', 'Compile to ES5', false);
         args.addSwitch('assert', 'Add assert() support', false);
@@ -679,7 +680,11 @@ module AdriaTransform = proto (Transform) {
             }
         }
 
-        var monitor = new Monitor(paths, ignore);
+        if (this.options['poll']) {
+            application.notice('Using experimental polling to monitor for file-changes');
+        }
+
+        var monitor = new Monitor(paths, ignore, 250, this.options['poll']);
 
         monitor.on('change', this, func(forceReload) {
             try {

@@ -35,12 +35,14 @@ module Monitor = proto (Listenable) {
     rescan: false,
     timeout: null,
     watcher: null,
+    usePolling: false,
 
-    constructor: func(Array paths = [], Array ignoreFiles = [], delay = 250) {
+    constructor: func(Array paths = [], Array ignoreFiles = [], delay = 250, usePolling = false) {
 
         this.paths = paths;
         this.delay = delay;
         this.ignoreFiles = new Set();
+        this.usePolling = usePolling;
 
         for (var _, file in ignoreFiles) {
             this.ignoreFiles.add(fspath.normalize(file));
@@ -48,16 +50,15 @@ module Monitor = proto (Listenable) {
     },
 
     /**
-     * set monitored paths
-     *
-     * @param Array paths
+     * expand monitored paths recusively either to full path or file list, depending on watcher-type
+     * and return result
      */
-    getPaths: func(Array paths) {
+    getExpandedPaths: func() {
 
         var result = [];
 
-        for (var _, path in paths) {
-            result.push.apply(result, recursePath(path));
+        for (var _, path in this.paths) {
+            result.push.apply(result, recursePath(path, false, this.usePolling));
         }
 
         return result;
@@ -74,11 +75,10 @@ module Monitor = proto (Listenable) {
         this.rescan = false;
         this.diff = new Set();
 
-        var paths = this.getPaths(this.paths);
+        var paths = this.getExpandedPaths();
 
         for (var _, path in paths) {
-            var watcher = fs.watch(path, this.compounder.bind(this, path));
-            this.watcher.push(watcher);
+            this.addWatcher(path);
         }
     },
 
@@ -89,9 +89,47 @@ module Monitor = proto (Listenable) {
 
         if (this.watcher !== null) {
             for (var _, watcher in this.watcher) {
-                watcher.close();
+                this.removeWatcher(watcher);
             }
             this.watcher = null;
+        }
+    },
+
+    /**
+     * start watching given argument
+     */
+    addWatcher: func(string path) {
+
+        if (this.usePolling) {
+
+            var file = fspath.basename(path);
+            var pathToFile = fspath.dirname(path);
+            var that = this;
+
+            fs.watchFile(path, { persistent: true, interval: 507 }, func(curr, prev) {
+                if (curr.mtime !== prev.mtime) {
+                    that.compounder(pathToFile, 'rename', file);
+                }
+            });
+
+            this.watcher.push(path);
+
+        } else {
+
+            var watcher = fs.watch(path, this.compounder.bind(this, path));
+            this.watcher.push(watcher);
+        }
+    },
+
+    /**
+     * stop watching given argument
+     */
+    removeWatcher: func(watcher) {
+
+        if (this.usePolling) {
+            fs.unwatchFile(watcher);
+        } else {
+            watcher.close();
         }
     },
 
@@ -151,14 +189,16 @@ module Monitor = proto (Listenable) {
     },
 };
 
-var recursePath = func(path = '.', includeHidden = false) {
+var recursePath = func(string path = '.', boolean includeHidden = false, boolean grabFiles = false) {
 
     var files = fs.readdirSync(path);
     var result = [ ];
 
     path = path.replace(/\/$/, '');
 
-    result.push(path);
+    if (grabFiles !== true) {
+        result.push(path);
+    }
 
     for (var file in files) {
 
@@ -167,7 +207,9 @@ var recursePath = func(path = '.', includeHidden = false) {
             var stat = fs.statSync(path + '/' + files[file]);
 
             if (stat.isDirectory()) {
-                result.push.apply(result, recursePath(path + '/' + files[file], includeHidden));
+                result.push.apply(result, recursePath(path + '/' + files[file], includeHidden, grabFiles));
+            } else if (grabFiles && stat.isFile()) {
+                result.push(path + '/' + files[file]);
             }
         }
     }

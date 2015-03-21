@@ -899,7 +899,7 @@ module('../../astdlib/astd/map.adria', function(module, resource) {
         Map.prototype.inc = function inc(key, value) {
             value = (arguments.length > 1 ? value : (1));
             if (key in this.data) {
-                this.data[key]++;
+                this.data[key] += value;
             } else {
                 this.data[key] = value;
             }
@@ -1174,7 +1174,7 @@ module('cache.adria', function(module, resource) {
         function Cache() {
             this.checkBaseDir();
         }
-        Cache.prototype.version = "8zizfgnk95jxpnt1fx54y080uulovewdg1jw8icfi0tw55ya31d3fio2f68wnoxj";
+        Cache.prototype.version = "gym4rz2ah8jktmk1ek2yqk1s2o8u4a6j25602kf6d1n6f8c53bjb5za6yjceayki";
         Cache.prototype.baseDir = util.home() + '/.adria/cache/';
         Cache.prototype.checkBaseDir = function checkBaseDir() {
             var parts, path;
@@ -5944,6 +5944,11 @@ module('../../astdlib/astd/prototype/array.adria', function(module, resource) {
                 return --this.length;
             }
         });
+        Object.defineProperty(ArrayExtensions.prototype, "random", {
+            value: function random() {
+                return this[Math.floor(Math.random() * this.length)];
+            }
+        });
         Object.defineProperty(ArrayExtensions.prototype, "unique", {
             value: function unique(arr) {
                 var hash, result;
@@ -6171,13 +6176,15 @@ module('monitor.adria', function(module, resource) {
     fs = ___require('fs');
     fspath = ___require('path');
     Monitor = (function(___parent) {
-        function Monitor(paths, ignoreFiles, delay) {
+        function Monitor(paths, ignoreFiles, delay, usePolling) {
             paths = (arguments.length > 0 ? paths : ([  ]));
             ignoreFiles = (arguments.length > 1 ? ignoreFiles : ([  ]));
             delay = (arguments.length > 2 ? delay : (250));
+            usePolling = (arguments.length > 3 ? usePolling : (false));
             this.paths = paths;
             this.delay = delay;
             this.ignoreFiles = new Set();
+            this.usePolling = usePolling;
             var _, file;
             for (_ in ignoreFiles) {
                 file = ignoreFiles[_];
@@ -6193,13 +6200,14 @@ module('monitor.adria', function(module, resource) {
         Monitor.prototype.rescan = false;
         Monitor.prototype.timeout = null;
         Monitor.prototype.watcher = null;
-        Monitor.prototype.getPaths = function getPaths(paths) {
+        Monitor.prototype.usePolling = false;
+        Monitor.prototype.getExpandedPaths = function getExpandedPaths() {
             var result;
             result = [  ];
             var _, path;
-            for (_ in paths) {
-                path = paths[_];
-                result.push.apply(result, recursePath(path));
+            for (_ in this.paths) {
+                path = this.paths[_];
+                result.push.apply(result, recursePath(path, false, this.usePolling));
             }
             return result;
         };
@@ -6209,12 +6217,11 @@ module('monitor.adria', function(module, resource) {
             this.watcher = [  ];
             this.rescan = false;
             this.diff = new Set();
-            paths = this.getPaths(this.paths);
-            var _, path, watcher;
+            paths = this.getExpandedPaths();
+            var _, path;
             for (_ in paths) {
                 path = paths[_];
-                watcher = fs.watch(path, this.compounder.bind(this, path));
-                this.watcher.push(watcher);
+                this.addWatcher(path);
             }
         };
         Monitor.prototype.stop = function stop() {
@@ -6222,9 +6229,34 @@ module('monitor.adria', function(module, resource) {
                 var _, watcher;
                 for (_ in this.watcher) {
                     watcher = this.watcher[_];
-                    watcher.close();
+                    this.removeWatcher(watcher);
                 }
                 this.watcher = null;
+            }
+        };
+        Monitor.prototype.addWatcher = function addWatcher(path) {
+            if (this.usePolling) {
+                var file, pathToFile, that;
+                file = fspath.basename(path);
+                pathToFile = fspath.dirname(path);
+                that = this;
+                fs.watchFile(path, { persistent: true, interval: 507 }, function(curr, prev) {
+                    if (curr.mtime !== prev.mtime) {
+                        that.compounder(pathToFile, 'rename', file);
+                    }
+                });
+                this.watcher.push(path);
+            } else {
+                var watcher;
+                watcher = fs.watch(path, this.compounder.bind(this, path));
+                this.watcher.push(watcher);
+            }
+        };
+        Monitor.prototype.removeWatcher = function removeWatcher(watcher) {
+            if (this.usePolling) {
+                fs.unwatchFile(watcher);
+            } else {
+                watcher.close();
             }
         };
         Monitor.prototype.compounder = function compounder(path, event, file) {
@@ -6256,21 +6288,26 @@ module('monitor.adria', function(module, resource) {
         };
         return Monitor;
     })(Listenable);
-    recursePath = function recursePath(path, includeHidden) {
+    recursePath = function recursePath(path, includeHidden, grabFiles) {
         var files, result;
         path = (arguments.length > 0 ? path : ('.'));
         includeHidden = (arguments.length > 1 ? includeHidden : (false));
+        grabFiles = (arguments.length > 2 ? grabFiles : (false));
         files = fs.readdirSync(path);
         result = [  ];
         path = path.replace(/\/$/, '');
-        result.push(path);
+        if (grabFiles !== true) {
+            result.push(path);
+        }
         var file;
         for (file in files) {
             if (includeHidden === true || files[file].substr(0, 1) !== '.') {
                 var stat;
                 stat = fs.statSync(path + '/' + files[file]);
                 if (stat.isDirectory()) {
-                    result.push.apply(result, recursePath(path + '/' + files[file], includeHidden));
+                    result.push.apply(result, recursePath(path + '/' + files[file], includeHidden, grabFiles));
+                } else if (grabFiles && stat.isFile()) {
+                    result.push(path + '/' + files[file]);
                 }
             }
         }
@@ -6506,6 +6543,7 @@ module('mode/adria/transform.adria', function(module, resource) {
                 metavar: '<args>'
             });
             args.addSwitch('monitor', 'Don\'t exit after compilation, watch for and rebuild on file changes', false);
+            args.addSwitch('poll', 'Use polling instead of inotify to monitor file changes (has issues)', false);
             args.addSwitch('strict', 'Compile strict Javascript', true);
             args.addSwitch('es5', 'Compile to ES5', false);
             args.addSwitch('assert', 'Add assert() support', false);
@@ -6702,16 +6740,19 @@ module('mode/adria/transform.adria', function(module, resource) {
                     ignore.push(jsFile.stripPostfix('.js') + '.map');
                 }
             }
-            monitor = new Monitor(paths, ignore);
+            if (this.options['poll']) {
+                application.notice('Using experimental polling to monitor for file-changes');
+            }
+            monitor = new Monitor(paths, ignore, 250, this.options['poll']);
             monitor.on('change', this, function(forceReload) {
                 try {
                     this.compile(forceReload, forceReload.intersect(this.resources).empty === false);
-                } catch (___exc$c6) {
-                    if (___exc$c6 instanceof BaseException) {
-                        var e = ___exc$c6;
+                } catch (___exc$ca) {
+                    if (___exc$ca instanceof BaseException) {
+                        var e = ___exc$ca;
                         process.stderr.write('Error: ' + e.message + '\n');
                     } else { 
-                        throw ___exc$c6;
+                        throw ___exc$ca;
                     }
                 }
             });
@@ -6836,12 +6877,12 @@ module('application.adria', function(module, resource) {
                 } else {
                     try {
                         this.handle(options['mode'], stdin);
-                    } catch (___exc$cc) {
-                        if (___exc$cc instanceof BaseException) {
-                            var e = ___exc$cc;
+                    } catch (___exc$cg) {
+                        if (___exc$cg instanceof BaseException) {
+                            var e = ___exc$cg;
                             this.error(e.message);
                         } else { 
-                            throw ___exc$cc;
+                            throw ___exc$cg;
                         }
                     }
                 }
