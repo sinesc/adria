@@ -65,15 +65,16 @@ module Scope = proto (Node) {
      * @param string name input name
      * @param boolean declare create declaration at top of scope
      * @param boolean ignore ignore whether the reference already exists in this scope
+     * @param boolean forceMangling always mangle
      * @return string mangled name
      */
-    addLocal: func(string name, boolean declare = true, boolean ignore = false) {
+    addLocal: func(string name, boolean declare = true, boolean ignore = false, boolean forceMangling = false) {
 
         if (ignore === false && this.getOwnRef(name) !== null) {
             throw new ASTException('Reference "' + name + '" already defined in local scope', this);
         }
 
-        var localName = this.createLocalName(name);
+        var localName = this.createLocalName(name, forceMangling);
         this.localReferences.set(name, localName);
 
         if (declare) {
@@ -148,8 +149,9 @@ module Scope = proto (Node) {
      * creates a local name for given reference
      *
      * @param string name
+     * @param boolean forceMangling
      */
-    createLocalName: func(string name) {
+    createLocalName: func(string name, boolean forceMangling = false) {
 
         var FunctionLiteral = require('./function_literal');
         var transform = this.parser.transform;
@@ -157,22 +159,25 @@ module Scope = proto (Node) {
 
         // check for reserved names or names used in parent scopes that are not also JS-scopes
 
-        if (transform.globalReservations.has(name)) {
+        if (forceMangling === false) {
 
-            refName = name;
+            if (transform.globalReservations.has(name)) {
 
-        } else {
+                refName = name;
 
-            var scope = this;
+            } else {
 
-            do {
-                if ((refName = scope.getOwnRef(name)) !== null) {
-                    break;
-                }
-            } while (scope instanceof FunctionLiteral === false && (scope = scope.findProto(Scope, FunctionLiteral, true, null)) !== null);
+                var scope = this;
+
+                do {
+                    if ((refName = scope.getOwnRef(name)) !== null) {
+                        break;
+                    }
+                } while (scope instanceof FunctionLiteral === false && (scope = scope.findProto(Scope, FunctionLiteral, true, null)) !== null);
+            }
         }
 
-        if (refName !== null) {
+        if (refName !== null || forceMangling) {
             return '___' + name + '$' + transform.makeUID();
         }
 

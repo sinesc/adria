@@ -83,19 +83,30 @@ module FunctionParamList = proto (ParamsNode) {
 
             // add to local scope if variables need to be declared
 
+            var valueNode = node.get('value');
+            var localName;
+
             if (this.optionalPermutations === null) {
-                scope.addLocal(nameSN.toString(), false, true);
+
+                //!perf mangle basic default args and clone to avoid major performance degradation after assigning to an argument in a function that also contains "arguments.length"
+
+                if (valueNode.isNode()) {
+                    localName = scope.addLocal(nameSN.toString(), false, true, true);
+                } else {
+                    localName = scope.addLocal(nameSN.toString(), false, true);
+                }
+
             } else {
-                scope.addLocal(nameSN.toString());
+
+                localName = scope.addLocal(nameSN.toString());
             }
 
             // check for basic default args, push those to FunctionLiteral's specialArgs property
 
-            var valueNode = node.get('value');
 
             if (valueNode.isNode() && this.optionalPermutations === null) {
 
-                var defaultArg = this.csn([ nameSN, ' = (arguments.length > ' + this.numParams + ' ? ', nameSN, ' : (', valueNode.toSourceNode(), '));' ]);
+                var defaultArg = this.csn([ 'var ' + localName + ' = (arguments.length > ' + this.numParams + ' ? ', nameSN, ' : (', valueNode.toSourceNode(), '));' ]);
                 functionNode.specialArgs.push(defaultArg);
             }
 
@@ -118,6 +129,7 @@ module FunctionParamList = proto (ParamsNode) {
 
             scope.addLocal(name.toString(), false, true);
 
+            //!perf significant performance issue in chrome, instead copy arguments manually
             //var restArg = this.csn([ 'var ', name, ' = Array.prototype.slice.call(arguments, ' + this.numParams + ');' ]);
 
             var uid = '$' + this.parser.transform.makeUID();
