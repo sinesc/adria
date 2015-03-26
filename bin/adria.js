@@ -162,7 +162,15 @@ module('../../astdlib/astd/prototype/string.adria', function(module, resource) {
             return this.hasPostfix(postfix) ? this.valueOf() : this.valueOf() + postfix;
         };
         StringExtensions.prototype.format = function format() {
-            var args = Array.prototype.slice.call(arguments, 0);
+            var args, ___num$d = arguments.length - 0;
+            if (___num$d > 0) {
+                args = new Array(___num$d);
+                for (var ___i$d = 0; ___i$d < ___num$d; ++___i$d) {
+                    args[___i$d] = arguments[___i$d + 0];
+                }
+            } else {
+                args = [];
+            }
             if (args.length === 1 && args[0] instanceof Object) {
                 args = args[0];
             }
@@ -768,7 +776,15 @@ module('../../astdlib/astd/set.adria', function(module, resource) {
         };
         Set.prototype.difference = function difference() {
             var result;
-            var sets = Array.prototype.slice.call(arguments, 0);
+            var sets, ___num$1w = arguments.length - 0;
+            if (___num$1w > 0) {
+                sets = new Array(___num$1w);
+                for (var ___i$1w = 0; ___i$1w < ___num$1w; ++___i$1w) {
+                    sets[___i$1w] = arguments[___i$1w + 0];
+                }
+            } else {
+                sets = [];
+            }
             result = new Set();
             var key, add;
             for (key in this.data) {
@@ -787,7 +803,15 @@ module('../../astdlib/astd/set.adria', function(module, resource) {
         };
         Set.prototype.intersect = function intersect() {
             var result;
-            var sets = Array.prototype.slice.call(arguments, 0);
+            var sets, ___num$1y = arguments.length - 0;
+            if (___num$1y > 0) {
+                sets = new Array(___num$1y);
+                for (var ___i$1y = 0; ___i$1y < ___num$1y; ++___i$1y) {
+                    sets[___i$1y] = arguments[___i$1y + 0];
+                }
+            } else {
+                sets = [];
+            }
             result = new Set();
             var key, add;
             for (key in this.data) {
@@ -808,7 +832,15 @@ module('../../astdlib/astd/set.adria', function(module, resource) {
         };
         Set.prototype.union = function union() {
             var result;
-            var sets = Array.prototype.slice.call(arguments, 0);
+            var sets, ___num$20 = arguments.length - 0;
+            if (___num$20 > 0) {
+                sets = new Array(___num$20);
+                for (var ___i$20 = 0; ___i$20 < ___num$20; ++___i$20) {
+                    sets[___i$20] = arguments[___i$20 + 0];
+                }
+            } else {
+                sets = [];
+            }
             result = new Set();
             var key;
             for (key in this.data) {
@@ -863,7 +895,15 @@ module('../../astdlib/astd/map.adria', function(module, resource) {
         }
         Map.prototype.merge = function merge() {
             var result;
-            var maps = Array.prototype.slice.call(arguments, 0);
+            var maps, ___num$26 = arguments.length - 0;
+            if (___num$26 > 0) {
+                maps = new Array(___num$26);
+                for (var ___i$26 = 0; ___i$26 < ___num$26; ++___i$26) {
+                    maps[___i$26] = arguments[___i$26 + 0];
+                }
+            } else {
+                maps = [];
+            }
             result = new Map();
             var key, value;
             for (key in this.data) {
@@ -1174,7 +1214,7 @@ module('cache.adria', function(module, resource) {
         function Cache() {
             this.checkBaseDir();
         }
-        Cache.prototype.version = "gym4rz2ah8jktmk1ek2yqk1s2o8u4a6j25602kf6d1n6f8c53bjb5za6yjceayki";
+        Cache.prototype.version = "w1dtb73jgornq31vyxety5kr2kayiqejnn7juzbkdcvdtxigql5xv6yemxbvl058";
         Cache.prototype.baseDir = util.home() + '/.adria/cache/';
         Cache.prototype.checkBaseDir = function checkBaseDir() {
             var parts, path;
@@ -3753,13 +3793,25 @@ module('mode/adria/definition/function_param_list.adria', function(module, resou
             } else if (node.key === 'opt_items') {
                 node.each(this.handle.bind(this, functionNode, scope, result));
             } else if (node.key === 'rest') {
-                var name, restArg;
+                var name, uid, restArg;
                 name = node.get('name').toSourceNode();
                 scope.addLocal(name.toString(), false, true);
+                uid = '$' + this.parser.transform.makeUID();
                 restArg = this.csn([
                     'var ',
                     name,
-                    ' = Array.prototype.slice.call(arguments, ' + this.numParams + ');'
+                    ', $0 = arguments.length - $1;'.format('___num' + uid, this.numParams) + this.nl(),
+                    'if (___num' + uid + ' > 0) {' + this.nl(1),
+                    name,
+                    ' = new Array(___num' + uid + ');' + this.nl(),
+                    'for (var $0 = 0; $0 < $1; ++$0) {'.format('___i' + uid, '___num' + uid) + this.nl(1),
+                    name,
+                    '[$0] = arguments[$0 + $1];'.format('___i' + uid, this.numParams) + this.nl(-1),
+                    '}' + this.nl(-1),
+                    '} else {' + this.nl(1),
+                    name,
+                    ' = [];' + this.nl(-1),
+                    '}' + this.nl()
                 ]);
                 functionNode.specialArgs.push(restArg);
                 return true;
@@ -5539,12 +5591,12 @@ module('mode/adria/definition/flow_statement.adria', function(module, resource) 
     module.exports = FlowStatement;
 });
 module('mode/adria/definition.adria', function(module, resource) {
-    var Node, ValueType, Ident, Name, ___String$ai, Numeric, Scope, Module, RequireLiteral, ResourceLiteral, FunctionLiteral, GeneratorLiteral, AsyncLiteral, FunctionStatement, GeneratorStatement, AsyncStatement, FunctionParamsOptional, FunctionParamList, AsyncParamList, Expression, ObjectLiteral, PropertyLiteral, ProtoLiteral, ProtoStatement, ProtoBodyItem, ProtoBodyConstructor, TryStatement, Try, Catch, CatchAll, CatchSpecific, Finally, ForCountStatement, ImportStatement, ApplicationStatement, AccessOperationProtocall, ConstLiteral, InvokeOperation, AsyncWrapOperation, BaseLiteral, DoWhileStatement, WhileStatement, SwitchStatement, ForInStatement, IfBlock, IfStatement, IfConditional, IfUnconditional, ArrayLiteral, NewProtoLiteral, ReturnStatement, YieldLiteral, AwaitLiteral, ThrowStatement, AssertStatement, Statement, InterfaceStatement, ModuleStatement, ExportStatement, GlobalStatement, VarStatement, StorageLiteral, ParentLiteral, SelfLiteral, FlowStatement;
+    var Node, ValueType, Ident, Name, ___String$an, Numeric, Scope, Module, RequireLiteral, ResourceLiteral, FunctionLiteral, GeneratorLiteral, AsyncLiteral, FunctionStatement, GeneratorStatement, AsyncStatement, FunctionParamsOptional, FunctionParamList, AsyncParamList, Expression, ObjectLiteral, PropertyLiteral, ProtoLiteral, ProtoStatement, ProtoBodyItem, ProtoBodyConstructor, TryStatement, Try, Catch, CatchAll, CatchSpecific, Finally, ForCountStatement, ImportStatement, ApplicationStatement, AccessOperationProtocall, ConstLiteral, InvokeOperation, AsyncWrapOperation, BaseLiteral, DoWhileStatement, WhileStatement, SwitchStatement, ForInStatement, IfBlock, IfStatement, IfConditional, IfUnconditional, ArrayLiteral, NewProtoLiteral, ReturnStatement, YieldLiteral, AwaitLiteral, ThrowStatement, AssertStatement, Statement, InterfaceStatement, ModuleStatement, ExportStatement, GlobalStatement, VarStatement, StorageLiteral, ParentLiteral, SelfLiteral, FlowStatement;
     Node = require('mode/adria/node.adria');
     ValueType = require('mode/adria/value_type.adria');
     Ident = require('mode/adria/definition/ident.adria');
     Name = Ident;
-    ___String$ai = (function(___parent) {
+    ___String$an = (function(___parent) {
         var ___String = function String() {
             ___parent.apply(this, arguments);
         };
@@ -5646,7 +5698,7 @@ module('mode/adria/definition.adria', function(module, resource) {
     module.exports.Node = Node;
     module.exports.Ident = Ident;
     module.exports.Name = Name;
-    module.exports.String = ___String$ai;
+    module.exports.String = ___String$an;
     module.exports.Numeric = Numeric;
     module.exports.Scope = Scope;
     module.exports.Module = Module;
@@ -5867,9 +5919,9 @@ module('../../astdlib/astd/util.adria', function(module, resource) {
     var defer;
     defer = (function defer() {
         var asap;
-        if (typeof ___process$au === 'object' && typeof ___process$au.nextTick === 'function') {
+        if (typeof ___process$az === 'object' && typeof ___process$az.nextTick === 'function') {
             asap = function asap(context, params, callback) {
-                ___process$au.nextTick(function() {
+                ___process$az.nextTick(function() {
                     callback.apply(context, params);
                 });
             };
@@ -5990,7 +6042,15 @@ module('../../astdlib/astd/listenable.adria', function(module, resource) {
         };
         Listenable.prototype.execute = function execute(eventName) {
             var eventListener;
-            var args = Array.prototype.slice.call(arguments, 1);
+            var args, ___num$be = arguments.length - 1;
+            if (___num$be > 0) {
+                args = new Array(___num$be);
+                for (var ___i$be = 0; ___i$be < ___num$be; ++___i$be) {
+                    args[___i$be] = arguments[___i$be + 1];
+                }
+            } else {
+                args = [];
+            }
             if (this._listener === null || (this._listener[eventName] === undefined && this._listener['_'] === undefined)) {
                 return ;
             }
@@ -6023,13 +6083,29 @@ module('../../astdlib/astd/listenable.adria', function(module, resource) {
         };
         Listenable.prototype.forward = function forward(eventName) {
             var bindArgs;
-            var args = Array.prototype.slice.call(arguments, 1);
+            var args, ___num$bg = arguments.length - 1;
+            if (___num$bg > 0) {
+                args = new Array(___num$bg);
+                for (var ___i$bg = 0; ___i$bg < ___num$bg; ++___i$bg) {
+                    args[___i$bg] = arguments[___i$bg + 1];
+                }
+            } else {
+                args = [];
+            }
             bindArgs = [ this, eventName ];
             bindArgs.push.apply(bindArgs, args);
             return this.execute.bind.apply(this.execute, bindArgs);
         };
         Listenable.prototype.trigger = function trigger() {
-            var args = Array.prototype.slice.call(arguments, 0);
+            var args, ___num$bi = arguments.length - 0;
+            if (___num$bi > 0) {
+                args = new Array(___num$bi);
+                for (var ___i$bi = 0; ___i$bi < ___num$bi; ++___i$bi) {
+                    args[___i$bi] = arguments[___i$bi + 0];
+                }
+            } else {
+                args = [];
+            }
             util.defer(this, args, this.execute);
         };
         Listenable.prototype.on = function on() {
@@ -6595,7 +6671,15 @@ module('mode/adria/transform.adria', function(module, resource) {
             var transform, addReferences;
             transform = this;
             addReferences = function addReferences() {
-                var refs = Array.prototype.slice.call(arguments, 0);
+                var refs, ___num$ce = arguments.length - 0;
+                if (___num$ce > 0) {
+                    refs = new Array(___num$ce);
+                    for (var ___i$ce = 0; ___i$ce < ___num$ce; ++___i$ce) {
+                        refs[___i$ce] = arguments[___i$ce + 0];
+                    }
+                } else {
+                    refs = [];
+                }
                 var _, ref;
                 for (_ in refs) {
                     ref = refs[_];
@@ -6747,12 +6831,12 @@ module('mode/adria/transform.adria', function(module, resource) {
             monitor.on('change', this, function(forceReload) {
                 try {
                     this.compile(forceReload, forceReload.intersect(this.resources).empty === false);
-                } catch (___exc$ca) {
-                    if (___exc$ca instanceof BaseException) {
-                        var e = ___exc$ca;
+                } catch (___exc$cj) {
+                    if (___exc$cj instanceof BaseException) {
+                        var e = ___exc$cj;
                         process.stderr.write('Error: ' + e.message + '\n');
                     } else { 
-                        throw ___exc$ca;
+                        throw ___exc$cj;
                     }
                 }
             });
@@ -6877,12 +6961,12 @@ module('application.adria', function(module, resource) {
                 } else {
                     try {
                         this.handle(options['mode'], stdin);
-                    } catch (___exc$cg) {
-                        if (___exc$cg instanceof BaseException) {
-                            var e = ___exc$cg;
+                    } catch (___exc$cp) {
+                        if (___exc$cp instanceof BaseException) {
+                            var e = ___exc$cp;
                             this.error(e.message);
                         } else { 
-                            throw ___exc$cg;
+                            throw ___exc$cp;
                         }
                     }
                 }
@@ -6923,7 +7007,15 @@ module('application.adria', function(module, resource) {
             process.exit(exitCode);
         };
         Application.prototype.notice = function notice(message) {
-            var vars = Array.prototype.slice.call(arguments, 1);
+            var vars, ___num$cw = arguments.length - 1;
+            if (___num$cw > 0) {
+                vars = new Array(___num$cw);
+                for (var ___i$cw = 0; ___i$cw < ___num$cw; ++___i$cw) {
+                    vars[___i$cw] = arguments[___i$cw + 1];
+                }
+            } else {
+                vars = [];
+            }
             process.stderr.write('Notice: ' + message.format(vars) + '\n');
         };
         return Application;
