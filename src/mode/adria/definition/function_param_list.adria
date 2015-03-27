@@ -131,20 +131,7 @@ module FunctionParamList = proto (ParamsNode) {
 
             //!perf significant performance issue in chrome, instead copy arguments manually
             //var restArg = this.csn([ 'var ', name, ' = Array.prototype.slice.call(arguments, ' + this.numParams + ');' ]);
-
-            var uid = '$' + this.parser.transform.makeUID();
-
-            var restArg = this.csn([
-                'var ', name, ', $0 = arguments.length - $1;'.format('___num' + uid, this.numParams) + this.nl(),
-                'if (___num' + uid + ' > 0) {' + this.nl(1),
-                    name, ' = new Array(___num' + uid + ');' + this.nl(),
-                    'for (var $0 = 0; $0 < $1; ++$0) {'.format('___i' + uid, '___num' + uid) + this.nl(1),
-                        name, '[$0] = arguments[$0 + $1];'.format('___i' + uid, this.numParams) + this.nl(-1),
-                    '}' + this.nl(-1),
-                '} else {' + this.nl(1),
-                    name, ' = [];' + this.nl(-1),
-                '}' + this.nl()
-            ]);
+            var restArg = this.jsCopyArguments(name, this.numParams);
 
             functionNode.specialArgs.push(restArg);
 

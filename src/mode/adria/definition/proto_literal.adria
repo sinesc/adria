@@ -116,7 +116,10 @@ module ProtoLiteral = proto (Node) {
         }
 
         if (chain) {
-            result.add(this.nl(1) + '___parent.apply(this, arguments);' + this.nl(-1));
+            var argsName = '___args$' + this.parser.transform.makeUID();
+            result.add(this.nl(1));
+            result.add(this.jsCopyArguments(argsName));
+            result.add('___parent.apply(this, ' + argsName + ');' + this.nl(-1));
         }
 
         result.add((name !== mangledName ? '};' : '}') + this.nl());

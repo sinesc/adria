@@ -74,7 +74,11 @@ module AsyncLiteral = proto (GeneratorLiteral) {
         result.add('(function() {' + this.nl(1));
         result.add([ 'var ___self = ', parent->toSourceNode(), ';', this.nl() ]);
         result.add([ 'return function', this.name.valid ? ' ' + this.name.getPlain() : '', '() {' + this.nl(1) ]);
-        result.add('return new ___Async(___self.apply(this, arguments));' + this.nl(-1));
+
+        var argsName = '___args$' + this.parser.transform.makeUID();
+        result.add(this.jsCopyArguments(argsName));
+
+        result.add('return new ___Async(___self.apply(this, ' + argsName + '));' + this.nl(-1));
         result.add('};'+ this.nl(-1));
         result.add('})()');
         return result;

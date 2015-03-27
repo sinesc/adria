@@ -190,4 +190,38 @@ module Node = proto (CaptureNode) {
         return this.toSourceNode().toString();
     },
 
+    /**
+     * returns sourcenode containing js-code to copy arguments to given variable
+     *
+     * @param mixed targetName
+     * @param finite numSkip optionally skip first numSkip arguments during copy
+     */
+    jsCopyArguments: func(targetName, finite numSkip = 0) {
+
+        var uid = '$' + this.parser.transform.makeUID();
+
+        if (numSkip > 0) {
+
+            return this.csn([
+                'var ', targetName, ', $0 = arguments.length - $1;'.format('___num' + uid, numSkip) + this.nl(),
+                'if (___num' + uid + ' > 0) {' + this.nl(1),
+                targetName, ' = new Array(___num' + uid + ');' + this.nl(),
+                    'for (var $0 = 0; $0 < $1; ++$0) {'.format('___i' + uid, '___num' + uid) + this.nl(1),
+                    targetName, '[$0] = arguments[$0 + $1];'.format('___i' + uid, numSkip) + this.nl(-1),
+                    '}' + this.nl(-1),
+                '} else {' + this.nl(1),
+                targetName, ' = [];' + this.nl(-1),
+                '}' + this.nl()
+            ]);
+
+        } else {
+
+            return this.csn([
+                'var ___num' + uid + ' = arguments.length, ', targetName, ' = new Array(___num' + uid + ');' + this.nl(),
+                'for (var $0 = 0; $0 < $1; ++$0) {'.format('___i' + uid, '___num' + uid) + this.nl(1),
+                    targetName, '[$0] = arguments[$0];'.format('___i' + uid) + this.nl(-1),
+                '}' + this.nl(),
+            ]);
+        }
+    }
 };
