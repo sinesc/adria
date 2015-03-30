@@ -22,6 +22,7 @@
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 var Node = require('../node');
+var ASTException = require('../../../language_parser/ast_exception');
 
 module ImportStatement = proto (Node) {
 
@@ -32,7 +33,7 @@ module ImportStatement = proto (Node) {
         this.eachKey('item', func(Node node) {
             resultData.globalReservations.add(node.value);
         });
-        
+
         parent->preprocess(state);
     },
 
@@ -41,7 +42,12 @@ module ImportStatement = proto (Node) {
         var scope = this.findScope();
 
         this.eachKey('item', func(node) {
-            scope.addLocal(node.value, false);
+
+            if (scope.localReferences.has(node.value)) {
+                throw new ASTException('Reference "' + node.value + '" already defined in local scope', this);
+            }
+
+            scope.localReferences.set(node.value, node.value);
         });
 
         return this.csn();
