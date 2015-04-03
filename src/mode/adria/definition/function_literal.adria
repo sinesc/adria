@@ -28,10 +28,11 @@ var Name = require('../name');
 
 module FunctionLiteral = proto (Scope) {
 
-    thisId          : 0,
-    provideContext  : false,
-    provideParent   : false,
-    provideSelf     : false,
+    thisId                  : 0,
+    provideContext          : false,
+    provideParent           : false,
+    provideSelf             : false,
+    provideArgumentsLength  : false,
 
     /**
      * @var Name
@@ -114,6 +115,12 @@ module FunctionLiteral = proto (Scope) {
         this.preBody(result);
         var body = this.get('body').toSourceNode();
 
+        // stored arguments length
+
+        if (this.provideArgumentsLength) {
+            result.add([ 'var ', this.jsArgumentsLength(), ' = arguments.length;' + this.nl() ]);
+        }
+
         // set local variables and special parameters
 
         result.add(this.refsToSourceNode());
@@ -131,7 +138,7 @@ module FunctionLiteral = proto (Scope) {
         // prepare parent/self lookup, if any of those keywords were used
 
         if (this.provideParent || this.provideSelf) {
-            this.getParentLookupCode(result, this.name.valid ? this.name.getPlain() : '');
+            result.add(this.jsProtoLookup(this.name.valid ? this.name.getPlain() : ''));
         }
 
         result.add(this.nl(0, result));
@@ -190,11 +197,22 @@ module FunctionLiteral = proto (Scope) {
     },
 
     /**
+     * causes function node to store arguments length
+     *
+     * @return string js reference name to arguments length
+     */
+    jsArgumentsLength: func() {
+
+        this.provideArgumentsLength = true;
+        return '___al';
+    },
+
+    /**
      * causes function node to add parent lookup
      *
      * @return string js reference name to parent
      */
-    getParentLookup: func() {
+    jsParent: func() {
 
         this.provideParent = true;
         return '___p';
@@ -205,7 +223,7 @@ module FunctionLiteral = proto (Scope) {
      *
      * @return string js reference name to self
      */
-    getSelfLookup: func() {
+    jsSelf: func() {
 
         this.provideSelf = true;
         return '___s';
@@ -214,15 +232,16 @@ module FunctionLiteral = proto (Scope) {
     /**
      * adds dynamic parent lookup code to given source-node
      *
-     * @param SourceNode result
      * @param string lookupName name of function to look up
      * @param string ownName name of function containing the lookup
      */
-    getParentLookupCode: func(SourceNode result, string lookupName, string ownName = lookupName) {
+    jsProtoLookup: func(string lookupName, string ownName = lookupName) {
 
         if (lookupName === '') {
             throw new ASTException('Unable to determine function name required by parent/self lookup', this);
         }
+
+        var result = this.csn();
 
         // check if in a prototype, don't skip it if we are
 
@@ -237,8 +256,13 @@ module FunctionLiteral = proto (Scope) {
 
         // get self and parent prototype
 
-        result.add('___s = ___s.constructor,' + this.nl());
+        if (this.provideSelf) {
+            result.add('___s = ___s.constructor,' + this.nl());
+        }
+
         result.add('___p = (___c !== null ? Object.getPrototypeOf(___c).constructor : ___c0);' + this.nl());
+
+        return result;
     },
 
     /**

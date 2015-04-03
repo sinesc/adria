@@ -21,7 +21,6 @@
  * IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-var Map = require('astd/map');
 var Set = require('astd/set');
 var ParamsNode = require('../params_node');
 var FunctionLiteral = require('./function_literal');
@@ -39,6 +38,7 @@ module FunctionParamList = proto (ParamsNode) {
     types: new Set([ 'boolean', 'number', 'finite', 'string', 'scalar', 'func', 'object' ]),
 
     reset: func(object state) {
+
         this.numParams = 0;
         this.optionalPermutations = null;
         this.optionalGroups = null;
@@ -56,7 +56,9 @@ module FunctionParamList = proto (ParamsNode) {
             this.generatePermutationSwitch(functionNode);
         }
 
-        this.each(this.handle.bind(this, functionNode, scope, result));
+        this.each(func(node) {
+            this.handle(functionNode, scope, result, node);
+        });
 
         return result.join(', ');
     },
@@ -103,16 +105,15 @@ module FunctionParamList = proto (ParamsNode) {
 
             // check for basic default args, push those to FunctionLiteral's specialArgs property
 
-
             if (valueNode.isNode() && this.optionalPermutations === null) {
 
-                var defaultArg = this.csn([ 'var ' + localName + ' = (arguments.length > ' + this.numParams + ' ? ', nameSN, ' : (', valueNode.toSourceNode(), '));' ]);
+                var defaultArg = this.csn([ 'var ' + localName + ' = (' + functionNode.jsArgumentsLength() + ' > ' + this.numParams + ' ? ', nameSN, ' : (', valueNode.toSourceNode(), '));' ]);
                 functionNode.specialArgs.push(defaultArg);
             }
 
             // check expected type if assertions are enabled
 
-            this.checkAnnotation(node, functionNode);
+            this.generateAnnotationChecks(node, functionNode);
 
             // count required by rest params
 
@@ -121,7 +122,8 @@ module FunctionParamList = proto (ParamsNode) {
 
         } else if (node.key === 'opt_items') {
 
-            node.each(this.handle.bind(this, functionNode, scope, result));
+            var that = this;
+            node.each(func(child) { that.handle(functionNode, scope, result, child); });
 
         } else if (node.key === 'rest') {
 
@@ -172,7 +174,7 @@ module FunctionParamList = proto (ParamsNode) {
      * @param Node node
      * @param FunctionLiteral functionNode
      */
-    checkAnnotation: func(Node node, FunctionLiteral functionNode) {
+    generateAnnotationChecks: func(Node node, FunctionLiteral functionNode) {
 
         var annotationNode = node.get('annotation');
 
@@ -238,7 +240,7 @@ module FunctionParamList = proto (ParamsNode) {
 
         for (var permutation, numGrouped in this.optionalPermutations) {
 
-            result.add('if (arguments.length === ' + (numGrouped + numUngrouped) + ') {' + this.nl(1));
+            result.add('if (' + functionNode.jsArgumentsLength() + ' === ' + (numGrouped + numUngrouped) + ') {' + this.nl(1));
 
             var argId = 0;
             this.applyOptionalPermutation(permutation, this.optionalGroups);
@@ -259,53 +261,5 @@ module FunctionParamList = proto (ParamsNode) {
         result.add('{' + this.nl(1) + 'throw new Exception(\'invalid number of arguments\');' + this.nl(-1) + '}') ;
 
         functionNode.specialArgs.unshift(result);
-    },
-
-    /**
-     * finds valid optional combinations and returns map of bit-string => used parameters
-     *
-     * @param Array optionals array of optional parameters as returned by indexOptionals
-     * @return Map
-     */
-    findValidOptionalPermutations: func(Array optionals) {
-
-        var bits = optionals.length;
-        var permutations = Math.pow(2, bits);
-        var patterns = new Map();
-
-        // try all permutations, log allowed ones
-
-        for (var permutation = 0; permutation < permutations; permutation++) {
-
-            var pattern = '';
-
-            // try to set bit-pattern to optionals and get actual pattern allowed by nested optionals
-
-            for (var bit = 0; bit < bits; bit++) {
-                var actuallySet = optionals[bit].setOptionalActive((permutation & (1 << bit)) > 0);
-                pattern += actuallySet ? '1' : '0';
-            }
-
-            // add pattern
-
-            if (patterns.lacks(pattern)) {
-                patterns.set(pattern, this.countActiveOptionals());
-            }
-        }
-
-        return patterns;
-    },
-
-    /**
-     * apply given permutation string to optional parameter groups
-     *
-     * @param string permutation as produced by findValidOptionalPermutations
-     * @param Array optionals as indexed by indexOptionals
-     */
-    applyOptionalPermutation: func(string permutation, Array optionals) {
-
-        for (var id = 0; id < permutation.length; id++) {
-            optionals[id].optionalIsActive = (permutation.slice(id, id + 1) === '1');
-        }
     },
 };

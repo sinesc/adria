@@ -29,6 +29,6 @@ module ParentLiteral = proto (Node) {
     toSourceNode: func() {
 
         var host = this.findProto(FunctionLiteral);
-        return this.csn(host.getParentLookup());
+        return this.csn(host.jsParent());
     }
 };

@@ -28,11 +28,11 @@ var SourceNode = require('../source_node');
  */
 module CaptureNode = proto {
 
+    key     : '',
+    value   : '',
     parser  : null,
     parent  : null,
     children: null,
-    key     : '',
-    value   : '',
     row     : 0,
     col     : 0,
 

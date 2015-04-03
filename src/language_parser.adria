@@ -289,6 +289,8 @@ module LanguageParser = proto(Parser) {
      */
     setSource: func(string filename, string data, string? cacheModifier = null) {
 
+        var that = this;
+
         // load source file
 
         this.cacheModifier = cacheModifier;
@@ -302,7 +304,10 @@ module LanguageParser = proto(Parser) {
         var captures = this.parse(this.sourceCode);
         application.log('LanguageParser', 'done', -2);
 
-        this.captureTree = CaptureNode::fromResults(captures, this, this.mapType.bind(this));
+
+        this.captureTree = CaptureNode::fromResults(captures, this, func(captureName, blockName) {
+            return that.mapType(captureName, blockName);
+        });
     },
 
     /**
@@ -313,12 +318,16 @@ module LanguageParser = proto(Parser) {
      */
     loadSourceFromCache: func(string filename, string? cacheModifier = null) {
 
+        var that = this;
+        
         this.cacheModifier = cacheModifier;
         this.cacheData = this.transform.cache.fetch(filename, [ 'base'/*, 'resultData'*/ ], cacheModifier);
 
         if (this.cacheData !== null) {
             this.file = filename;
-            this.captureTree = CaptureNode::fromJSON(this.cacheData['base'], this, this.mapType.bind(this));
+            this.captureTree = CaptureNode::fromJSON(this.cacheData['base'], this, func(captureName, blockName) {
+                return that.mapType(captureName, blockName);
+            });
             //this.resultData = this.unserializeData(this.cacheData['resultData']);
         }
     },

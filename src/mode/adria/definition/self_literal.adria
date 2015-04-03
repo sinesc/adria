@@ -29,6 +29,6 @@ module SelfLiteral = proto (Node) {
     toSourceNode: func() {
 
         var host = this.findProto(FunctionLiteral);
-        return this.csn(host.getSelfLookup());
+        return this.csn(host.jsSelf());
     }
 };
