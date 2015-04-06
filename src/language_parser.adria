@@ -315,6 +315,7 @@ module LanguageParser = proto(Parser) {
      *
      * @param string filename
      * @param string? optional cache modifier to identify different versions of the same file (i.e. different compilation flags)
+     * @return boolean true if file was retrieved from cache
      */
     loadSourceFromCache: func(string filename, string? cacheModifier = null) {
 
@@ -329,7 +330,10 @@ module LanguageParser = proto(Parser) {
                 return that.mapType(captureName, blockName);
             });
             //this.resultData = this.unserializeData(this.cacheData['resultData']);
+            return true;
         }
+
+        return false;
     },
 
     /**
@@ -337,20 +341,26 @@ module LanguageParser = proto(Parser) {
      *
      * @param string filename name
      * @param string? optional cache modifier to identify different versions of the same file (i.e. different compilation flags)
+     * @return boolean true if file was retrieved from cache
      */
     loadSource: func(string filename, string? cacheModifier = null) {
 
         // try to load from cache
 
+        var fromCache = false;
+
         if (this.transform.options['cache'] && this.cacheData === null) {
-            this.loadSourceFromCache(filename, cacheModifier);
+            fromCache = this.loadSourceFromCache(filename, cacheModifier);
         }
 
         // check if now available from cache, if not, parse
 
-        if (this.cacheData === null) {
+        if (fromCache !== true) {
             this.setSource(filename, fs.readFileSync(filename, 'UTF-8'), cacheModifier);
+            return false;
         }
+
+        return true;
     },
 
     /**

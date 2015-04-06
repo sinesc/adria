@@ -85,7 +85,7 @@ export WhileStatement = require('./definition/while_statement');
 export SwitchStatement = require('./definition/switch_statement');
 export ForInStatement = require('./definition/for_in_statement');
 
-var IfBlock = require('./definition/if_statement'); //!todo bad naming
+var IfBlock = require('./definition/if_block');
 export IfStatement = IfBlock.IfStatement;
 export IfConditional = IfBlock.IfConditional;
 export IfUnconditional = IfBlock.IfUnconditional;

@@ -26,6 +26,11 @@ var Listenable = require('astd/listenable');
 var fs = require('fs');
 var fspath = require('path');
 
+/**
+ * file monitor
+ *
+ * @event change(Set changedFiles)
+ */
 module Monitor = proto (Listenable) {
 
     paths: null,
