@@ -421,7 +421,9 @@ module AdriaTransform = proto (Transform) {
     /**
      * create parser from proto-parser or reuse from cache
      *
-     * @see recurseDependencies for parameters
+     * @param string moduleName name of the module
+     * @param string? data module source code
+     * @param Set? forceReload in monitoring mode contains the names of modified modules
      */
     getParser: func(string moduleName, string? data = null, Set? forceReload = null) {
 
@@ -457,7 +459,7 @@ module AdriaTransform = proto (Transform) {
     },
 
     /**
-     * defines implicitly known references
+     * defines implicitly known references and reserved words
      */
     defineImplicits: func() {
 
@@ -493,6 +495,14 @@ module AdriaTransform = proto (Transform) {
         if (this.options['assert']) {
             addReferences('AssertionFailedException');
         }
+
+        // make sure javascript reserved words get mangled
+
+        if (this.options['stict']) {
+            this.globalReservations.add('implements', 'interface', 'let', 'package', 'private', 'protected', 'public', 'static');
+        }
+
+        this.globalReservations.add('function', 'class', 'enum', 'extends', 'super');
     },
 
     /**
