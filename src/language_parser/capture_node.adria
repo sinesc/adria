@@ -516,8 +516,7 @@ module CaptureNode = proto {
      * @param any code SourceNode or string
      */
     csn: func(code) {
-
-        return new SourceNode(this.row, this.col -1, null, code); //!todo why is everthing offset by one if I don't subtract 1 here? col start at 0, row at 1? unlikely
+        return new SourceNode(this.row, this.col, this.parser.file, code);
     },
 
     /**

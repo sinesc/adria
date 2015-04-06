@@ -565,23 +565,23 @@ module AdriaTransform = proto (Transform) {
         }
 
         var fw = tpl.fetch(resource('../../../templates/adria/framework.tpl'));
-        /*var moduleSN =*/ node.add(new SourceNode(1, 0, 'adria-framework.js', fw));
-        //moduleSN.setSourceContent('adria-framework.js', fw);
+        node.add(new SourceNode(1, 1, 'adria-framework.js', fw))
+            .setSourceContent('adria-framework.js', fw);
 
         // merge javascript requires
 
         for (var fileName in this.jsRequires.data) {
             var contents = fs.readFileSync(options['basePath'] + fileName, 'UTF-8');
             var wrapped = 'module(\'' + fileName + '\', function(module, resource) {\nvar exports = module.exports;\n' + contents + '\n});\n';
-            /*var moduleSN =*/ node.add(new SourceNode(null, null, fileName, wrapped));
-            //moduleSN.setSourceContent(fileName, contents);
+            node.add(new SourceNode(1, 1, fileName, wrapped))
+                .setSourceContent(fileName, contents);
         }
 
         // merge modules
 
         for (var id, currentModule in this.modules) {
-            var moduleSN = node.add(new SourceNode(null, null, currentModule.parser.file, currentModule.result));
-            moduleSN.setSourceContent(currentModule.parser.file, currentModule.parser.sourceCode);
+            node.add(new SourceNode(1, 1, currentModule.parser.file, currentModule.result))
+                .setSourceContent(currentModule.parser.file, currentModule.parser.sourceCode);
         }
 
         // merge built-ins
@@ -590,8 +590,8 @@ module AdriaTransform = proto (Transform) {
 
         for (var id, name in usedBuiltins) {
             var builtIn = tpl.fetch(this.builtins[name]);
-            /*var moduleSN =*/ node.add(new SourceNode(1, 0, name.replace('.adria', '.js'), builtIn));
-            //moduleSN.setSourceContent(name.replace('.adria', '.js'), builtIn);
+            node.add(new SourceNode(1, 1, name.replace('.adria', '.js'), builtIn))
+                .setSourceContent(name.replace('.adria', '.js'), builtIn);
         }
 
         // merge resources
@@ -599,8 +599,8 @@ module AdriaTransform = proto (Transform) {
         for (var fileName in this.resources.data) {
             var contents = fs.readFileSync(options['basePath'] + fileName, 'UTF-8');
             var wrapped = 'resource(\'' + fileName + '\', \'' + contents.jsify("'") + '\');\n';
-            /*var moduleSN =*/ node.add(new SourceNode(null, null, fileName, wrapped));
-            //moduleSN.setSourceContent(fileName, contents);
+            node.add(new SourceNode(1, 1, fileName, wrapped))
+                .setSourceContent(fileName, contents);
         }
 
         node.trim();
@@ -621,7 +621,7 @@ module AdriaTransform = proto (Transform) {
 
         if (this.interfaceName !== null) {
             var interfaceTpl = tpl.fetch(resource('../../../templates/adria/interface.tpl'));
-            node.add(new SourceNode(1, 0, 'adria-interface.js', interfaceTpl));
+            node.add(new SourceNode(1, 1, 'adria-interface.js', interfaceTpl));
         }
 
         node.add('\n})(' + closureParams.keys().join(', ') + ');');
@@ -643,10 +643,10 @@ module AdriaTransform = proto (Transform) {
             if (this.options['map']) {
 
                 var mapFile = jsFile.stripPostfix('.js') + '.map';
-                var result = node.toStringWithSourceMap({ file: this.options['outFile'] });
+                var result = node.toStringWithSourceMap({ file: path.basename(jsFile) });
 
                 if (this.options['link']) {
-                    result.code += '\n//@ sourceMappingURL=' + path.relative(this.options['basePath'], mapFile);
+                    result.code += '\n//# sourceMappingURL=' + path.basename(mapFile);
                 }
 
                 fs.writeFileSync(jsFile, result.code);
@@ -688,10 +688,6 @@ module AdriaTransform = proto (Transform) {
             if (this.options['map']) {
                 ignore.push(jsFile.stripPostfix('.js') + '.map');
             }
-        }
-
-        if (this.options['poll']) {
-            application.notice('Using experimental polling to monitor for file-changes');
         }
 
         var monitor = new Monitor(paths, ignore, 250, this.options['poll']);

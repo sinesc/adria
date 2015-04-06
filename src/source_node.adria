@@ -25,6 +25,13 @@ var MozillaSourceNode = require('source-map').SourceNode;
 
 module SourceNode = proto (MozillaSourceNode) {
 
+    constructor: func(finite? aLine, finite? aColumn, aSource, aChunks, aName) {
+
+        // fix insane zero based columns (vs one based lines)
+
+        MozillaSourceNode->constructor(aLine, aColumn !== null ? aColumn - 1 : null, aSource, aChunks, aName);
+    },
+
     trim: func() {
 
         var id = this.children.length;
