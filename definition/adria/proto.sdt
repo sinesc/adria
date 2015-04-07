@@ -1,13 +1,34 @@
 
+proto_statement {
+
+    // proto name [ ( [ parent ] ) ] [ mixin ( exp [, exp, ...] ) ] body
+
+    entry -> "proto" -> ident:name -> "(" -> expression:parent -> ")" -> proto_body:body -> return
+    ident:name -> proto_body:body
+    "(" -> ")"
+
+    ident:name -> proto_mixin
+    ")" -> proto_mixin -> proto_body:body
+}
+
 proto_literal {
 
-    // proto [ name ] [ ( [ parent ] ) ] body
+    // proto [ name ] [ ( [ parent ] ) ] [ mixin ( exp [, exp, ...] ) ] body
 
     entry -> "proto" -> "(" -> expression:parent -> ")" -> proto_body:body -> return
     "proto" -> ident:name -> "("
     ident:name -> proto_body:body
     "(" -> ")"
     "proto" -> proto_body:body
+
+    "proto" -> proto_mixin
+    ident:name -> proto_mixin
+    ")" -> proto_mixin -> proto_body:body
+}
+
+proto_mixin {
+    entry -> "mixin" -> "(" -> expression:mixin -> ")" -> return
+    expression:mixin -> "," -> expression:mixin
 }
 
 new_proto_literal {

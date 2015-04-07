@@ -32,5 +32,6 @@ require('./test_proto');
 require('./test_prop');
 require('./test_scope');
 require('./test_async');
+require('./test_mixin');
 
 test.summary();

@@ -90,19 +90,61 @@ module ProtoLiteral = proto (Node) {
             result.add(mangledName + '.prototype.constructor = ' + mangledName + ';' + this.nl());
         }
 
+        // mixins
+
+        var mixinSources = [];
+
+        this.eachKey('mixin', func(node) {
+            mixinSources.push(node.toSourceNode());
+        });
+
+        result.add(this.jsMixin(mangledName, mixinSources));
+
         // append body elements, close and return
 
         result.add(body);
         result.add('return ' + mangledName + ';' + this.nl(-1));
-        result.add('})(');
-
-        if (chainToParent) {
-            result.add(parentNode.toSourceNode());
-        }
-
-        result.add(')');
+        result.add([ '})(', (chainToParent ? parentNode.toSourceNode() : ''), ')' ]);
 
         this.postBody(result);
+
+        return result;
+    },
+
+    jsMixin: func(string target, Array sources) {
+
+        if (sources.length === 0) {
+            return '';
+        }
+
+        var result = this.csn();
+        result.add('(function(___srcs) {' + this.nl(1));
+
+        // one source/multiple sources: only loop for multiple sources and copy last item first so that the last mixins properties have priority over the one before etc.
+
+        if (sources.length > 1) {
+            result.add('for (var ___src = ___srcs.length -1; ___src >= 0; --___src) {' + this.nl(1));
+            result.add('var ___proto = ___srcs[___src].prototype;' + this.nl());
+        } else {
+            result.add([ 'var ___proto = ___srcs.prototype;' + this.nl() ]);
+        }
+
+        result.add('var ___props = Object.getOwnPropertyNames(___proto);' + this.nl());
+        result.add('for (var ___prop = 0; ___prop < ___props.length; ++___prop) {' + this.nl(1));
+        result.add('var ___propName = ___props[___prop];' + this.nl());
+        result.add('if (' + target + '.prototype.hasOwnProperty(___propName) === false) {' + this.nl(1));
+        result.add('Object.defineProperty(' + target + '.prototype, ___propName, Object.getOwnPropertyDescriptor(___proto, ___propName));' + this.nl(-1));
+        result.add('}' + this.nl(-1));
+        result.add('}' + this.nl(-1));
+
+        // call closure with one source/multiple sources
+
+        if (sources.length > 1) {
+            result.add('}' + this.nl(-1));
+            result.add([ '})([ ', sources.join(', '), ' ]);' + this.nl() ]);
+        } else {
+            result.add([ '})(', sources[0], ');' + this.nl() ]);
+        }
 
         return result;
     },

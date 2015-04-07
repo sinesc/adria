@@ -34,13 +34,6 @@ function_statement {
     "(" -> function_param_list:param_list -> ")"
 }
 
-proto_statement {
-    // proto name [ ( [ parent ] ) ] body
-    entry -> "proto" -> ident:name -> "(" -> expression:parent -> ")" -> proto_body:body -> return
-    ident:name -> proto_body:body
-    "(" -> ")"
-}
-
 generator_statement {
     entry -> "func" -> "*":generator -> ident:name -> "(" -> ")" -> block:body -> return
     "(" -> function_param_list:param_list -> ")"
