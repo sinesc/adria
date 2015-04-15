@@ -316,6 +316,26 @@ module CaptureNode = proto {
     },
 
     /**
+     * returns first matching constructor
+     *
+     * @param func constructors array of prototype constructor to find
+     * @param func StopConstructor prototype constructor to stop searching at (will be returned if also instance of one of constructors)
+     * @param boolean fromParent default true, will also check this if false
+     * @param any dummy result when constructor is not found
+     * @return CaptureNode/dummy
+     */
+    findFirstProto: func(Array constructors, func? StopConstructor = null, boolean fromParent = true, dummy = this.dummy) {
+
+        var current = fromParent ? this.parent : this;
+
+        while (current instanceof CaptureNode && (StopConstructor === null || current instanceof StopConstructor === false) && isMatch(constructors, current) === false) {
+            current = current.parent;
+        }
+
+        return isMatch(constructors, current) ? current : dummy;
+    },
+
+    /**
      * get the <index>th node that matches key with index = 0 being the first node
      *
      * @param string key node key to find
@@ -681,4 +701,15 @@ var stackDiff = func(Array stack, Array lastStack, finite minStackLen) {
     }
 
     return { ascend: numCaptures, create: captures };
+};
+
+var isMatch = func(constructors, obj) {
+
+    for (var i = 0, len = constructors.length; i < len; ++i) {
+        if (obj instanceof constructors[i]) {
+            return true;
+        }
+    }
+
+    return false;
 };

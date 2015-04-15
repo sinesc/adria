@@ -23,12 +23,15 @@
  */
 var Node = require('../node');
 var FunctionLiteral = require('./function_literal');
+var ProtoLiteral = require('./proto_literal');
 
 module SelfLiteral = proto (Node) {
 
     toSourceNode: func() {
 
-        var host = this.findProto(FunctionLiteral);
+        // find either proto or function literal (different self code generation)
+
+        var host = this.findFirstProto([ ProtoLiteral, FunctionLiteral ]);
         return this.csn(host.jsSelf());
     }
 };

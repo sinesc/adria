@@ -179,6 +179,31 @@ test('self keyword (inheritance)', func() {
     assert(success);
 });
 
+test('parent/self in proto body', func() {
+
+    var Base = proto {
+        test1: 1234,
+        test2: func() { return 5678; },
+    };
+
+    var Sub = proto (Base) {
+        test3: parent::test1,
+        test4: parent::test2(), // now a value
+    };
+
+    var SubSub = proto (Sub) {
+        test5: self::test3,
+        test6: self::test4,
+    };
+
+    assert(Base::test1 === 1234);
+    assert(Base::test2() === 5678);
+    assert(Sub::test3 === Base::test1);
+    assert(Sub::test4 === Base::test2());
+    assert(SubSub::test5 === Sub::test3);
+    assert(SubSub::test6 === Sub::test4);
+});
+
 if (test.noSummary !== true) {
     test.summary();
 }

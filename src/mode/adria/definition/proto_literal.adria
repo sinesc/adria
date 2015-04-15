@@ -21,6 +21,7 @@
  * IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
+var ASTException = require('../../../language_parser/ast_exception');
 var Node = require('../node');
 var SourceNode = require('../../../source_node');
 var Name = require('../name');
@@ -147,6 +148,25 @@ module ProtoLiteral = proto (Node) {
         }
 
         return result;
+    },
+
+    jsSelf: func() {
+        return this.name.valid ? this.name.getMangled() : 'Anonymous';
+    },
+
+    jsParent: func(object requestOrigin = null) {
+
+        var parentNode = this.get('parent');
+        var haveParent = parentNode.isNode();
+        var blankParent = (haveParent ? parentNode.toString() === 'null' : false);
+
+        if (haveParent && blankParent === false) {
+            return '___parent';
+        } else if (blankParent === false) {
+            return 'Object';
+        } else {
+            throw new ASTException('Attempted to access parent from null-proto', requestOrigin || this);
+        }
     },
 
     addDefaultConstructor: func(result, name, mangledName, chain) {
