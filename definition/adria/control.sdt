@@ -81,6 +81,11 @@ for_in_statement {
     ident:key -> "," -> ident:value -> "in"
 }
 
+for_of_statement {
+    entry -> "for" -> "(" -> ident:key -> "of" -> expression:source -> ")" -> block:body -> return
+    "(" -> "var":var -> ident:key
+}
+
 /*
  * switch statement !todo scoping how?
  */

@@ -84,6 +84,7 @@ export DoWhileStatement = require('./definition/do_while_statement');
 export WhileStatement = require('./definition/while_statement');
 export SwitchStatement = require('./definition/switch_statement');
 export ForInStatement = require('./definition/for_in_statement');
+export ForOfStatement = require('./definition/for_of_statement');
 
 var IfBlock = require('./definition/if_block');
 export IfStatement = IfBlock.IfStatement;

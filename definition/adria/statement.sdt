@@ -91,11 +91,12 @@ statement {
     entry -> if_statement:if -> return
     entry -> for_in_statement:for_in -> return
     entry -> return_statement:control -> return
-    entry -> throw_statement:throw -> return
     entry -> for_count_statement:for_count -> return
     entry -> while_statement:while -> return
+    entry -> throw_statement:throw -> return
+    entry -> for_of_statement:for_of -> return
     entry -> flow_statement:flow -> return
-    entry -> application_statement:application -> return    /* needs to come before expression as application is intentionally no a keyword */
+    entry -> application_statement:application -> return    /* needs to come before expression as application is intentionally not a keyword */
 
     entry -> expression:expression -> ";" -> return
 
