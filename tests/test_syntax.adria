@@ -22,17 +22,32 @@
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 var test = require('./test');
-test.noSummary = true;
 
-require('./test_assert');
-require('./test_module');
-require('./test_exception');
-require('./test_func');
-require('./test_proto');
-require('./test_prop');
-require('./test_scope');
-require('./test_async');
-require('./test_mixin');
-require('./test_syntax');
+/*
+ * tests
+ */
 
-test.summary();
+test.group('test_syntax');
+
+test('mangle function literal', func() {
+
+    var function = func(string dummy) {
+        return dummy;
+    };
+
+    assert(function('hello') == 'hello');
+});
+
+test('mangle function statement', func() {
+
+    func function(string dummy) {
+        var x = function;
+        return dummy;
+    }
+
+    assert(function('world') == 'world');
+});
+
+if (test.noSummary !== true) {
+    test.summary();
+}

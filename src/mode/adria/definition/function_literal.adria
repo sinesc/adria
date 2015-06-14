@@ -138,7 +138,7 @@ module FunctionLiteral = proto (Scope) {
         // prepare parent/self lookup, if any of those keywords were used
 
         if (this.provideParent || this.provideSelf) {
-            result.add(this.jsProtoLookup(this.name.valid ? this.name.getPlain() : ''));
+            result.add(this.jsProtoLookup(this.name.valid ? this.name.getMangled() : ''));
         }
 
         result.add(this.nl(0, result));
@@ -161,7 +161,7 @@ module FunctionLiteral = proto (Scope) {
         result.add('function');
 
         if (this.name.valid) {
-            result.add([ ' ', this.name.getPlainNode() ]);
+            result.add([ ' ', this.name.getMangledNode() ]);
         }
     },
 
@@ -245,12 +245,18 @@ module FunctionLiteral = proto (Scope) {
 
         // check if in a prototype, don't skip it if we are
 
-        result.add('var ___p, ___s, ___c, ___c0 = ___c = ___s = (this === this.constructor.prototype ? this : Object.getPrototypeOf(this));' + this.nl());
+        var declarations = this.provideSelf ? '___p, ___s, ___c, ___c0 = ___c = ___s' : '___p, ___c, ___c0 = ___c';
+
+        result.add('var ' + declarations + ' = (this === this.constructor.prototype ? this : Object.getPrototypeOf(this));' + this.nl());
 
         // find self in proto-chain
 
         result.add('while (___c !== null && (___c.' + lookupName + ' !== ' + ownName + ' || ___c.hasOwnProperty(\'' + lookupName + '\') === false)) {' + this.nl(1));
-        result.add('___s = ___c,' + this.nl());
+
+        if (this.provideSelf) {
+            result.add('___s = ___c,' + this.nl());
+        }
+
         result.add('___c = Object.getPrototypeOf(___c);' + this.nl(-1));
         result.add('}' + this.nl());
 
@@ -266,7 +272,7 @@ module FunctionLiteral = proto (Scope) {
     },
 
     /**
-     * set local function name and return SourceNode of it
+     * set local function name
      *
      * @return SourceNode?
      */
@@ -274,21 +280,30 @@ module FunctionLiteral = proto (Scope) {
 
         var name = this.findName();
 
-        if (name !== null && name.valid) {
-            var mangledName = this.addLocal(name.getPlain(), false, true);
-            this.name = new Name(name.node, name.getPlain(), mangledName);
-        } else {
-            this.name = new Name();
-        }
-
         // check if name needs to be registered with parent scope
 
         if (this.registerWithParent) {
-            if (this.name.valid) {
-                this.parent.findScope().addLocal(this.name.getPlain(), false);
+
+            // register at parent level
+
+            if (name.valid) {
+                var mangledName = this.parent.findScope().addLocal(name.getPlain(), false);
+                this.name = new Name(name.node, name.getPlain(), mangledName);
             } else {
                 throw new ASTException('Unable to determine function name in func statement', this);
             }
+
+        } else {
+
+            // register in function scope
+
+            if (name !== null && name.valid) {
+                var mangledName = this.addLocal(name.getPlain(), false, true);
+                this.name = new Name(name.node, name.getPlain(), mangledName);
+            } else {
+                this.name = new Name();
+            }
         }
+
     },
 };

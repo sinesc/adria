@@ -1,7 +1,7 @@
 /*
  * Adria transcompiler
  *
- * Copyright (C) 2014 Dennis Möhlmann <mail@dennismoehlmann.de>
+ * Copyright (C) 2014 Dennis MÃ¶hlmann <mail@dennismoehlmann.de>
  * Licensed under the MIT license.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -62,14 +62,24 @@ module Name = proto {
     },
 
     getPlainNode: func() {
-        return this.makeSourceNode(this.getPlain());
+
+        var plain = this.getPlain();
+
+        if (plain !== null) {
+            return this.node.csn(plain);
+        } else  {
+            throw new Exception('Attempted to get plain name node of string name');
+        }
     },
 
     getMangledNode: func() {
-        return this.makeSourceNode(this.getMangled());
-    },
 
-    makeSourceNode: func(string value) {
-        return this.node.csn(value);
+        var mangled = this.getMangled();
+
+        if (mangled !== null) {
+            return this.node.csn(mangled);
+        } else  {
+            throw new Exception('Attempted to get mangled name node of string name');
+        }
     },
 };
