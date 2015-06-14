@@ -142,7 +142,7 @@ module Node = proto (CaptureNode) {
     /**
      * find name on left side of assignment or proto body item
      *
-     * @return SourceNode for name or null
+     * @return Name or null
      */
     findName: func() {
 

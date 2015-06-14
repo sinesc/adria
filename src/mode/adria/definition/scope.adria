@@ -152,7 +152,7 @@ module Scope = proto (Node) {
      * @param boolean forceMangling
      */
     createLocalName: func(string name, boolean forceMangling = false) {
-
+// TODO Name
         var FunctionLiteral = require('./function_literal');
         var transform = this.parser.transform;
         var refName = null;

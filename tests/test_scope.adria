@@ -44,7 +44,7 @@ test.group('test_scope');
 
 test('constructor scope', func() {
 
-    var test = new TestObj();
+    new TestObj();
 });
 
 test('function scope', func() {

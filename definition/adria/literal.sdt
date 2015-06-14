@@ -76,14 +76,6 @@ array_literal {
 }
 
 /*
- * scope literal
- */
-//!TBD
-/*scope_literal {
-    entry -> "scope" -> "{" -> block:body -> "}" -> return
-}*/
-
-/*
  * function literals
  */
 

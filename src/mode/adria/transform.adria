@@ -93,7 +93,7 @@ module AdriaTransform = proto (Transform) {
     interfaceName: null,
 
     /**
-     * @var boolean application makes use of the application() feature
+     * @var boolean true if application makes use of the application() feature
      */
     addApplication: false,
 
@@ -498,7 +498,7 @@ module AdriaTransform = proto (Transform) {
 
         // make sure javascript reserved words get mangled
 
-        if (this.options['stict']) {
+        if (this.options['strict']) {
             this.globalReservations.add('implements', 'interface', 'let', 'package', 'private', 'protected', 'public', 'static');
         }
 
