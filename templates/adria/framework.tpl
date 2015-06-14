@@ -125,7 +125,7 @@ var Exception{! if (enableAssert): !}, AssertionFailedException{! endif !};
 
             if (actualType === 'number' && isFinite(value) === false) {
                 throw new AssertionFailedException(name + ' expected to be scalar, got ' + value + ' instead');
-            } else if (actualType !== 'string' && actualType !== 'boolean') {
+            } else if (actualType !== 'string' && actualType !== 'boolean' && actualType !== 'number') {
                 throw new AssertionFailedException(name + ' expected to be scalar, got ' + actualType + ' instead');
             }
 

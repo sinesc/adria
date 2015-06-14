@@ -15,4 +15,9 @@ echo "== build == ok. again..."
 ./bin/ngadria.js -c dist
 
 echo "== build == unit testing...";
-./bin/ngadria.js -c tests && ./bin/test.js
+./bin/ngadria.js -c tests
+# currently required to access framework internals (sed -i may copy invalid permissions from its tempfile)
+TMPFILE=$(tempfile)
+sed 's/replace_with_assert/assert/' ./bin/test.js > $TMPFILE
+cat $TMPFILE > ./bin/test.js
+./bin/test.js

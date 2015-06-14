@@ -78,6 +78,50 @@ test('assert user message', func() {
     }
 });
 
+test('function argument checks', func() {
+
+    import replace_with_assert; // requires postprocessing. cannot currently access assert.type from outside the base framework
+
+    var allowNull = [ true, false ];
+    var type = [ 'func', 'finite', 'scalar', 'number', 'string', 'boolean', 'object' ];
+    var results = [
+        [ undefined,  [ ] ],
+        [ null,       [ ] ],
+        [ NaN,        [ 'number' ] ],
+        [ 0,          [ 'finite', 'scalar', 'number' ] ],
+        [ 1,          [ 'finite', 'scalar', 'number' ] ],
+        [ 3.14156,    [ 'finite', 'scalar', 'number' ] ],
+        [ '',         [ 'string', 'scalar' ] ],
+        [ '1',        [ 'string', 'scalar' ] ],
+        [ 'false',    [ 'string', 'scalar' ] ],
+    ];
+
+    for (var a = 0; a < allowNull.length; ++a) {
+        for (var t = 0; t < type.length; ++t) {
+            for (var r = 0; r < results.length; ++r) {
+
+                var input = results[r][0];
+                var valid = results[r][1];
+
+                var isError = false;
+                var shouldNotError = allowNull[a] && input === null;
+                var shouldError = (valid.indexOf(type[t]) === -1) && shouldNotError === false;
+
+                try {
+                    replace_with_assert.type(type[t], allowNull[a], input, '');
+                } catch (AssertionFailedException e) {
+                    isError = true;
+                }
+
+                if (isError !== shouldError) {
+                    test.fail('expected ' + (shouldError ? 'failure' : 'pass') + ' for type ' + type[t] + ' given value ' + input + (allowNull[a] ? ' (allow null)' : ''));
+                }
+
+            }
+        }
+    }
+});
+
 if (test.noSummary !== true) {
     test.summary();
 }
