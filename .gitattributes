@@ -1,4 +1,5 @@
 build text eol=lf
 *.adria text eol=lf
+*.js text eol=lf
 *.sdt text eol=lf
 *.zip binary
