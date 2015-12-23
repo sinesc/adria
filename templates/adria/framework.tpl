@@ -7,6 +7,7 @@ var Exception{! if (enableAssert): !}, AssertionFailedException{! endif !};
 (function() {
     var resources = { };
     var modules = { };
+    var jsPathStack = [ ];
 
     Exception = function Exception(message) {
         this.message = message === undefined ? this.message : message;
@@ -58,14 +59,17 @@ var Exception{! if (enableAssert): !}, AssertionFailedException{! endif !};
     };{! endif !}
 
     require = function(file) {
-        var module = modules[file];{! if (enableAssert): !}
+        var path = jsPathStack.length > 0 ? jsPathStack[jsPathStack.length -1] : ''
+        var module = modules[file.slice(-3) === '.js' && file.slice(0, 2) === './' ? path + file.slice(2) : file];{! if (enableAssert): !}
         if (module === undefined) {
             throw Error('missing dependency ' + file);
         }{! endif !}
         if (typeof module.func === 'function') {
             var func = module.func;
             delete module.func;
+            jsPathStack.push(file.slice(0, file.lastIndexOf('/') + 1));
             func(module, getResource);
+            jsPathStack.pop();
         }
         return module.exports;
     };{! if (enableAssert): !}
