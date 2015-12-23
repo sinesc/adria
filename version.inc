@@ -1,5 +1,5 @@
 {
-	"defines": {
-		"version": "0.3.1"
-	}
+    "defines": {
+        "version": "0.3.2"
+    }
 }

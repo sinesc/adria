@@ -39,16 +39,6 @@ module Transform = proto {
     options: null,
 
     /**
-     * @var string option file to load command line options from
-     */
-    readOptionFile: null,
-
-    /**
-     * @var string option file to write command line options to
-     */
-    writeOptionFile: null,
-
-    /**
      * @var string? data received via stdin
      */
     stdin: null,
@@ -92,25 +82,35 @@ module Transform = proto {
      */
     initOptions: func() {
 
-        application.args.addSwitch('cache', 'Cache generated code', true);
+        application.args.add({
+            name: 'cache',
+            param: [ 'cache' ],
+            defaultValue: true,
+            help: 'Cache generated code',
+        });
 
-        // handle option file now because the specific transform might add required options
+        application.args.add({
+            name: 'help',
+            param: [ 'h', 'help' ],
+            defaultValue: false,
+            help: 'Show this help message',
+        });
 
-        application.args.add(
-            [ '-c', '--config' ],
-            { help: 'Use build configuration', dest: 'readConfig', metavar: '<file>', defaultValue: '*', nargs: '?' },
-            func(value) { return value === '*' ? null : (value === null ? 'build.abc' : util.normalizeExtension(value, '.abc')); }
-        );
+        application.args.add({
+            name: 'readConfig',
+            param: [ 'c', 'config' ],
+            help: 'Use build configuration',
+            helpVar: 'file',
+            formatter: func(value) { return value === true ? 'build.abc' : (value === null ? null : util.normalizeExtension(value, '.abc')); },
+        });
 
-        application.args.add(
-            [ '--write-config' ],
-            { help: 'Write build configuration', dest: 'writeConfig', metavar: '<file>', defaultValue: '*', nargs: '?' },
-            func(value) { return value === '*' ? null : (value === null ? 'build.abc' : util.normalizeExtension(value, '.abc')); }
-        );
-
-        var options = application.args.parseKnown();
-        this.readOptionFile = options['readConfig'];
-        this.writeOptionFile = options['writeConfig'];
+        application.args.add({
+            name: 'writeConfig',
+            param: [ 'write-config' ],
+            help: 'Write build configuration',
+            helpVar: 'file',
+            formatter: func(value) { return value === true ? 'build.abc' : (value === null ? null : util.normalizeExtension(value, '.abc')); },
+        });
     },
 
     /**
@@ -134,15 +134,19 @@ module Transform = proto {
 
         for (var key, value in base) {
 
-            if (value instanceof Array && result[key] instanceof Array) {
+            if (result[key] === undefined) {
+
+                result[key] = value;
+
+            } if (result[key] instanceof Array && value instanceof Array) {
 
                 result[key] = (new Set(depend[key])).add(value).toArray();
 
-            } else if (typeof value === 'object' && typeof result[key] === 'object') {
+            } else if (typeof result[key] === 'object' && value !== null && typeof value === 'object') {
 
                 result[key] = (new Map(depend[key])).set(value).data;
 
-            } else {
+            } else if (value !== null) {
 
                 result[key] = value;
             }
@@ -169,23 +173,46 @@ module Transform = proto {
     },
 
     /**
+     * write given options to given file. removes read/write/depend options and null-values
+     *
+     * @param string file
+     * @param object options
+     */
+    writeOptions: func(string file, object options) {
+
+        var saveOptions = { };
+
+        for (var key, value in options) {
+
+            if (key !== 'writeConfig' && key !== 'readConfig' && key !== 'depend' && value !== null) {
+                saveOptions[key] = value;
+            }
+        }
+
+        fs.writeFileSync(file, JSON.stringify(saveOptions, null, '\t'));
+    },
+
+    /**
      * either load or save options from file or processes given command-line arguments
      */
     processOptions: func() {
 
-        if (this.readOptionFile !== null) {
-            this.options = this.readOptions(this.readOptionFile);
-        } else {
-            this.options = application.args.parseAll();
+        var options = application.args.parse(true);
+
+        if (options['readConfig'] !== null) {
+            options = this.mergeOptions(options, this.readOptions(options['readConfig']));
         }
 
-        delete this.options['depend'];
-        delete this.options['readConfig'];
-        delete this.options['writeConfig'];
-
-        if (this.writeOptionFile !== null) {
-            fs.writeFileSync(this.writeOptionFile, JSON.stringify(this.options, null, '\t'));
+        if (options['help']) {
+            console.log(application.args.getHelp('adria'));
+            process.exit(0);
         }
+
+        if (options['writeConfig'] !== null) {
+            this.writeOptions(options['writeConfig'], options);
+        }
+
+        this.options = this.mergeOptions(options, application.args.getDefaults());
     },
 
     /**

@@ -18,7 +18,7 @@ usage: adria [-v] [-d] [-m {adria,adriadebug}] [--stdin] [--cache]
                [-c [<file>]] [--write-config [<file>]] [-o <file>] [-b <path>]
                [-p <path>] [--extension <ext>] [-t {node,web}]
                [--header <file>] [-D <key>=<value>] [--shellwrap]
-               [--shellargs <args>] [--monitor] [--strict] [--es5] [--assert]
+               [--shellargs <args>] [--monitor] [--strict] [--assert]
                [--scan] [--map] [--link] [--time] [-h]
                files [files ...]
 
@@ -54,7 +54,6 @@ Optional arguments:
   --monitor             Don't exit after compilation, watch for and rebuild
                         on file changes (false)
   --strict              Compile strict Javascript (true)
-  --es5                 Compile to ES5 (false)
   --assert              Add assert() support (false)
   --scan                Perform basic logic checks (true)
   --map                 Generate source map (false)

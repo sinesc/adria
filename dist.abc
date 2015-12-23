@@ -1,28 +1,15 @@
 {
     "depend": "version.inc",
-	"debug": false,
-	"mode": "adria",
-	"stdin": false,
-	"cache": true,
-	"files": [
-		"main.adria"
-	],
-	"outFile": "../bin/ngadria.js",
-	"basePath": "src/",
-	"paths": [
-		"../../astdlib/"
-	],
-	"extension": ".adria",
-	"platform": "node",
-	"headerFile": "../LICENSE",
-	"shellwrap": true,
-	"shellargs": "",
-	"monitor": false,
-	"strict": true,
-	"es5": false,
-	"assert": false,
-	"scan": true,
-	"map": false,
-	"link": true,
-	"time": true
+    "files": [
+        "main.adria"
+    ],
+    "outFile": "../bin/ngadria.js",
+    "basePath": "./src/",
+    "paths": [
+        "../../astdlib/"
+    ],
+    "platform": "node",
+    "headerFile": "../LICENSE",
+    "shellwrap": true,
+    "time": true
 }

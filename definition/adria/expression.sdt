@@ -68,6 +68,7 @@ binary_operation {
 
 ternary_operation {
     entry -> "?":ternary_op -> literal_expression:true_expression -> ":":ternary_op -> literal_expression:false_expression -> return
+    entry -> "?":ternary_op -> ":":ternary_op_default -> literal_expression:false_expression -> return
 }
 
 assignment_operation {

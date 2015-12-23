@@ -5,6 +5,10 @@ echo "== build == changing working directory to $DIR"
 cd $DIR
 chmod +x ./bin/adria.js
 
+echo "== build == cleanup..."
+rm -f ./bin/test.js
+rm -f ./bin/ngadria.js
+
 echo "== build == adria compiling ngadria..."
 ./bin/adria.js -c dist
 

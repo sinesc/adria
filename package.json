@@ -1,6 +1,6 @@
 {
   "name": "adria",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "description": "Adria to Javascript compiler",
   "files": [
     "bin/adria.js",
@@ -30,7 +30,7 @@
   },
   "dependencies": {
     "source-map": ">=0.1.27",
-    "argparse": ">=0.1.15"
+    "minimalist": ">=1.0.0"
   },
   "devDependencies": {
     "astdlib": "0.1.x"

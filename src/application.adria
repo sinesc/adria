@@ -38,20 +38,16 @@ module Application = proto {
         this.log = log;
         this.args = new Args();
 
-        this.args.add(
-            [ '-d', '--debug' ],
-            { help: 'Enable debug mode (false)', action: 'storeTrue' }
-        );
+        this.args.add({
+            name: 'mode',
+            param: [ 'm', 'mode' ],
+            allowed: [ 'adria', 'adriadebug' ],
+            defaultValue: 'adria',
+            help: 'Translation mode',
+        });
 
-        this.args.add(
-            [ '-m', '--mode' ],
-            { help: 'Translation mode (adria)', defaultValue: 'adria', choices: [ 'adria', 'adriadebug' ], required: false }
-        );
-
-        this.args.add(
-            [ '--stdin' ],
-            { help: 'Read from stdin (false)', action: 'storeTrue' }
-        );
+        this.args.addSwitch('stdin', 'Read from stdin', false);
+        this.args.addSwitch('debug', 'Enable debug mode', false);
     },
 
     /**
@@ -59,7 +55,7 @@ module Application = proto {
      */
     run: func#() {
 
-        var options = this.args.parseKnown();
+        var options = this.args.parse();
 
         // break here on debug mode to make it easier to skip over all those nodejs-init-exceptions and start logging
 

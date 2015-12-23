@@ -1,7 +1,7 @@
 {
     "depend": "dist.abc",
-	"assert": true,
-	"defines": {
-		"tag": "-dev"
-	}
+    "assert": true,
+    "defines": {
+        "tag": "-dev"
+    }
 }

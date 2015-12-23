@@ -338,46 +338,68 @@ module AdriaTransform = proto (Transform) {
 
         var args = application.args;
 
-        args.add(
-            [ 'files' ],
-            { help: 'File(s) to compile', nargs: '+' }
-        );
+        args.add({
+            name: 'files',
+            param: [ '_' ],
+            defaultValue: [ ],
+            help: 'File(s) to compile',
+            helpVar: 'file',
+        });
 
-        args.add(
-            [ '-o', '--out' ],
-            { help: 'Output file', action: 'store', dest: 'outFile', metavar: '<file>' }
-        );
+        args.add({
+            name: 'outFile',
+            param: [ 'o', 'out' ],
+            help: 'Output file',
+            helpVar: 'file',
+        });
 
-        args.add(
-            [ '-b', '--base' ],
-            { help: 'Base path, include paths are relative to this', defaultValue: './', dest: 'basePath', metavar: '<path>', required: false }
-        );
+        args.add({
+            name: 'basePath',
+            param: [ 'b', 'base' ],
+            defaultValue: './',
+            help: 'Base path, include paths are relative to this',
+            helpVar: 'path',
+        });
 
-        args.add(
-            [ '-p', '--path' ],
-            { help: 'Additional path to look for includes', action: 'append', dest: 'paths', metavar: '<path>' }
-        );
+        args.add({
+            name: 'paths',
+            param: [ 'p', 'path' ],
+            defaultValue: [ ],
+            help: 'Additional path to look for includes',
+            helpVar: 'path',
+        });
 
-        args.add(
-            [ '--extension' ],
-            { help: 'Adria file extension (adria)', defaultValue: 'adria', metavar: '<ext>', required: false },
-            func(value) { return '.' + value; }
-        );
+        args.add({
+            name: 'extension',
+            param: [ 'extension' ],
+            defaultValue: 'adria',
+            help: 'Adria file extension',
+            helpVar: 'extension',
+            formatter: func(data) { return '.' + data; },
+        });
 
-        args.add(
-            [ '-t', '--target' ],
-            { help: 'Platform to generate code for (node)', action: 'store', choices: [ 'node', 'web' ], dest: 'platform', defaultValue: 'node' }
-        );
+        args.add({
+            name: 'platform',
+            param: [ 't', 'target' ],
+            allowed: [ 'node', 'web' ],
+            defaultValue: 'node',
+            help: 'Platform to generate code for',
+        });
 
-        args.add(
-            [ '--header'],
-            { help: 'File to include as commentblock before output', action: 'store', dest: 'headerFile', defaultValue: '', metavar: '<file>' }
-        );
+        args.add({
+            name: 'headerFile',
+            param: [ 'header' ],
+            help: 'File to include as commentblock before output',
+            helpVar: 'file',
+        });
 
-        args.add(
-            [ '-D', '--define' ],
-            { help: 'Define preprocessor value, i.e. version="1.2"', metavar: '<key>=<value>', action: 'append', dest: 'defines' },
-            func(data) {
+        args.add({
+            name: 'defines',
+            param: [ 'D', 'define' ],
+            defaultValue: [ ],
+            help: 'Define preprocessor value',
+            helpVar: '"key=value"',
+            formatter: func(data) {
                 var result = { };
                 for (var id, value in data) {
                     var pair = value.split('=');
@@ -385,19 +407,20 @@ module AdriaTransform = proto (Transform) {
                 }
                 return result;
             }
-        );
+        });
 
         args.addSwitch('shellwrap', 'Wrap in shell-script and flag executable', false);
 
-        args.add(
-            [ '--shellargs'],
-            { help: 'Arguments for shellwrap to pass to runtime. Use --shellargs="..." syntax.', action: 'store', dest: 'shellargs', defaultValue: '', metavar: '<args>' }
-        );
+        args.add({
+            name: 'shellargs',
+            param: [ 'shellargs' ],
+            help: 'Arguments for shellwrap to pass to runtime',
+            helpVar: '"arguments"',
+        });
 
         args.addSwitch('monitor', 'Don\'t exit after compilation, watch for and rebuild on file changes', false);
         args.addSwitch('poll', 'Use polling instead of inotify to monitor file changes (has issues)', false);
         args.addSwitch('strict', 'Compile strict Javascript', true);
-        args.addSwitch('es5', 'Compile to ES5', false);
         args.addSwitch('assert', 'Add assert() support', false);
         args.addSwitch('scan', 'Perform basic logic checks', true);
         args.addSwitch('map', 'Generate source map', false);
@@ -411,6 +434,11 @@ module AdriaTransform = proto (Transform) {
     processOptions: func() {
 
         parent->processOptions();
+
+        if (this.options['files'].length < 1 || this.options['!'].length > 0) {
+            console.log(application.args.getHelp('adria'));
+            process.exit(1);
+        }
 
         this.cacheModifier = util.md5(JSON.stringify(this.options));
         this.options['defines']['___uniqueId'] = util.uniqueId();
@@ -527,13 +555,13 @@ module AdriaTransform = proto (Transform) {
         if (options['shellwrap']) {
             node.add([
                 '#!/bin/sh\n',
-                '\':\' //; exec "`command -v nodejs || command -v node`" --harmony' + (options['shellargs'] === '' ? '' : ' ' + options['shellargs']) + ' "$0" "$@"\n'
+                '\':\' //; exec "`command -v nodejs || command -v node`" --harmony' + (options['shellargs'] === null ? '' : ' ' + options['shellargs']) + ' "$0" "$@"\n'
             ]);
         }
 
         // include header comment
 
-        if (options['headerFile'] !== '') {
+        if (options['headerFile'] !== null) {
             var header = fs.readFileSync(options['basePath'] + options['headerFile'], 'UTF-8');
             node.add('/**\n * ' + header.trim().replace(/\r?\n/g, '\n * ') + '\n */\n');
         }
@@ -542,7 +570,7 @@ module AdriaTransform = proto (Transform) {
 
         var closureParams = new Map();
 
-        if (this.options['platform'] === 'node') {
+        if (options['platform'] === 'node') {
             closureParams.set({
                 'global'    : 'window',
                 'module'    : '___module',

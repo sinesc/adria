@@ -21,116 +21,231 @@
  * IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-var argparse = require('argparse');
+var parseArgs = require('minimist');
+
+var identity = func(val) {
+    return val;
+};
 
 module Args = proto {
 
-    parser      : null,
-    parsed      : null,
-    callbacks   : { },
+    rawArgs     : null,
+    definition  : { },
+    paramMap    : { },
 
+    /**
+     * construct instance, parse to raw argument object
+     */
     constructor: func() {
-
-        this.parser = new argparse.ArgumentParser({
-            version : '{{version}}{{tag}}',
-            addHelp : false,
-            epilog  : 'Use --no-... to invert option switches, i.e. --no-strict',
-        });
+        this.rawArgs = parseArgs(process.argv.slice(2));
     },
 
     /**
      * add a new argument
      *
-     * @param Array flags
      * @param object options
-     * @param func? callback
      */
-    add: func(Array flags, object options, func? callback = null) {
+    add: func(object options) {
 
-        this.parser.addArgument(flags, options);
+        assert(typeof options.name === 'string');
+        assert(typeof options.param === 'string' || options.param instanceof Array);
 
-        if (callback !== null) {
+        this.definition[options.name] = options;
 
-            var name = (options.dest !== undefined ? options.dest : null);
-
-            if (name === null) {
-                for (var id, flag in flags) {
-                    if (flag.slice(0, 2) === '--') {
-                        name = flag.slice(2);
-                    }
-                }
+        if (typeof options.param === 'string') {
+            this.paramMap[options.param] = options.name;
+        } else if (options.param instanceof Array) {
+            for (var i = 0; i < options.param.length; ++i) {
+                this.paramMap[options.param[i]] = options.name;
             }
-
-            this.callbacks[name] = callback;
         }
+    },
 
-        this.parsed = null;
+    addSwitch: func(name, help, defaultValue) {
+
+        this.add({
+            name: name,
+            param: name,
+            defaultValue: defaultValue,
+            help: help,
+        });
     },
 
     /**
-     * add a new on-off switch type argument
+     * returns parsed arguments
      *
-     * @param string name
-     * @param string help
-     * @param boolean defaultState
-     */
-    addSwitch: func(string name, string help, boolean defaultState = false) {
-
-        var defaultText = ' (' + (defaultState ? 'true' : 'false') + ')';
-
-        this.parser.addArgument([ '--' + name ], { help: help + defaultText, action: 'storeTrue', dest: name });
-        this.parser.addArgument([ '--no-' + name ], { help: argparse.Const.SUPPRESS, action: 'storeFalse', dest: name });
-
-        var defaultValue = { };
-        defaultValue[name] = defaultState;
-        this.parser.setDefaults(defaultValue);
-    },
-
-    /**
-     * returns parsed arguments, ignoring any unknown args
-     *
+     * @param boolean nullDefaults return null as default for missing options (instead of defined defaults)
      * @return object
      */
-    parseKnown: func() {
+    parse: func(nullDefaults = false) {
 
-        if (this.parsed === null) {
-            this.parsed = this.parser.parseKnownArgs()[0];
-            applyCallbacks.call(this);
+        var parsed = { };
+        var unknown = { };
+
+        parsed['!'] = unknown;
+
+        for (var paramName, value in this.rawArgs) {
+
+            if (this.paramMap[paramName] === undefined) {
+                unknown[paramName] = value;
+            } else if (value instanceof Array === false || value.length > 0) {
+                parsed[this.paramMap[paramName]] = value;
+            }
         }
 
-        return this.parsed;
+        for (var name, options in this.definition) {
+
+            var formatter = options.formatter !== undefined ? options.formatter : identity;
+            assert(typeof formatter === 'function');
+
+            if (parsed[name] === undefined && nullDefaults) {
+                parsed[name] = null;
+            } else {
+                var value = parsed[name] !== undefined ? parsed[name] : options.defaultValue;
+                parsed[name] = formatter.call(this, value !== undefined ? value : null);
+            }
+        }
+
+        return parsed;
     },
 
     /**
-     * returns parsed arguments, terminating the application on unknown
-     * arguments with helpful error message. also handles help flag.
+     * validate parameters
      *
+     * @param object optional parsed options
+     */
+    validate: func(object? options = null) {
+
+        //!todo
+        return true;
+    },
+
+    /**
+     * returns argument default values
+     *
+     * @param boolean nullDefaults return null as default for missing options (instead of defined defaults)
      * @return object
      */
-    parseAll: func() {
+    getDefaults: func(nullDefaults = false) {
 
-        // only add help on final parse, so that all options are available for help output
+        var parsed = { };
 
-        this.parser.addArgument(
-            [ '-h', '--help' ],
-            { action: 'help', defaultValue: argparse.Const.SUPPRESS, help: 'Show this help message and exit.' }
-        );
+        for (var name, options in this.definition) {
 
-        this.parsed = this.parser.parseArgs();
-        applyCallbacks.call(this);
+            var formatter = options.formatter !== undefined ? options.formatter : identity;
+            assert(typeof formatter === 'function');
 
-        return this.parsed;
+            parsed[name] = nullDefaults ? null : formatter.call(this, options.defaultValue !== undefined ? options.defaultValue : null);
+        }
+
+        return parsed;
+    },
+
+    /**
+     * returns help message for defined parameters
+     *
+     * @param string processName displayed within helpmessage
+     * @return string
+     */
+    getHelp: func(string processName) {
+
+        var result = 'usage: ' + processName;
+        var length = result.length;
+        var positional = null;
+
+        // output argument summary behind processname
+
+        for (var name, options in this.definition) {
+            var isPositional = options.param === '_' || (options.param.length === 1 && options.param[0] === '_');
+            if (options.help && isPositional === false) {
+                var param = formatParams(options, true, true);
+                if (length + param.length > 80) {
+                    result += "\n  " + param;
+                    length = param.length + 2;
+                } else {
+                    result += ' ' + param;
+                    length += param.length + 1;
+                }
+            } else if (isPositional) {
+                positional = name;
+            }
+        }
+
+        // add positional argument
+
+        if (positional !== null && this.definition[positional].help) {
+            var options = this.definition[positional];
+            result += ' ' + options.helpVar + ' [' + options.helpVar + ' ...]';
+            result += "\n\nPositional arguments:";
+            result += "\n  " + options.helpVar.padRight(20) + options.help;
+        }
+
+        // output helplines
+
+        result += "\n\nOptional arguments:";
+
+        for (var name, options in this.definition) {
+            if (options.help && options.param !== '_' && (options.param.length !== 1 || options.param[0] !== '_')) {
+                var fullParams = formatParams(options);
+                result += "\n  " + fullParams.padRight(20);
+                if (fullParams.length > 18) {
+                    result += "\n  " + " ".repeat(20);
+                }
+                result += options.help;
+                result += formatDefault(options);
+            }
+        }
+
+        return result;
     },
 };
 
-/**
- * apply user-defined callbacks to parsed results (to avoid having to deal with argparse custom actions)
- */
-var applyCallbacks = func() {
+var formatDefault = func(options) {
 
-    for (var key, value in this.parsed) {
-        if (this.callbacks[key] !== undefined) {
-            this.parsed[key] = this.callbacks[key](value);
+    var defaultValue = options.defaultValue;
+    var invertParam = options.param instanceof Array ? options.param[options.param.length -1] : options.param;
+    var stringValue = null;
+
+    if (typeof defaultValue === 'string') {
+        stringValue = defaultValue;
+    } else if (defaultValue instanceof Array && defaultValue.length > 0) {
+        stringValue = defaultValue.join(', ');
+    } else if (typeof defaultValue === 'object' && defaultValue !== null && defaultValue instanceof Array === false) {
+        stringValue = '!todo';
+    } else if (defaultValue === true) {
+        stringValue = 'enabled, --no-' + invertParam + ' to disable';
+    }
+
+    if (stringValue !== null) {
+        return ' [ ' + stringValue + ' ]';
+    } else {
+        return '';
+    }
+};
+
+var formatParams = func(object options, first = false, brackets = false) {
+
+    var params = typeof options.param === 'string' ? [ options.param ] : (first ? [ options.param[0] ] : options.param);
+    var result = [];
+
+    for (var i, param in params) {
+        if (param !== '_') {
+
+            var item = (param.length === 1 ? '-' : '--') + param;
+
+            if (options.allowed) {
+                item += ' {' + options.allowed.join(',') + '}';
+            } else if (options.helpVar) {
+                item += ' <' + options.helpVar + '>';
+            }
+
+            if (brackets) {
+                result.push('[' + item + ']');
+            } else {
+                result.push(item);
+            }
         }
     }
+
+    return result.join(', ');
 };
