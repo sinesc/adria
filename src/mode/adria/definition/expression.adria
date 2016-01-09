@@ -109,6 +109,17 @@ module Expression = proto (Node) {
                     break;
 
                 case 'binary_op':
+                    var value = child.value;
+                    if (value === '==') {
+                        value = '===';
+                    } else if (value === '!=') {
+                        value = '!==';
+                    } else if (value === '===' || value === '!==') {
+                        application.notice('binary operator $0 is deprecated (comparisons is always strict)' + child.loc(), value);
+                    }
+                    result.add([ ' ', child.csn(value), ' ' ]);
+                    break;
+
                 case 'assignment_op':
                 case 'ternary_op':
                     result.add([ ' ', child.csn(child.value), ' ' ]);
