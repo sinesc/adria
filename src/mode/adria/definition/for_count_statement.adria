@@ -31,7 +31,7 @@ module ForCountStatement = proto (Scope) {
         var initNode = this.get('init');
         var init;
 
-        if (initNode.value === 'var_statement') {
+        if (initNode.value == 'var_statement') {
 
             var varDefs = this.csn();
             var ownScope = this;

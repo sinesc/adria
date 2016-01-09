@@ -32,7 +32,7 @@ export IfStatement = proto (Node) {
 
         this.each(func(Node child) {
 
-            if (child.key === 'else_if' || child.key === 'else') {
+            if (child.key == 'else_if' || child.key == 'else') {
                 result.add(' else ');
             }
 

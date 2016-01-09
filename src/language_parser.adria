@@ -142,7 +142,7 @@ module LanguageParser = proto(Parser) {
 
         // feed file contents to secondary parser
 
-        if (this.trainer === null) {
+        if (this.trainer == null) {
             this.trainer = new DefinitionParser();
         }
 
@@ -201,7 +201,7 @@ module LanguageParser = proto(Parser) {
             case 'return':
                 node.match          = '';
                 node.tokenType      = -1;
-                node.type           = (name === 'entry' ? Node.Type.BLOCK : Node.Type.RETURN);
+                node.type           = (name == 'entry' ? Node.Type.BLOCK : Node.Type.RETURN);
                 node.description    = '<Please file a bug-report if you ever see this message (' + name + ')>';
                 break;
 
@@ -222,7 +222,7 @@ module LanguageParser = proto(Parser) {
             default:
                 var numChars = name.length;
 
-                if (name[0] === '\"') {
+                if (name[0] == '\"') {
 
                     // string match
 
@@ -233,7 +233,7 @@ module LanguageParser = proto(Parser) {
                     node.type           = Node.Type.NONE;
                     node.description    = name.slice(1, numChars -1);
 
-                } else if (name[0] === '\'') {
+                } else if (name[0] == '\'') {
 
                     // regexp match
 
@@ -274,7 +274,7 @@ module LanguageParser = proto(Parser) {
 
         // append entry-node to definition (once only as it is already fully connected)
 
-        if (pair[0].type === Parser.Definition.Node.Type.BLOCK && this.definition.haveBlock(blockName) === false) {
+        if (pair[0].type == Parser.Definition.Node.Type.BLOCK && this.definition.haveBlock(blockName) == false) {
 
             this.definition.createBlock(pair[0], blockName);
         }
@@ -324,7 +324,7 @@ module LanguageParser = proto(Parser) {
         this.cacheModifier = cacheModifier;
         this.cacheData = this.transform.cache.fetch(filename, [ 'base'/*, 'resultData'*/ ], cacheModifier);
 
-        if (this.cacheData !== null) {
+        if (this.cacheData != null) {
             this.file = filename;
             this.captureTree = CaptureNode::fromJSON(this.cacheData['base'], this, func(captureName, blockName) {
                 return that.mapType(captureName, blockName);
@@ -349,13 +349,13 @@ module LanguageParser = proto(Parser) {
 
         var fromCache = false;
 
-        if (this.transform.options['cache'] && this.cacheData === null) {
+        if (this.transform.options['cache'] && this.cacheData == null) {
             fromCache = this.loadSourceFromCache(filename, cacheModifier);
         }
 
         // check if now available from cache, if not, parse
 
-        if (fromCache !== true) {
+        if (fromCache != true) {
             this.setSource(filename, fs.readFileSync(filename, 'UTF-8'), cacheModifier);
             return false;
         }
@@ -395,7 +395,7 @@ module LanguageParser = proto(Parser) {
 
         // write new data to cache (don't write it again if it just came from the cache)
 
-        if (this.transform.options['cache'] && this.cacheData === null && fs.existsSync(this.file)) {
+        if (this.transform.options['cache'] && this.cacheData == null && fs.existsSync(this.file)) {
 
             if (this.forceNoCache) {
                 application.log('LanguageParser', 'caching of ' + this.file + ' explicitly disabled');

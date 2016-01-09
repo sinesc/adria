@@ -33,45 +33,45 @@ test.group('test_module');
 
 test('full module export', func() {
 
-    assert(typeof Req === 'function');
-    assert(Req === RequireModule);
+    assert(typeof Req == 'function');
+    assert(Req == RequireModule);
 
     var req = new Req();
     assert(req instanceof RequireModule);
-    assert(req.value === 'proto value');
+    assert(req.value == 'proto value');
 });
 
 test('property export', func() {
 
-    assert(typeof Req.requireExport === 'object');
-    assert(Req.requireExport instanceof Object === false);
+    assert(typeof Req.requireExport == 'object');
+    assert(Req.requireExport instanceof Object == false);
 });
 
 test('export required', func() {
 
     var rex = Req.requireExport;
 
-    assert(rex.varValue === 'var assigned value');
+    assert(rex.varValue == 'var assigned value');
 
-    assert(rex.someGlobal === reqExpSomeGlobal);
-    assert(rex.someGlobal === 'global assign value');
+    assert(rex.someGlobal == reqExpSomeGlobal);
+    assert(rex.someGlobal == 'global assign value');
 
-    assert(rex.directValue === 'direct value');
+    assert(rex.directValue == 'direct value');
 });
 
 test('mangling and export', func() {
 
     var rex = Req.requireExport;
-    assert(rex.window === 'mangled export');
-    assert(typeof window === 'object' && window !== 'mangled export');
+    assert(rex.window == 'mangled export');
+    assert(typeof window == 'object' && window != 'mangled export');
 });
 
 test('mangling and module', func() {
 
-    assert(typeof Req.RequireModuleMangled === 'function');
+    assert(typeof Req.RequireModuleMangled == 'function');
 
     var mangledModule = new Req.RequireModuleMangled();
-    assert(mangledModule.value === 'mangled module proto value');
+    assert(mangledModule.value == 'mangled module proto value');
 
-    assert(typeof window === 'object' && window !== Req.RequireModuleMangled);
+    assert(typeof window == 'object' && window != Req.RequireModuleMangled);
 });

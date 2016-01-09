@@ -29,7 +29,7 @@ var ASTException = require('../../../language_parser/ast_exception');
 module AwaitLiteral = proto (YieldLiteral) {
 
     checkEnvironment: func() {
-        if (this.findProto(FunctionLiteral) instanceof AsyncLiteral === false) {
+        if (this.findProto(FunctionLiteral) instanceof AsyncLiteral == false) {
             throw new ASTException('Encountered "await" outside of asynchronous function', this);
         }
     },

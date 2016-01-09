@@ -40,13 +40,13 @@ test.group('test_func');
 test('default parameters', func() {
 
     var r = testDefaults(1);
-    assert(r[0] === 1 && r[1] === 'test' && r[2] === 3);
+    assert(r[0] == 1 && r[1] == 'test' && r[2] == 3);
 
     var s = testDefaults(1, 'works');
-    assert(s[0] === 1 && s[1] === 'works' && s[2] === 3);
+    assert(s[0] == 1 && s[1] == 'works' && s[2] == 3);
 
     var t = testDefaults(1, undefined, 4);
-    assert(t[0] === 1 && t[1] === undefined && t[2] === 4);
+    assert(t[0] == 1 && t[1] == undefined && t[2] == 4);
 });
 
 test('type annotations/default parameters, base param', func() {
@@ -78,7 +78,7 @@ test('type annotations/default parameters, default param', func() {
 test('advanced optionals', func() {
 
     var r = testOptionals(1);
-    assert(r[0] === 1 && r[1] === 2 && r[2] === 3 && r[3] === 4);
+    assert(r[0] == 1 && r[1] == 2 && r[2] == 3 && r[3] == 4);
 });
 
 test('type annotations/advanced optionals, base param', func() {
@@ -107,6 +107,6 @@ test('type annotations/advanced optionals, optional param', func() {
     assert(thrown instanceof AssertionFailedException);
 });
 
-if (test.noSummary !== true) {
+if (test.noSummary != true) {
     test.summary();
 }

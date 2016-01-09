@@ -46,7 +46,7 @@ module Node = proto (CaptureNode) {
      */
     prescan: func(object state) {
 
-        if (this.toBeMarkedAsUsed !== null) {
+        if (this.toBeMarkedAsUsed != null) {
 
             for (var name, fromParent in this.toBeMarkedAsUsed.data) {
                 this.markUsed(name, fromParent);
@@ -67,14 +67,14 @@ module Node = proto (CaptureNode) {
 
         var refScope = this.findRefScope(name, fromParent);
 
-        if (refScope !== null) {
+        if (refScope != null) {
 
             refScope.usages.inc(name);
             return true;
 
         } else {
 
-            if (this.toBeMarkedAsUsed === null) {
+            if (this.toBeMarkedAsUsed == null) {
                 this.toBeMarkedAsUsed = new Map();
             }
 
@@ -108,10 +108,10 @@ module Node = proto (CaptureNode) {
         var current = this.findScope(fromParent);
 
         do {
-            if (current.getOwnRef(name) !== null) {
+            if (current.getOwnRef(name) != null) {
                 return current;
             }
-        } while ((current = current.findScope(true)) !== null);
+        } while ((current = current.findScope(true)) != null);
 
         return current;
     },
@@ -132,7 +132,7 @@ module Node = proto (CaptureNode) {
             return false;
         }
 
-        if (this.findScope().getRef(name) !== null) {
+        if (this.findScope().getRef(name) != null) {
             return true;
         }
 
@@ -149,7 +149,7 @@ module Node = proto (CaptureNode) {
         var result = null;
         var nameNode = this.get('name');
 
-        if (nameNode.isNode() === false) {
+        if (nameNode.isNode() == false) {
 
             nameNode = this.ancestor(null, ['module_statement', 'export_statement', 'expression', 'dec_def', 'dec_def_import', 'proto_body_item']);
 
@@ -157,17 +157,17 @@ module Node = proto (CaptureNode) {
 
                 // fetch from declaration, proto-literal item's left side or expression
 
-                if (nameNode.value === 'dec_def' || nameNode.value === 'dec_def_import' || nameNode.value === 'module_statement' || nameNode.value === 'export_statement') {
+                if (nameNode.value == 'dec_def' || nameNode.value == 'dec_def_import' || nameNode.value == 'module_statement' || nameNode.value == 'export_statement') {
 
                     var item = nameNode.get('name');
                     return new Name(item, item.value);
 
-                } else if (nameNode.value === 'proto_body_item') {
+                } else if (nameNode.value == 'proto_body_item') {
 
                     var item = nameNode.get('key');
                     return new Name(item, item.value);
 
-                } else if (nameNode.value === 'expression') {
+                } else if (nameNode.value == 'expression') {
 
                     return nameNode.findAssignee();
                 }

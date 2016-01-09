@@ -33,7 +33,7 @@ module Name = proto {
         this.node = node;
         this.plain = plain;
         this.mangled = mangled;
-        this.valid = /^([\'\"]).*\1$/.test(plain) === false && node !== null && plain !== null;
+        this.valid = /^([\'\"]).*\1$/.test(plain) == false && node != null && plain != null;
     },
 
     getPlain: func() {
@@ -44,7 +44,7 @@ module Name = proto {
 
         // return custom mangled name
 
-        if (this.mangled !== null && this.valid) {
+        if (this.mangled != null && this.valid) {
             return this.mangled;
         }
 
@@ -52,9 +52,9 @@ module Name = proto {
 
         var plain = this.getPlain();
 
-        if (plain !== null) {
+        if (plain != null) {
             var name = this.node.findScope().getRef(plain);
-            this.mangled = (name === null ? plain : name);
+            this.mangled = (name == null ? plain : name);
             return this.mangled;
         }
 
@@ -65,7 +65,7 @@ module Name = proto {
 
         var plain = this.getPlain();
 
-        if (plain !== null) {
+        if (plain != null) {
             return this.node.csn(plain);
         } else  {
             throw new Exception('Attempted to get plain name node of string name');
@@ -76,7 +76,7 @@ module Name = proto {
 
         var mangled = this.getMangled();
 
-        if (mangled !== null) {
+        if (mangled != null) {
             return this.node.csn(mangled);
         } else  {
             throw new Exception('Attempted to get mangled name node of string name');

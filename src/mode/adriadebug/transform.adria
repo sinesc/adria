@@ -52,7 +52,7 @@ module AdriaDebugTransform = proto(AdriaTransform) {
 
         // process data from stdin and initial files
 
-        if (this.stdin !== null) {
+        if (this.stdin != null) {
             this.recurseDependencies('main' + this.options['extension'], this.stdin);
         }
 
@@ -72,7 +72,7 @@ module AdriaDebugTransform = proto(AdriaTransform) {
 
         // merge and return
 
-        if (this.options['outFile'] !== null) {
+        if (this.options['outFile'] != null) {
             fs.writeFileSync(this.options['basePath'] + this.options['outFile'], result.join('\n'));
         } else {
             process.stdout.write(result.join('\n'));

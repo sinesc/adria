@@ -70,7 +70,7 @@ module Scope = proto (Node) {
      */
     addLocal: func(string name, boolean declare = true, boolean ignore = false, boolean forceMangling = false) {
 
-        if (ignore === false && this.getOwnRef(name) !== null) {
+        if (ignore == false && this.getOwnRef(name) != null) {
             throw new ASTException('Reference "' + name + '" already defined in local scope', this);
         }
 
@@ -114,7 +114,7 @@ module Scope = proto (Node) {
 
         var scope = this.findRefScope(name);
 
-        if (scope !== null) {
+        if (scope != null) {
             return scope.getOwnRef(name);
         }
 
@@ -162,7 +162,7 @@ module Scope = proto (Node) {
 
         // check for reserved names or names used in parent scopes that are not also JS-scopes
 
-        if (forceMangling === false) {
+        if (forceMangling == false) {
 
             if (transform.globalReservations.has(name)) {
 
@@ -173,14 +173,14 @@ module Scope = proto (Node) {
                 var scope = this;
 
                 do {
-                    if ((refName = scope.getOwnRef(name)) !== null) {
+                    if ((refName = scope.getOwnRef(name)) != null) {
                         break;
                     }
-                } while (scope instanceof FunctionLiteral === false && (scope = scope.findProto(Scope, FunctionLiteral, true, null)) !== null);
+                } while (scope instanceof FunctionLiteral == false && (scope = scope.findProto(Scope, FunctionLiteral, true, null)) != null);
             }
         }
 
-        if (refName !== null || forceMangling) {
+        if (refName != null || forceMangling) {
             return '___' + name + '$' + transform.makeUID();
         }
 

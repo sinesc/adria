@@ -79,7 +79,7 @@ test('finally', func() {
 
     } catch (e) {
         assert(e instanceof TestException);
-        assert(ran === true);
+        assert(ran == true);
         return;
     }
 
@@ -121,7 +121,7 @@ test('default message', func() {
     try {
         throw new TestException();
     } catch (e) {
-        assert(e.message === 'test123');
+        assert(e.message == 'test123');
     }
 });
 
@@ -130,7 +130,7 @@ test('custom message', func() {
     try {
         throw new TestException('custom123');
     } catch (e) {
-        assert(e.message === 'custom123');
+        assert(e.message == 'custom123');
     }
 });
 
@@ -139,10 +139,10 @@ test('type-name', func() {
     try {
         throw new SubTestException();
     } catch (e) {
-        assert(e.stack.split(':', 1)[0] === 'SubTestException');
+        assert(e.stack.split(':', 1)[0] == 'SubTestException');
     }
 });
 
-if (test.noSummary !== true) {
+if (test.noSummary != true) {
     test.summary();
 }

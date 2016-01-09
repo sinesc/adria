@@ -73,13 +73,13 @@ module FunctionParamList = proto (ParamsNode) {
      */
     handle: func(FunctionLiteral functionNode, Scope scope, SourceNode result, Node node) {
 
-        if (node.key === 'item') {
+        if (node.key == 'item') {
 
             var nameSN = node.get('name').toSourceNode();
 
             // add to parameter list unless using advanced optionals
 
-            if (this.optionalPermutations === null) {
+            if (this.optionalPermutations == null) {
                 result.add(nameSN);
             }
 
@@ -88,7 +88,7 @@ module FunctionParamList = proto (ParamsNode) {
             var valueNode = node.get('value');
             var localName;
 
-            if (this.optionalPermutations === null) {
+            if (this.optionalPermutations == null) {
 
                 //!perf mangle basic default args and clone to avoid major performance degradation after assigning to an argument in a function that also contains "arguments.length"
 
@@ -105,7 +105,7 @@ module FunctionParamList = proto (ParamsNode) {
 
             // check for basic default args, push those to FunctionLiteral's specialArgs property
 
-            if (valueNode.isNode() && this.optionalPermutations === null) {
+            if (valueNode.isNode() && this.optionalPermutations == null) {
 
                 var defaultArg = this.csn([ 'var ' + localName + ' = (' + functionNode.jsArgumentsLength() + ' > ' + this.numParams + ' ? ', nameSN, ' : (', valueNode.toSourceNode(), '));' ]);
                 functionNode.specialArgs.push(defaultArg);
@@ -120,12 +120,12 @@ module FunctionParamList = proto (ParamsNode) {
             this.numParams++;
             return true;
 
-        } else if (node.key === 'opt_items') {
+        } else if (node.key == 'opt_items') {
 
             var that = this;
             node.each(func(child) { that.handle(functionNode, scope, result, child); });
 
-        } else if (node.key === 'rest') {
+        } else if (node.key == 'rest') {
 
             var name = node.get('name').toSourceNode();
 
@@ -186,17 +186,17 @@ module FunctionParamList = proto (ParamsNode) {
 
         var type = annotationNode.toString();
 
-        if (this.types.has(type) === false) {
+        if (this.types.has(type) == false) {
             this.markUsed(type);
         }
 
         // stop here if assertions are disabled
 
-        if (this.parser.transform.options['assert'] === false) {
+        if (this.parser.transform.options['assert'] == false) {
             return;
         }
 
-        var allowNull   = node.get('annotation_mod').value === '?';
+        var allowNull   = node.get('annotation_mod').value == '?';
         var name        = node.get('name').toString();
         var argId       = this.numParams + 1;
 
@@ -253,13 +253,13 @@ module FunctionParamList = proto (ParamsNode) {
             // either get parameter value from arguments or default values (get from arguments first as those have no dependencies)
 
             for (var id, parameter in parameters) {
-                if (parameterGroups[id] === null || parameterGroups[id].optionalIsActive) {
+                if (parameterGroups[id] == null || parameterGroups[id].optionalIsActive) {
                     result.add([ parameter.get('name').toSourceNode(), ' = arguments[' + (argId++) + '];' + this.nl() ]);
                 }
             }
 
             for (var id, parameter in parameters) {
-                if (parameterGroups[id] !== null && parameterGroups[id].optionalIsActive !== true) {
+                if (parameterGroups[id] != null && parameterGroups[id].optionalIsActive != true) {
                     result.add([ parameter.get('name').toSourceNode(), ' = ', parameter.get('value').toSourceNode(), ';' + this.nl() ]);
                 }
             }

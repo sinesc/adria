@@ -94,7 +94,7 @@ export Log = proto {
             this.indent += offset;
         }
 
-        if (message !== undefined && this.enabled) {
+        if (message != undefined && this.enabled) {
             console.log(('+' + diffLast + '/' + diffStart).padLeft(10, ' ') + 'ms: ' + source.padLeft(15) + ': ' + ' '.repeat(this.indent) + message);
         }
 
@@ -108,7 +108,7 @@ export Log = proto {
  * ensures the existance of the singleton instance
  */
 var initInstance = func(initalState = false) {
-    if (singleton === null) {
+    if (singleton == null) {
         singleton = new Log(initalState);
     }
 };

@@ -48,6 +48,6 @@ test('mangle function statement', func() {
     assert(function('world') == 'world');
 });
 
-if (test.noSummary !== true) {
+if (test.noSummary != true) {
     test.summary();
 }

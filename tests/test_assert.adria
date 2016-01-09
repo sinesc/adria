@@ -37,7 +37,7 @@ test('assert exception type', func() {
         test.fail('invalid assertion exception');
     }
 
-    if (caught !== true) {
+    if (caught != true) {
         test.fail('no exception thrown');
     }
 });
@@ -50,12 +50,12 @@ test('assert default message', func() {
         assert(true && false);
     } catch (AssertionFailedException e) {
         caught = true;
-        if (e.message !== 'true && false') {
+        if (e.message != 'true && false') {
             test.fail('asserion message wrong');
         }
     }
 
-    if (caught !== true) {
+    if (caught != true) {
         test.fail('no exception thrown');
     }
 });
@@ -68,12 +68,12 @@ test('assert user message', func() {
         assert(true && false, 'weird boolean operation');
     } catch (AssertionFailedException e) {
         caught = true;
-        if (e.message !== 'weird boolean operation') {
+        if (e.message != 'weird boolean operation') {
             test.fail('asserion message wrong');
         }
     }
 
-    if (caught !== true) {
+    if (caught != true) {
         test.fail('no exception thrown');
     }
 });
@@ -104,8 +104,8 @@ test('function argument checks', func() {
                 var valid = results[r][1];
 
                 var isError = false;
-                var shouldNotError = allowNull[a] && input === null;
-                var shouldError = (valid.indexOf(type[t]) === -1) && shouldNotError === false;
+                var shouldNotError = allowNull[a] && input == null;
+                var shouldError = (valid.indexOf(type[t]) == -1) && shouldNotError == false;
 
                 try {
                     replace_with_assert.type(type[t], allowNull[a], input, '');
@@ -113,7 +113,7 @@ test('function argument checks', func() {
                     isError = true;
                 }
 
-                if (isError !== shouldError) {
+                if (isError != shouldError) {
                     test.fail('expected ' + (shouldError ? 'failure' : 'pass') + ' for type ' + type[t] + ' given value ' + input + (allowNull[a] ? ' (allow null)' : ''));
                 }
 
@@ -122,6 +122,6 @@ test('function argument checks', func() {
     }
 });
 
-if (test.noSummary !== true) {
+if (test.noSummary != true) {
     test.summary();
 }

@@ -43,12 +43,12 @@ module Expression = proto (Node) {
         var end = -1;
 
         while (id--) {
-            if (children[id].key === 'wrap') {
+            if (children[id].key == 'wrap') {
                 end = id;
             } else if (end > -1 && this.wrapPrefix.lacks(children[id].key)) {
                 this.nest(id + 1, end);
                 end = -1;
-            } else if (end > -1 && end < children.length -1 && id === 0) {
+            } else if (end > -1 && end < children.length -1 && id == 0) {
                 this.nest(0, end);
             }
         }
@@ -71,7 +71,7 @@ module Expression = proto (Node) {
 
         for (var id, child in children) {
 
-            if (children[+id+1] !== undefined && children[+id+1].key === 'passignment_op') {
+            if (children[+id+1] != undefined && children[+id+1].key == 'passignment_op') {
                 propertyAssignSplit = +id + 1;
                 break;
             }
@@ -110,11 +110,11 @@ module Expression = proto (Node) {
 
                 case 'binary_op':
                     var value = child.value;
-                    if (value === '==') {
+                    if (value == '==') {
                         value = '===';
-                    } else if (value === '!=') {
+                    } else if (value == '!=') {
                         value = '!==';
-                    } else if (value === '===' || value === '!==') {
+                    } else if (value == '===' || value == '!==') {
                         application.notice('binary operator $0 is deprecated (comparisons is always strict)' + child.loc(), value);
                     }
                     result.add([ ' ', child.csn(value), ' ' ]);
@@ -156,7 +156,7 @@ module Expression = proto (Node) {
 
             // handle read-only assignment
 
-            if (children[propertyAssignSplit].value === ':=') {
+            if (children[propertyAssignSplit].value == ':=') {
                 result.prepend('Object.defineProperty(');
                 result.add([ ', ', name, ', {' + this.nl(1) + 'value: ' ]);
                 result.add(children[propertyAssignSplit + 1].toSourceNode());
@@ -201,22 +201,22 @@ module Expression = proto (Node) {
         var found = -1;
 
         for (var id = 0; id < children.length; id++) {
-            if (children[id].key === 'assignment_op') {
+            if (children[id].key == 'assignment_op') {
                 found = id - 1;
                 break;
             }
         }
 
-        if (found !== -1) {
+        if (found != -1) {
 
             var child = children[found];
 
-            if (child.value === 'access_operation_member' || child.value === 'access_operation_proto') {
+            if (child.value == 'access_operation_member' || child.value == 'access_operation_proto') {
                 var item = child.get('item');
                 return new Name(item, item.value);
             }
 
-            if (child.key === 'ident') {
+            if (child.key == 'ident') {
                 return new Name(child, child.value);
             }
         }

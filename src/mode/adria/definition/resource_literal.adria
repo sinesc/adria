@@ -34,7 +34,7 @@ module ResourceLiteral = proto (FileNode) {
 
         this.resolvedName = this.resolvePath(fileName, this.parser);
 
-        if (this.resolvedName !== null) {
+        if (this.resolvedName != null) {
             this.parser.resultData.resources.add(this.resolvedName);
         } else {
             throw new ASTException('Could not find resource "' + fileName + '"', this);

@@ -27,7 +27,7 @@ var ASTException = require('../../../language_parser/ast_exception');
 module YieldLiteral = proto (Node) {
 
     checkEnvironment: func() {
-        if (this.ancestor([ 'function', 'generator', 'async' ]).key !== 'generator') {
+        if (this.ancestor([ 'function', 'generator', 'async' ]).key != 'generator') {
             throw new ASTException('Encountered "yield" outside of generator', this);
         }
     },

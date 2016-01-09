@@ -29,7 +29,7 @@ module SourceNode = proto (MozillaSourceNode) {
 
         // fix insane zero based columns (vs one based lines)
 
-        MozillaSourceNode->constructor(aLine, aColumn !== null ? aColumn - 1 : null, aSource, aChunks, aName);
+        MozillaSourceNode->constructor(aLine, aColumn != null ? aColumn - 1 : null, aSource, aChunks, aName);
     },
 
     trim: func() {
@@ -48,11 +48,11 @@ module SourceNode = proto (MozillaSourceNode) {
                     break;
                 }
 
-            } else if (typeof lastChild === 'string') {
+            } else if (typeof lastChild == 'string') {
 
                 this.children[id] = lastChild.replace(/\s+$/, '');
 
-                if (this.children[id] === '') {
+                if (this.children[id] == '') {
                     this.children.pop();
                 } else {
                     break;
@@ -60,6 +60,6 @@ module SourceNode = proto (MozillaSourceNode) {
             }
         }
 
-        return this.children.length === 0;
+        return this.children.length == 0;
     }
 };

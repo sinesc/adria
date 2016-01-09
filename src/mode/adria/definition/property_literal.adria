@@ -81,10 +81,10 @@ module PropertyLiteral = proto (ObjectLiteral) {
             var childKey = child.get('key');
             var childValue = child.get('value');
 
-            if (childKey.value === 'default') {
+            if (childKey.value == 'default') {
                 this.defaultValueNode = childValue.toSourceNode();
                 this.useStorage = true;
-            } else if (childKey.value === 'storage') {
+            } else if (childKey.value == 'storage') {
                 this.storageName = childValue.value;
                 this.useStorage = true;
             }
@@ -92,11 +92,11 @@ module PropertyLiteral = proto (ObjectLiteral) {
 
         // find name for property storage field
 
-        if (this.storageName === null) {
+        if (this.storageName == null) {
 
             var name = this.findName();
 
-            if (name === null) {
+            if (name == null) {
                 this.storageName = '\'___psf$' + this.parser.transform.makeUID() + '\'';
             } else {
                 this.storageName = '\'_' + name.getPlain() + '\'';
@@ -112,7 +112,7 @@ module PropertyLiteral = proto (ObjectLiteral) {
             var childKey = child.get('key');
             var inherit = child.has('inherit');
 
-            if (childKey.value !== 'default' && childKey.value !== 'storage') {
+            if (childKey.value != 'default' && childKey.value != 'storage') {
 
                 var item = this.csn();
                 item.add(childKey.csn(childKey.value));

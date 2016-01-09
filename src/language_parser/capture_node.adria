@@ -149,7 +149,7 @@ module CaptureNode = proto {
 
             node = result.node;
 
-            if (node.capture !== '') {
+            if (node.capture != '') {
                 var match = current.addNew(node.capture, result.token.data, typeMapper(node.capture, node.name));
                 match.row = result.token.pos.row;
                 match.col = result.token.pos.col;
@@ -171,7 +171,7 @@ module CaptureNode = proto {
      */
     add: func(CaptureNode child) {
 
-        if (this.children === null) {
+        if (this.children == null) {
             this.children = [ ];
         }
 
@@ -199,7 +199,7 @@ module CaptureNode = proto {
      * @return boolean
      */
     isNode: func() {
-        return this.col !== -1;
+        return this.col != -1;
     },
 
     /**
@@ -208,7 +208,7 @@ module CaptureNode = proto {
      * @return boolean
      */
     isDummy: func() {
-        return this.col === -1;
+        return this.col == -1;
     },
 
     /**
@@ -217,7 +217,7 @@ module CaptureNode = proto {
      * @return boolean
      */
     isLeaf: func() {
-        return (this.children instanceof Array === false);
+        return (this.children instanceof Array == false);
     },
 
     /**
@@ -271,19 +271,19 @@ module CaptureNode = proto {
 
         var current = this;
 
-        key = typeof key === 'string' ? [ key ] : key;
-        value = typeof value === 'string' ? [ value ] : value;
+        key = typeof key == 'string' ? [ key ] : key;
+        value = typeof value == 'string' ? [ value ] : value;
 
-        if (key !== null && value !== null) {
-            while (current.parent instanceof CaptureNode && key.indexOf(current.parent.key) === -1 && value.indexOf(current.parent.value) === -1) {
+        if (key != null && value != null) {
+            while (current.parent instanceof CaptureNode && key.indexOf(current.parent.key) == -1 && value.indexOf(current.parent.value) == -1) {
                 current = current.parent;
             }
-        } else if (key !== null) {
-            while (current.parent instanceof CaptureNode && key.indexOf(current.parent.key) === -1) {
+        } else if (key != null) {
+            while (current.parent instanceof CaptureNode && key.indexOf(current.parent.key) == -1) {
                 current = current.parent;
             }
-        } else if (value !== null) {
-            while (current.parent instanceof CaptureNode && value.indexOf(current.parent.value) === -1) {
+        } else if (value != null) {
+            while (current.parent instanceof CaptureNode && value.indexOf(current.parent.value) == -1) {
                 current = current.parent;
             }
         }
@@ -308,7 +308,7 @@ module CaptureNode = proto {
 
         var current = fromParent ? this.parent : this;
 
-        while (current instanceof CaptureNode && current instanceof Constructor === false && (StopConstructor === null || current instanceof StopConstructor === false)) {
+        while (current instanceof CaptureNode && current instanceof Constructor == false && (StopConstructor == null || current instanceof StopConstructor == false)) {
             current = current.parent;
         }
 
@@ -328,7 +328,7 @@ module CaptureNode = proto {
 
         var current = fromParent ? this.parent : this;
 
-        while (current instanceof CaptureNode && (StopConstructor === null || current instanceof StopConstructor === false) && isMatch(constructors, current) === false) {
+        while (current instanceof CaptureNode && (StopConstructor == null || current instanceof StopConstructor == false) && isMatch(constructors, current) == false) {
             current = current.parent;
         }
 
@@ -350,7 +350,7 @@ module CaptureNode = proto {
             for (var id in this.children) {
                 var child = this.children[id];
 
-                if (child.key === key && index-- === 0) {
+                if (child.key == key && index-- == 0) {
                     return child;
                 }
             }
@@ -371,7 +371,7 @@ module CaptureNode = proto {
 
             for (var id, child in this.children) {
 
-                if (child.key === key) {
+                if (child.key == key) {
                     return true;
                 }
             }
@@ -394,7 +394,7 @@ module CaptureNode = proto {
             var last = children.length -1;
 
             for (var id in children) {
-                fn.call(this, children[id], +id === 0, +id === last);
+                fn.call(this, children[id], +id == 0, +id == last);
             }
         }
     },
@@ -422,12 +422,12 @@ module CaptureNode = proto {
             for (id = 0; id < len; id++) {
                 var child = children[id];
 
-                if (child.key === part[0]) {
-                    if (part.length === 1) {
+                if (child.key == part[0]) {
+                    if (part.length == 1) {
 
                         // delay by one loop to be able to identify the last item
 
-                        if (prevChild !== null) {
+                        if (prevChild != null) {
                             fn.call(this, prevChild, first, false);
                             first = false;
                         }
@@ -442,7 +442,7 @@ module CaptureNode = proto {
 
             // last item
 
-            if (prevChild !== null && prevChild.key === part[0] && part.length === 1) {
+            if (prevChild != null && prevChild.key == part[0] && part.length == 1) {
                 fn.call(this, prevChild, first, true);
             }
         }
@@ -467,7 +467,7 @@ module CaptureNode = proto {
         for (var id in pathString) {
             step = pathString[id].split('[');
 
-            if (step.length === 1) {
+            if (step.length == 1) {
                 current = current.get(step[0]);
             } else {
                 current = current.get(step[0], parseInt(step[1].slice(0, -1)));
@@ -523,7 +523,7 @@ module CaptureNode = proto {
 
         this.parser.indent += indent;
 
-        if (node !== null) {
+        if (node != null) {
             node.trim();
         }
 
@@ -592,7 +592,7 @@ module CaptureNode = proto {
         if (this.children instanceof Array) {
             for (var id in this.children) {
                 var child = this.children[id].toSourceNode();
-                if (child !== '') {
+                if (child != '') {
                     result.add(child);
                 }
             }
@@ -667,8 +667,8 @@ var stackDiff = func(Array stack, Array lastStack, finite minStackLen) {
     var minLen = Math.min(stack.length, lastStack.length, minStackLen);
 
     for (var i = 0; i < minLen; i++) {
-        if (stack[i].node === lastStack[i].node) {
-            if (stack[i].node.capture !== '') {
+        if (stack[i].node == lastStack[i].node) {
+            if (stack[i].node.capture != '') {
                 deepestCommonCapture = i;
             }
         } else {
@@ -683,7 +683,7 @@ var stackDiff = func(Array stack, Array lastStack, finite minStackLen) {
     var lastLen = lastStack.length;
 
     for (var i = deepestCommonCapture + 1; i < lastLen; i++) {
-        if (lastStack[i].node.capture !== '') {
+        if (lastStack[i].node.capture != '') {
             numCaptures++;
         }
     }
@@ -695,7 +695,7 @@ var stackDiff = func(Array stack, Array lastStack, finite minStackLen) {
     var len = stack.length;
 
     for (var i = deepestCommonCapture + 1; i < len; i++) {
-        if (stack[i].node.capture !== '') {
+        if (stack[i].node.capture != '') {
             captures.push(stack[i].node);
         }
     }

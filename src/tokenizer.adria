@@ -88,15 +88,15 @@ module Tokenizer = proto {
 
                 match = processor.match(data, startPos, lastMatch);
 
-                if (match !== null) {
+                if (match != null) {
 
-                    if (match.data !== null && match.name !== null) {
+                    if (match.data != null && match.name != null) {
                         result.push(new Token(match.data, this.Type[match.name], startPos, col, row));
                         lastMatch = match.data;
                     }
 
                     row += match.containedRows;
-                    col = (match.containedRows === 0 ? col + match.lastRowLen : match.lastRowLen + 1);
+                    col = (match.containedRows == 0 ? col + match.lastRowLen : match.lastRowLen + 1);
                     found = true;
                     startPos += match.data.length;
                     break;
@@ -105,7 +105,7 @@ module Tokenizer = proto {
 
             // none of the parsers were able to match the next token, error out
 
-            if (found !== true) {
+            if (found != true) {
                 throw new BaseException(filename + ': invalid token at row ' + row + ', column ' + col + ': "' + data.substr(startPos).split(/\r?\n/)[0] + '"');
             }
         }

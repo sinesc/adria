@@ -42,14 +42,14 @@ module RequireLiteral = proto (FileNode) {
 
         var resolvedName = util.normalizeExtension(this.moduleName, options['extension']);
 
-        if (parser.transform.builtins[resolvedName] !== undefined) {
+        if (parser.transform.builtins[resolvedName] != undefined) {
 
             // module is builtin, set flag for inclusion by transform and update modulename
 
             parser.transform.usedBuiltins.add(resolvedName);
             this.moduleName = resolvedName;
 
-            if (resolvedName === 'async.adria') {
+            if (resolvedName == 'async.adria') {
                 parser.resultData.globalDeclarations.add('___Async'); //!todo add a useBuiltin function to handle cases like this
             }
 
@@ -59,18 +59,18 @@ module RequireLiteral = proto (FileNode) {
 
             var resolvedPath = this.resolvePath(resolvedName, parser);
 
-            if (resolvedPath !== null && resolvedPath.hasPostfix(options['extension'])) {
+            if (resolvedPath != null && resolvedPath.hasPostfix(options['extension'])) {
 
                 // resolved to an adria file, include in application
 
                 this.moduleName = resolvedPath;
                 parser.resultData.requires.add(this.moduleName);
 
-            } else if (this.moduleName.hasPostfix(options['extension']) === false) {
+            } else if (this.moduleName.hasPostfix(options['extension']) == false) {
 
                 // use node require for node modules, include js for web
 
-                if (options['platform'] === 'node') {
+                if (options['platform'] == 'node') {
 
                     this.requireFunction = '___require';
 
@@ -80,7 +80,7 @@ module RequireLiteral = proto (FileNode) {
 
                     var resolvedJsPath = this.resolvePath(util.normalizeExtension(this.moduleName, '.js'), parser, true);
 
-                    if (resolvedJsPath === null) {
+                    if (resolvedJsPath == null) {
                         throw new ASTException('Could not find require "' + this.moduleName + '"', this);
                     }
 

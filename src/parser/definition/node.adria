@@ -57,7 +57,7 @@ module Node = proto {
 
         for (var id in children) {
 
-            if (children[id] === node) {
+            if (children[id] == node) {
                 return true;
             }
         }
@@ -130,7 +130,7 @@ module Node = proto {
         node.capture        = capture;
         node.tokenType      = tokenType;
         node.match          = match;
-        node.description    = (description !== '' ? description : (capture !== '' ? capture : match));
+        node.description    = (description != '' ? description : (capture != '' ? capture : match));
 
         return this.add(node);
     },
@@ -145,16 +145,16 @@ module Node = proto {
 
         // types have to overlap
 
-        if ((token.type & this.tokenType) === 0) {
+        if ((token.type & this.tokenType) == 0) {
             return false;
         }
 
         // compare the string or regex match
 
-        if (this.match === '') {
+        if (this.match == '') {
             return true;
-        } else if (typeof this.match === 'string') {
-            return token.data === this.match;
+        } else if (typeof this.match == 'string') {
+            return token.data == this.match;
         } else {
             return this.match.test(token.data);
         }
@@ -173,9 +173,9 @@ module Node = proto {
 
         // exit nodes always come last, so just look if the last node is an exit node
 
-        if (children[lastChild].type === Type.RETURN) {
+        if (children[lastChild].type == Type.RETURN) {
 
-            if (stack.length === 0) {
+            if (stack.length == 0) {
                 return true;
             } else {
                 return stack[stack.length -1].node.reachesExit(stack.slice(0, -1));
@@ -198,21 +198,21 @@ module Node = proto {
 
         for (var _, child in children) {
 
-            if (child.type === Type.RETURN) {
+            if (child.type == Type.RETURN) {
 
-                if (stack.length === 0) {
+                if (stack.length == 0) {
                     break;
                 }
 
                 var returnTo = stack[stack.length -1].node;
                 returnTo.matchingTokens(definition, stack.slice(0, -1), result);
 
-            } else if (child.type === Type.JUMP) {
+            } else if (child.type == Type.JUMP) {
 
                 var jumpTo = definition.getBlock(child.match);
                 jumpTo.matchingTokens(definition, stack.concat([ new StackItem(child, null) ]),result);
 
-            } else if (child.type === Type.BLOCK) {
+            } else if (child.type == Type.BLOCK) {
 
                 child.matchingTokens(definition, stack, result);
 
@@ -247,11 +247,11 @@ module Node = proto {
 
             var child = children[id];
 
-            if (child.type === Type.JUMP) {
+            if (child.type == Type.JUMP) {
 
                 // if this is a conditional jump, check if condition is met
 
-                if (child.condition !== '' && parser.checkCondition(child.condition, stack) === false) {
+                if (child.condition != '' && parser.checkCondition(child.condition, stack) == false) {
                     continue;
                 }
 
@@ -260,15 +260,15 @@ module Node = proto {
                 var blockRoot = parser.definition.getBlock(child.match);
                 var generator = blockRoot.filter(parser, token, stack.concat(new StackItem(child, token)));
 
-                while ((result = generator.next()).done === false) {
+                while ((result = generator.next()).done == false) {
                     yield result.value;
                 }
 
-            } else if (child.type === Type.RETURN) {
+            } else if (child.type == Type.RETURN) {
 
                 // reached bottom of the stack
 
-                if (stack.length === 0) {
+                if (stack.length == 0) {
                     break;
                 }
 
@@ -277,7 +277,7 @@ module Node = proto {
                 var top = stack[stack.length -1].node;
                 var generator = top.filter(parser, token, stack.slice(0, -1));
 
-                while ((result = generator.next()).done === false) {
+                while ((result = generator.next()).done == false) {
                     result.value.minStack = Math.min(result.value.minStack, stack.length -1);
                     yield result.value;
                 }

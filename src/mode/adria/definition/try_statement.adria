@@ -55,10 +55,10 @@ export Catch = proto (Node) {
 
             // handle non-first catch all and catch-specific
 
-            if (node instanceof CatchAll && first !== true) {
+            if (node instanceof CatchAll && first != true) {
                 var block;
                 result.add([ ' else {' + this.nl(1), block = node.toSourceNode(), this.nl(-1, block) + '}' ]);
-            } else if (node instanceof CatchSpecific && first !== true) {
+            } else if (node instanceof CatchSpecific && first != true) {
                 result.add([ ' else ', node.toSourceNode() ]);
             } else {
                 result.add(node.toSourceNode());
@@ -66,7 +66,7 @@ export Catch = proto (Node) {
 
             // last block not a catch-all block, rethrow
 
-            if (last && node instanceof CatchAll !== true) {
+            if (last && node instanceof CatchAll != true) {
                 result.add(' else { ' + this.nl(1, result));
                 result.add('throw ' + this.exceptionName + ';' + this.nl());
                 result.add(this.nl(-1, result) + '}');

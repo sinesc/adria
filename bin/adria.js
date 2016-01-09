@@ -1217,7 +1217,7 @@ module('cache.adria', function(module, resource) {
         function Cache() {
             this.checkBaseDir();
         }
-        Cache.prototype.version = "2bqfpm7kmfuaw8pgg8a317wm5s6k3by7wzxrtyznjkcrcyd7bfpvrycwzfb5c5hq";
+        Cache.prototype.version = "0mk91dutx3bzgw8k8wluyyarw1zc9urcarg7xw09kmwmxkkyupo2nkdeqmvzax50";
         Cache.prototype.baseDir = util.home() + '/.adria/cache/';
         Cache.prototype.checkBaseDir = function checkBaseDir() {
             if (this.baseDir.slice(0, 1) !== '/' || this.baseDir.slice(-1) !== '/') {
@@ -1677,7 +1677,7 @@ module('parser/definition/node.adria', function(module, resource) {
                 } else if (child.type === Type.BLOCK) {
                     child.matchingTokens(definition, stack, ___result$4q);
                 } else {
-                    ___result$4q[child.description != '' ? child.description : (child.capture != '' ? child.capture : '"' + child.match + '"')] = true;
+                    ___result$4q[child.description !== '' ? child.description : (child.capture !== '' ? child.capture : '"' + child.match + '"')] = true;
                 }
             }
             return ___result$4q;
@@ -2109,7 +2109,7 @@ module('definition_parser.adria', function(module, resource) {
                 this.pathBlocks[this.block_name] = [  ];
                 return ;
             }
-            if ((name === 'path' || name === 'source_name' || name === 'block_done') && currentPath.source.name != '' && currentPath.target.name != '') {
+            if ((name === 'path' || name === 'source_name' || name === 'block_done') && currentPath.source.name !== '' && currentPath.target.name !== '') {
                 this.pathBlocks[this.block_name].push(currentPath.clone());
                 currentPath.reset();
             }
@@ -2141,7 +2141,7 @@ module('definition_parser.adria', function(module, resource) {
             let results = Parser.prototype.parse.call(this, source);
             for (let id in results) {
                 let result = results[id];
-                if (result.node.capture != '') {
+                if (result.node.capture !== '') {
                     this.capture(result.node.capture, result.token.data);
                 }
             }
@@ -4065,6 +4065,16 @@ module('mode/adria/definition/expression.adria', function(module, resource) {
                         result.add(child.csn(child.value.search(/[a-z]/) > -1 ? child.value + ' ' : child.value));
                         break ;
                     case 'binary_op':
+                        let value = child.value;
+                        if (value === '==') {
+                            value = '===';
+                        } else if (value === '!=') {
+                            value = '!==';
+                        } else if (value === '===' || value === '!==') {
+                            application.notice('binary operator $0 is deprecated (comparisons is always strict)' + child.loc(), value);
+                        }
+                        result.add([ ' ', child.csn(value), ' ' ]);
+                        break ;
                     case 'assignment_op':
                     case 'ternary_op':
                         result.add([ ' ', child.csn(child.value), ' ' ]);
@@ -6108,85 +6118,16 @@ module('../../astdlib/astd/util.adria', function(module, resource) {
             asap(context, params, callback);
         };
     })();
-    let flashSortObjects = function flashSortObjects(a, n) {
-        var ___al = arguments.length;
-        var ___n$hf = (___al > 1 ? n : (a.length));
-        let i = 0;
-        let j = 0;
-        let k = 0;
-        let t;
-        let m = ~~(___n$hf * 0.125);
-        let a_nmin = a[0];
-        let nmax = 0;
-        let nmove = 0;
-        let l = new Array(m);
-        for (i = 0; i < m;i++) {
-            l[i] = 0;
-        }
-        for (i = 1; i < ___n$hf;++i) {
-            let a_i = a[i];
-            if (a_i.order < a_nmin.order) {
-                a_nmin = a_i;
-            }
-            if (a_i.order > a[nmax].order) {
-                nmax = i;
-            }
-        }
-        let a_nmax = a[nmax];
-        if (a_nmin === a_nmax) {
-            return a;
-        }
-        let c1 = (m - 1) / (a_nmax.order - a_nmin.order);
-        for (i = 0; i < ___n$hf;++i) {
-            ++l[~~(c1 * (a[i].order - a_nmin.order))];
-        }
-        for (k = 1; k < m;++k) {
-            l[k] += l[k - 1];
-        }
-        let hold = a_nmax;
-        a[nmax] = a[0];
-        a[0] = hold;
-        let flash;
-        j = 0;
-        k = m - 1;
-        i = ___n$hf - 1;
-        while (nmove < i) {
-            while (j > (l[k] - 1)) {
-                k = ~~(c1 * (a[++j].order - a_nmin.order));
-            }
-            if (k < 0) {
-                break ;
-            }
-            flash = a[j];
-            while (j !== l[k]) {
-                k = ~~(c1 * (flash.order - a_nmin.order));
-                hold = a[t = --l[k]];
-                a[t] = flash;
-                flash = hold;
-                ++nmove;
-            }
-        }
-        for (j = 1; j < ___n$hf;++j) {
-            hold = a[j];
-            i = j - 1;
-            while (i >= 0 && a[i].order > hold.order) {
-                a[i + 1] = a[i--];
-            }
-            a[i + 1] = hold;
-        }
-        return a;
-    };
     module.exports.defer = defer;
-    module.exports.flashSortObjects = flashSortObjects;
 });
 module('../../astdlib/astd/exceptions.adria', function(module, resource) {
     let InvalidArgumentException = (function(___parent) {
         function InvalidArgumentException() {
-            var ___num$hh = arguments.length, ___args$hg = new Array(___num$hh);
-            for (var ___i$hh = 0; ___i$hh < ___num$hh; ++___i$hh) {
-                ___args$hg[___i$hh] = arguments[___i$hh];
+            var ___num$hf = arguments.length, ___args$he = new Array(___num$hf);
+            for (var ___i$hf = 0; ___i$hf < ___num$hf; ++___i$hf) {
+                ___args$he[___i$hf] = arguments[___i$hf];
             }
-            ___parent.apply(this, ___args$hg);
+            ___parent.apply(this, ___args$he);
         }
         InvalidArgumentException.prototype = Object.create(___parent.prototype);
         InvalidArgumentException.prototype.constructor = InvalidArgumentException;
@@ -6194,11 +6135,11 @@ module('../../astdlib/astd/exceptions.adria', function(module, resource) {
     })(Exception);
     let LogicException = (function(___parent) {
         function LogicException() {
-            var ___num$hj = arguments.length, ___args$hi = new Array(___num$hj);
-            for (var ___i$hj = 0; ___i$hj < ___num$hj; ++___i$hj) {
-                ___args$hi[___i$hj] = arguments[___i$hj];
+            var ___num$hh = arguments.length, ___args$hg = new Array(___num$hh);
+            for (var ___i$hh = 0; ___i$hh < ___num$hh; ++___i$hh) {
+                ___args$hg[___i$hh] = arguments[___i$hh];
             }
-            ___parent.apply(this, ___args$hi);
+            ___parent.apply(this, ___args$hg);
         }
         LogicException.prototype = Object.create(___parent.prototype);
         LogicException.prototype.constructor = LogicException;
@@ -6275,11 +6216,11 @@ module('../../astdlib/astd/listenable.adria', function(module, resource) {
             offCallback(listenable._listener['_'], this, null);
         };
         Listenable.prototype.execute = function execute(eventName) {
-            var args, ___num$ht = arguments.length - 1;
-            if (___num$ht > 0) {
-                args = new Array(___num$ht);
-                for (var ___i$ht = 0; ___i$ht < ___num$ht; ++___i$ht) {
-                    args[___i$ht] = arguments[___i$ht + 1];
+            var args, ___num$hr = arguments.length - 1;
+            if (___num$hr > 0) {
+                args = new Array(___num$hr);
+                for (var ___i$hr = 0; ___i$hr < ___num$hr; ++___i$hr) {
+                    args[___i$hr] = arguments[___i$hr + 1];
                 }
             } else {
                 args = [];
@@ -6312,11 +6253,11 @@ module('../../astdlib/astd/listenable.adria', function(module, resource) {
             }
         };
         Listenable.prototype.forward = function forward(eventName) {
-            var args, ___num$hv = arguments.length - 1;
-            if (___num$hv > 0) {
-                args = new Array(___num$hv);
-                for (var ___i$hv = 0; ___i$hv < ___num$hv; ++___i$hv) {
-                    args[___i$hv] = arguments[___i$hv + 1];
+            var args, ___num$ht = arguments.length - 1;
+            if (___num$ht > 0) {
+                args = new Array(___num$ht);
+                for (var ___i$ht = 0; ___i$ht < ___num$ht; ++___i$ht) {
+                    args[___i$ht] = arguments[___i$ht + 1];
                 }
             } else {
                 args = [];
@@ -6326,9 +6267,9 @@ module('../../astdlib/astd/listenable.adria', function(module, resource) {
             return this.execute.bind.apply(this.execute, bindArgs);
         };
         Listenable.prototype.trigger = function trigger() {
-            var ___num$hx = arguments.length, args = new Array(___num$hx);
-            for (var ___i$hx = 0; ___i$hx < ___num$hx; ++___i$hx) {
-                args[___i$hx] = arguments[___i$hx];
+            var ___num$hv = arguments.length, args = new Array(___num$hv);
+            for (var ___i$hv = 0; ___i$hv < ___num$hv; ++___i$hv) {
+                args[___i$hv] = arguments[___i$hv];
             }
             util.defer(this, args, this.execute);
         };
@@ -6424,11 +6365,11 @@ module('../../astdlib/astd/listenable.adria', function(module, resource) {
         return Listener;
     })();
     let expand = function expand(fn, expansionArgId) {
-        var args, ___num$i3 = arguments.length - 2;
-        if (___num$i3 > 0) {
-            args = new Array(___num$i3);
-            for (var ___i$i3 = 0; ___i$i3 < ___num$i3; ++___i$i3) {
-                args[___i$i3] = arguments[___i$i3 + 2];
+        var args, ___num$i1 = arguments.length - 2;
+        if (___num$i1 > 0) {
+            args = new Array(___num$i1);
+            for (var ___i$i1 = 0; ___i$i1 < ___num$i1; ++___i$i1) {
+                args[___i$i1] = arguments[___i$i1 + 2];
             }
         } else {
             args = [];
@@ -6482,16 +6423,16 @@ module('monitor.adria', function(module, resource) {
     let Monitor = (function(___parent) {
         function Monitor(paths, ignoreFiles, delay, usePolling) {
             var ___al = arguments.length;
-            var ___paths$i8 = (___al > 0 ? paths : ([  ]));
-            var ___ignoreFiles$i9 = (___al > 1 ? ignoreFiles : ([  ]));
-            var ___delay$ia = (___al > 2 ? delay : (250));
-            var ___usePolling$ib = (___al > 3 ? usePolling : (false));
-            this.paths = ___paths$i8;
-            this.delay = ___delay$ia;
+            var ___paths$i6 = (___al > 0 ? paths : ([  ]));
+            var ___ignoreFiles$i7 = (___al > 1 ? ignoreFiles : ([  ]));
+            var ___delay$i8 = (___al > 2 ? delay : (250));
+            var ___usePolling$i9 = (___al > 3 ? usePolling : (false));
+            this.paths = ___paths$i6;
+            this.delay = ___delay$i8;
             this.ignoreFiles = new Set();
-            this.usePolling = ___usePolling$ib;
-            for (let _ in ___ignoreFiles$i9) {
-                let file = ___ignoreFiles$i9[_];
+            this.usePolling = ___usePolling$i9;
+            for (let _ in ___ignoreFiles$i7) {
+                let file = ___ignoreFiles$i7[_];
                 this.ignoreFiles.add(fspath.normalize(file));
             }
         }
@@ -6585,22 +6526,22 @@ module('monitor.adria', function(module, resource) {
     })(Listenable);
     let recursePath = function recursePath(path, includeHidden, grabFiles) {
         var ___al = arguments.length;
-        var ___path$il = (___al > 0 ? path : ('.'));
-        var ___includeHidden$im = (___al > 1 ? includeHidden : (false));
-        var ___grabFiles$in = (___al > 2 ? grabFiles : (false));
-        let files = fs.readdirSync(___path$il);
+        var ___path$ij = (___al > 0 ? path : ('.'));
+        var ___includeHidden$ik = (___al > 1 ? includeHidden : (false));
+        var ___grabFiles$il = (___al > 2 ? grabFiles : (false));
+        let files = fs.readdirSync(___path$ij);
         let result = [  ];
-        ___path$il = ___path$il.replace(/\/$/, '');
-        if (___grabFiles$in !== true) {
-            result.push(___path$il);
+        ___path$ij = ___path$ij.replace(/\/$/, '');
+        if (___grabFiles$il !== true) {
+            result.push(___path$ij);
         }
         for (let file in files) {
-            if (___includeHidden$im === true || files[file].substr(0, 1) !== '.') {
-                let stat = fs.statSync(___path$il + '/' + files[file]);
+            if (___includeHidden$ik === true || files[file].substr(0, 1) !== '.') {
+                let stat = fs.statSync(___path$ij + '/' + files[file]);
                 if (stat.isDirectory()) {
-                    result.push.apply(result, recursePath(___path$il + '/' + files[file], ___includeHidden$im, ___grabFiles$in));
-                } else if (___grabFiles$in && stat.isFile()) {
-                    result.push(___path$il + '/' + files[file]);
+                    result.push.apply(result, recursePath(___path$ij + '/' + files[file], ___includeHidden$ik, ___grabFiles$il));
+                } else if (___grabFiles$il && stat.isFile()) {
+                    result.push(___path$ij + '/' + files[file]);
                 }
             }
         }
@@ -6679,15 +6620,15 @@ module('mode/adria/transform.adria', function(module, resource) {
         };
         AdriaTransform.prototype.compile = function compile(forceReload, resourceChanges) {
             var ___al = arguments.length;
-            var ___forceReload$is = (___al > 0 ? forceReload : (null));
-            var ___resourceChanges$it = (___al > 1 ? resourceChanges : (true));
+            var ___forceReload$iq = (___al > 0 ? forceReload : (null));
+            var ___resourceChanges$ir = (___al > 1 ? resourceChanges : (true));
             this.reset();
             if (this.stdin !== null) {
-                this.recurseDependencies('main' + this.options['extension'], this.stdin, ___forceReload$is);
+                this.recurseDependencies('main' + this.options['extension'], this.stdin, ___forceReload$iq);
             }
             let files = this.options['files'];
             for (let id in files) {
-                this.recurseDependencies(util.normalizeExtension(files[id], this.options['extension']), null, ___forceReload$is);
+                this.recurseDependencies(util.normalizeExtension(files[id], this.options['extension']), null, ___forceReload$iq);
             }
             this.time('Load/preprocess $0.ms');
             for (let id in this.modules) {
@@ -6706,7 +6647,7 @@ module('mode/adria/transform.adria', function(module, resource) {
                 }
                 this.time('Scan $0.ms');
             }
-            if (this.options['monitor'] && this.numCompiled === 0 && ___resourceChanges$it === false) {
+            if (this.options['monitor'] && this.numCompiled === 0 && ___resourceChanges$ir === false) {
                 return ;
             }
             let code = this.mergeAll();
@@ -6719,15 +6660,15 @@ module('mode/adria/transform.adria', function(module, resource) {
         };
         AdriaTransform.prototype.recurseDependencies = function recurseDependencies(moduleName, data, forceReload) {
             var ___al = arguments.length;
-            var ___data$iv = (___al > 1 ? data : (null));
-            var ___forceReload$iw = (___al > 2 ? forceReload : (null));
-            let parser = this.getParser(moduleName, ___data$iv, ___forceReload$iw);
+            var ___data$it = (___al > 1 ? data : (null));
+            var ___forceReload$iu = (___al > 2 ? forceReload : (null));
+            let parser = this.getParser(moduleName, ___data$it, ___forceReload$iu);
             parser.preprocess({  });
             let requires = parser.resultData.requires;
             this.requiresDone.add(moduleName);
             for (let name in requires.data) {
                 if (this.requiresDone.has(name) === false) {
-                    this.recurseDependencies(name, null, ___forceReload$iw);
+                    this.recurseDependencies(name, null, ___forceReload$iu);
                 }
             }
             this.globalDeclarations = this.globalDeclarations.union(parser.resultData.globalDeclarations);
@@ -6746,10 +6687,10 @@ module('mode/adria/transform.adria', function(module, resource) {
         };
         AdriaTransform.prototype.time = function time(message) {
             var ___al = arguments.length;
-            var ___message$iy = (___al > 0 ? message : (null));
+            var ___message$iw = (___al > 0 ? message : (null));
             if (this.options['time'] && this.options['outFile'] !== null) {
-                if (___message$iy !== null) {
-                    console.log('Timing: ' + ___message$iy.format(Date.now() - this.startTime));
+                if (___message$iw !== null) {
+                    console.log('Timing: ' + ___message$iw.format(Date.now() - this.startTime));
                 }
                 this.startTime = Date.now();
             }
@@ -6856,24 +6797,24 @@ module('mode/adria/transform.adria', function(module, resource) {
         };
         AdriaTransform.prototype.getParser = function getParser(moduleName, data, forceReload) {
             var ___al = arguments.length;
-            var ___data$j4 = (___al > 1 ? data : (null));
-            var ___forceReload$j5 = (___al > 2 ? forceReload : (null));
+            var ___data$j2 = (___al > 1 ? data : (null));
+            var ___forceReload$j3 = (___al > 2 ? forceReload : (null));
             let parser;
             let fullName = path.normalize(this.options['basePath'] + moduleName);
-            if (this.cachedParsers.has(moduleName) && ___forceReload$j5 !== null && ___forceReload$j5.lacks(fullName)) {
+            if (this.cachedParsers.has(moduleName) && ___forceReload$j3 !== null && ___forceReload$j3.lacks(fullName)) {
                 parser = this.cachedParsers.get(moduleName);
                 parser.resetResult();
                 parser.reset();
             } else {
-                if (___forceReload$j5 !== null) {
+                if (___forceReload$j3 !== null) {
                     
                 }
                 parser = this.protoParser.clone();
                 parser.moduleName = moduleName;
-                if (___data$j4 === null) {
+                if (___data$j2 === null) {
                     parser.loadSource(fullName, this.cacheModifier);
                 } else {
-                    parser.setSource(moduleName, ___data$j4, this.cacheModifier);
+                    parser.setSource(moduleName, ___data$j2, this.cacheModifier);
                 }
                 this.cachedParsers.set(moduleName, parser);
                 this.numCompiled++;
@@ -6883,9 +6824,9 @@ module('mode/adria/transform.adria', function(module, resource) {
         AdriaTransform.prototype.defineImplicits = function defineImplicits() {
             let transform = this;
             let addReferences = function addReferences() {
-                var ___num$j8 = arguments.length, refs = new Array(___num$j8);
-                for (var ___i$j8 = 0; ___i$j8 < ___num$j8; ++___i$j8) {
-                    refs[___i$j8] = arguments[___i$j8];
+                var ___num$j6 = arguments.length, refs = new Array(___num$j6);
+                for (var ___i$j6 = 0; ___i$j6 < ___num$j6; ++___i$j6) {
+                    refs[___i$j6] = arguments[___i$j6];
                 }
                 for (let _ in refs) {
                     let ref = refs[_];
@@ -7018,23 +6959,23 @@ module('mode/adria/transform.adria', function(module, resource) {
             monitor.on('change', this, function(forceReload) {
                 try {
                     this.compile(forceReload, forceReload.intersect(this.resources).empty === false);
-                } catch (___exc$jd) {
-                    if (___exc$jd instanceof BaseException) {
-                        var e = ___exc$jd;
+                } catch (___exc$jb) {
+                    if (___exc$jb instanceof BaseException) {
+                        var e = ___exc$jb;
                         this.monitorError(e.message);
                     } else { 
-                        throw ___exc$jd;
+                        throw ___exc$jb;
                     }
                 }
             });
             try {
                 this.compile();
-            } catch (___exc$je) {
-                if (___exc$je instanceof BaseException) {
-                    var e = ___exc$je;
+            } catch (___exc$jc) {
+                if (___exc$jc instanceof BaseException) {
+                    var e = ___exc$jc;
                     this.monitorError(e.message);
                 } else { 
-                    throw ___exc$je;
+                    throw ___exc$jc;
                 }
             }
             monitor.start();
@@ -7044,8 +6985,8 @@ module('mode/adria/transform.adria', function(module, resource) {
                 let jsFile = this.options['basePath'] + this.options['outFile'];
                 fs.unlinkSync(jsFile);
                 fs.unlinkSync(jsFile.stripPostfix('.js') + '.map');
-            } catch (___exc$jg) {
-                var e = ___exc$jg;
+            } catch (___exc$je) {
+                var e = ___exc$je;
             }
             process.stderr.write('Error: ' + message + '\n');
         };
@@ -7073,11 +7014,11 @@ module('mode/adriadebug/parser.adria', function(module, resource) {
     };
     let AdriaDebugParser = (function(___parent) {
         function AdriaDebugParser() {
-            var ___num$jj = arguments.length, ___args$ji = new Array(___num$jj);
-            for (var ___i$jj = 0; ___i$jj < ___num$jj; ++___i$jj) {
-                ___args$ji[___i$jj] = arguments[___i$jj];
+            var ___num$jh = arguments.length, ___args$jg = new Array(___num$jh);
+            for (var ___i$jh = 0; ___i$jh < ___num$jh; ++___i$jh) {
+                ___args$jg[___i$jh] = arguments[___i$jh];
             }
-            ___parent.apply(this, ___args$ji);
+            ___parent.apply(this, ___args$jg);
         }
         AdriaDebugParser.prototype = Object.create(___parent.prototype);
         AdriaDebugParser.prototype.constructor = AdriaDebugParser;
@@ -7163,22 +7104,22 @@ module('application.adria', function(module, resource) {
                 } else {
                     try {
                         this.handle(options['mode'], stdin);
-                    } catch (___exc$jo) {
-                        if (___exc$jo instanceof BaseException) {
-                            var e = ___exc$jo;
+                    } catch (___exc$jm) {
+                        if (___exc$jm instanceof BaseException) {
+                            var e = ___exc$jm;
                             this.error(e.message);
                         } else { 
-                            throw ___exc$jo;
+                            throw ___exc$jm;
                         }
                     }
                 }
             };
             return function run() {
-                var ___num$jq = arguments.length, ___args$jp = new Array(___num$jq);
-                for (var ___i$jq = 0; ___i$jq < ___num$jq; ++___i$jq) {
-                    ___args$jp[___i$jq] = arguments[___i$jq];
+                var ___num$jo = arguments.length, ___args$jn = new Array(___num$jo);
+                for (var ___i$jo = 0; ___i$jo < ___num$jo; ++___i$jo) {
+                    ___args$jn[___i$jo] = arguments[___i$jo];
                 }
-                return new ___Async(___self.apply(this, ___args$jp));
+                return new ___Async(___self.apply(this, ___args$jn));
             };
         })();
         Application.prototype.handle = function handle(mode, stdin) {
@@ -7206,16 +7147,16 @@ module('application.adria', function(module, resource) {
         };
         Application.prototype.error = function error(message, exitCode) {
             var ___al = arguments.length;
-            var ___exitCode$jw = (___al > 1 ? exitCode : (1));
+            var ___exitCode$ju = (___al > 1 ? exitCode : (1));
             process.stderr.write('Error: ' + message + '\n');
-            process.exit(___exitCode$jw);
+            process.exit(___exitCode$ju);
         };
         Application.prototype.notice = function notice(message) {
-            var vars, ___num$jy = arguments.length - 1;
-            if (___num$jy > 0) {
-                vars = new Array(___num$jy);
-                for (var ___i$jy = 0; ___i$jy < ___num$jy; ++___i$jy) {
-                    vars[___i$jy] = arguments[___i$jy + 1];
+            var vars, ___num$jw = arguments.length - 1;
+            if (___num$jw > 0) {
+                vars = new Array(___num$jw);
+                for (var ___i$jw = 0; ___i$jw < ___num$jw; ++___i$jw) {
+                    vars[___i$jw] = arguments[___i$jw + 1];
                 }
             } else {
                 vars = [];

@@ -33,12 +33,12 @@ try {
     thrown = e;
 }
 
-if (thrown === null) {
+if (thrown == null) {
     console.log('assertion support is disabled, please recompile with --assert');
     process.exit(1);
 }
 
-if (thrown.stack.split(':', 1)[0] !== 'AssertionFailedException') {
+if (thrown.stack.split(':', 1)[0] != 'AssertionFailedException') {
     console.log('incorrect assertion type thrown during pretest, environment incompatible');
     process.exit(1);
 }
@@ -69,7 +69,7 @@ module test = func(name, timeout, testFunction) {
 
     // handle optional parameter async timeout
 
-    if (typeof timeout === 'function') {
+    if (typeof timeout == 'function') {
         testFunction = timeout;
         timeout = 1000;
     }
@@ -180,13 +180,13 @@ var consume = func() {
 
         var item = queue.shift();
 
-        if (item.type === 'test') {
+        if (item.type == 'test') {
             if (runTest(item)) {
                 break;  // break here on async test and wait for callback
             }
-        } else if (item.type === 'group') {
+        } else if (item.type == 'group') {
             showGroup(item);
-        } else if (item.type === 'summary') {
+        } else if (item.type == 'summary') {
             showSummary();
         }
     }
@@ -201,7 +201,7 @@ var asyncCallback = func(exception = null) {
 
     // callback was invoked before the the testfunction returned, ignore it, the function will be sync
 
-    if (inAsync === false) {
+    if (inAsync == false) {
         return;
     }
 
@@ -211,7 +211,7 @@ var asyncCallback = func(exception = null) {
     inAsync = false;
     asyncTimer = null;
 
-    if (exception !== null) {
+    if (exception != null) {
         exceptions.push(exception);
         fails++;
         print('(FAILED)');
@@ -267,7 +267,7 @@ var runTest = func(item) {
 
             // async test, exit here and wait for callback (or timeout failover)
 
-            if (asyncObject.done !== true) {
+            if (asyncObject.done != true) {
 
                 var exception = new TestException('Timeout after ' + item.timeout + 'ms');
                 asyncTimer = setTimeout(asyncCallback.bind(this, exception), item.timeout);

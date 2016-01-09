@@ -55,7 +55,7 @@ module SyntaxException = proto (BaseException) {
         this.node = node;
         this.stack = stack;
 
-        if (message === null) {
+        if (message == null) {
             message = this.unexpectedTokenMessage(includeTrace, parser, token, node, stack);
         } else {
             message = this.file + ': ' + message;
@@ -110,7 +110,7 @@ module SyntaxException = proto (BaseException) {
             levelToken = stack[id].token;
 
             if (levelNode instanceof Object) {
-                result += (id + 1) + '. ' + levelNode.name + (levelNode.capture !== '' ? ':' + levelNode.capture : '') + (levelNode.label !== '' ? '[' + levelNode.label + ']' : '');
+                result += (id + 1) + '. ' + levelNode.name + (levelNode.capture != '' ? ':' + levelNode.capture : '') + (levelNode.label != '' ? '[' + levelNode.label + ']' : '');
             } else {
                 result += 'null entry on stack';
             }

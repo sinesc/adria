@@ -199,14 +199,14 @@ module AdriaTransform = proto (Transform) {
 
         // additional monitor mode output
 
-        /*if (forceReload !== null) {
+        /*if (forceReload != null) {
             console.log((new Date()).format('Monitor: [%H:%M:%S] recompiling changed files...'));
             this.time();
         }*/
 
         // recursively preprocess data from stdin and initial files, assemble list of modules
 
-        if (this.stdin !== null) {
+        if (this.stdin != null) {
             this.recurseDependencies('main' + this.options['extension'], this.stdin, forceReload);
         }
 
@@ -240,7 +240,7 @@ module AdriaTransform = proto (Transform) {
 
         // only write if files changed
 
-        if (this.options['monitor'] && this.numCompiled === 0 && resourceChanges === false) {
+        if (this.options['monitor'] && this.numCompiled == 0 && resourceChanges == false) {
             //console.log((new Date()).format('Monitor: [%H:%M:%S] no changes. ready.'));
             return;
         }
@@ -283,7 +283,7 @@ module AdriaTransform = proto (Transform) {
         this.requiresDone.add(moduleName);
 
         for (var name in requires.data) {
-            if (this.requiresDone.has(name) === false) {
+            if (this.requiresDone.has(name) == false) {
                 this.recurseDependencies(name, null, forceReload);
             }
         }
@@ -297,9 +297,9 @@ module AdriaTransform = proto (Transform) {
         this.jsRequires = this.jsRequires.union(parser.resultData.jsRequires);
         this.resources = this.resources.union(parser.resultData.resources);
 
-        if (parser.resultData.interfaceName !== null) {
+        if (parser.resultData.interfaceName != null) {
 
-            if (this.interfaceName !== null) {
+            if (this.interfaceName != null) {
                 throw new ASTException('Interface already defined (' + this.interfaceName + ')', parser); //!todo where
             }
             this.interfaceName = parser.resultData.interfaceName;
@@ -317,9 +317,9 @@ module AdriaTransform = proto (Transform) {
      */
     time: func(string? message = null) {
 
-        if (this.options['time'] && this.options['outFile'] !== null) {
+        if (this.options['time'] && this.options['outFile'] != null) {
 
-            if (message !== null) {
+            if (message != null) {
                 console.log('Timing: ' + message.format(Date.now() - this.startTime));
             }
 
@@ -401,7 +401,7 @@ module AdriaTransform = proto (Transform) {
                 var result = { };
                 for (var id, value in data) {
                     var pair = value.split('=');
-                    result[pair[0]] = (pair[1] === undefined ? true : pair[1]); //!todo join all remaining (value might have contained =)
+                    result[pair[0]] = (pair[1] == undefined ? true : pair[1]); //!todo join all remaining (value might have contained =)
                 }
                 return result;
             }
@@ -455,7 +455,7 @@ module AdriaTransform = proto (Transform) {
         var parser;
         var fullName = path.normalize(this.options['basePath'] + moduleName);
 
-        if (this.cachedParsers.has(moduleName) && forceReload !== null && forceReload.lacks(fullName)) {
+        if (this.cachedParsers.has(moduleName) && forceReload != null && forceReload.lacks(fullName)) {
 
             parser = this.cachedParsers.get(moduleName);
             parser.resetResult();
@@ -463,14 +463,14 @@ module AdriaTransform = proto (Transform) {
 
         } else {
 
-            if (forceReload !== null) {
+            if (forceReload != null) {
                 //console.log((new Date()).format('Monitor: [%H:%M:%S] updating ' + moduleName));
             }
 
             parser = this.protoParser.clone();
             parser.moduleName = moduleName;
 
-            if (data === null) {
+            if (data == null) {
                 parser.loadSource(fullName, this.cacheModifier);
             } else {
                 parser.setSource(moduleName, data, this.cacheModifier);
@@ -511,9 +511,9 @@ module AdriaTransform = proto (Transform) {
             'application', 'Exception'
         );
 
-        if (this.options['platform'] === 'node') {
+        if (this.options['platform'] == 'node') {
             addReferences('process', 'Buffer');
-        } else if (this.options['platform'] === 'web') {
+        } else if (this.options['platform'] == 'web') {
             addReferences('screen', 'document', 'location', 'performance', 'alert', 'XMLHttpRequest', 'Worker');
         }
 
@@ -550,13 +550,13 @@ module AdriaTransform = proto (Transform) {
         if (options['shellwrap']) {
             node.add([
                 '#!/bin/sh\n',
-                '\':\' //; exec "`command -v nodejs || command -v node`" --harmony' + (options['shellargs'] === null ? '' : ' ' + options['shellargs']) + ' "$0" "$@"\n'
+                '\':\' //; exec "`command -v nodejs || command -v node`" --harmony' + (options['shellargs'] == null ? '' : ' ' + options['shellargs']) + ' "$0" "$@"\n'
             ]);
         }
 
         // include header comment
 
-        if (options['headerFile'] !== null) {
+        if (options['headerFile'] != null) {
             var header = fs.readFileSync(options['basePath'] + options['headerFile'], 'UTF-8');
             node.add('/**\n * ' + header.trim().replace(/\r?\n/g, '\n * ') + '\n */\n');
         }
@@ -565,7 +565,7 @@ module AdriaTransform = proto (Transform) {
 
         var closureParams = new Map();
 
-        if (options['platform'] === 'node') {
+        if (options['platform'] == 'node') {
             closureParams.set({
                 'global'    : 'window',
                 'module'    : '___module',
@@ -573,7 +573,7 @@ module AdriaTransform = proto (Transform) {
             });
         } else {
             closureParams.set('self', 'window');
-            if (this.interfaceName !== null) {
+            if (this.interfaceName != null) {
                 closureParams.set('typeof define === "undefined" ? null : define', '___define');
                 closureParams.set('typeof module !== "object" ? { ___nomodule: true } : module', '___module');
             }
@@ -636,7 +636,7 @@ module AdriaTransform = proto (Transform) {
 
         // register interface with outside module loader
 
-        if (this.interfaceName !== null) {
+        if (this.interfaceName != null) {
             var interfaceTpl = tpl.fetch(resource('../../../templates/adria/interface.tpl'));
             node.add(new SourceNode(1, 1, 'adria-interface.js', interfaceTpl));
         }
@@ -653,7 +653,7 @@ module AdriaTransform = proto (Transform) {
      */
     output: func(SourceNode node) {
 
-        if (this.options['outFile'] !== null) {
+        if (this.options['outFile'] != null) {
 
             var jsFile = this.options['basePath'] + this.options['outFile'];
 
@@ -701,7 +701,7 @@ module AdriaTransform = proto (Transform) {
 
         var ignore = [ ];
 
-        if (this.options['outFile'] !== null) {
+        if (this.options['outFile'] != null) {
 
             var jsFile = this.options['basePath'] + this.options['outFile'];
             ignore.push(jsFile);
@@ -717,7 +717,7 @@ module AdriaTransform = proto (Transform) {
 
         monitor.on('change', this, func(forceReload) {
             try {
-                this.compile(forceReload, forceReload.intersect(this.resources).empty === false);
+                this.compile(forceReload, forceReload.intersect(this.resources).empty == false);
             } catch (BaseException e) {
                 this.monitorError(e.message);
             }

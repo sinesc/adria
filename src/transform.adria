@@ -101,7 +101,7 @@ module Transform = proto {
             param: [ 'c', 'config' ],
             help: 'Use build configuration',
             helpVar: 'file',
-            formatter: func(value) { return value === true ? 'build.abc' : (value === null ? null : util.normalizeExtension(value, '.abc')); },
+            formatter: func(value) { return value == true ? 'build.abc' : (value == null ? null : util.normalizeExtension(value, '.abc')); },
         });
 
         application.args.add({
@@ -109,7 +109,7 @@ module Transform = proto {
             param: [ 'write-config' ],
             help: 'Write build configuration',
             helpVar: 'file',
-            formatter: func(value) { return value === true ? 'build.abc' : (value === null ? null : util.normalizeExtension(value, '.abc')); },
+            formatter: func(value) { return value == true ? 'build.abc' : (value == null ? null : util.normalizeExtension(value, '.abc')); },
         });
     },
 
@@ -134,7 +134,7 @@ module Transform = proto {
 
         for (var key, value in base) {
 
-            if (result[key] === undefined) {
+            if (result[key] == undefined) {
 
                 result[key] = value;
 
@@ -142,11 +142,11 @@ module Transform = proto {
 
                 result[key] = (new Set(depend[key])).add(value).toArray();
 
-            } else if (typeof result[key] === 'object' && value !== null && typeof value === 'object') {
+            } else if (typeof result[key] == 'object' && value != null && typeof value == 'object') {
 
                 result[key] = (new Map(depend[key])).set(value).data;
 
-            } else if (value !== null) {
+            } else if (value != null) {
 
                 result[key] = value;
             }
@@ -165,7 +165,7 @@ module Transform = proto {
 
         var options = JSON.parse(fs.readFileSync(file));
 
-        if (typeof options['depend'] === 'string') {
+        if (typeof options['depend'] == 'string') {
             options = this.mergeOptions(options, this.readOptions(options['depend']));
         }
 
@@ -184,7 +184,7 @@ module Transform = proto {
 
         for (var key, value in options) {
 
-            if (key !== 'writeConfig' && key !== 'readConfig' && key !== 'depend' && value !== null) {
+            if (key != 'writeConfig' && key != 'readConfig' && key != 'depend' && value != null) {
                 saveOptions[key] = value;
             }
         }
@@ -199,7 +199,7 @@ module Transform = proto {
 
         var options = application.args.parse(true);
 
-        if (options['readConfig'] !== null) {
+        if (options['readConfig'] != null) {
             options = this.mergeOptions(options, this.readOptions(options['readConfig']));
         }
 
@@ -208,7 +208,7 @@ module Transform = proto {
             process.exit(0);
         }
 
-        if (options['writeConfig'] !== null) {
+        if (options['writeConfig'] != null) {
             this.writeOptions(options['writeConfig'], options);
         }
 

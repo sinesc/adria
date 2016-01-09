@@ -63,7 +63,7 @@ module Definition = proto {
      * @return boolean exists
      */
     haveBlock: func(string name) {
-        return (this.blockRoot[name] !== undefined);
+        return (this.blockRoot[name] != undefined);
     },
 
     /**
@@ -76,7 +76,7 @@ module Definition = proto {
 
         var node = this.blockRoot[name];
 
-        if (node === undefined) {
+        if (node == undefined) {
             throw new Exception('referencing non-existing definition block ' + name);
         }
 

@@ -50,8 +50,8 @@ test('proto statement', func() {
     proto Sub (Base) {
     }
 
-    assert(typeof Base === 'function');
-    assert(typeof Sub === 'function');
+    assert(typeof Base == 'function');
+    assert(typeof Sub == 'function');
     assert((new Base) instanceof Base);
     assert((new Sub) instanceof Base);
 });
@@ -68,7 +68,7 @@ test('null proto', func() {
 
     var p = new P();
 
-    assert((p instanceof P) && (p instanceof Object === false));
+    assert((p instanceof P) && (p instanceof Object == false));
 });
 
 test('object proto', func() {
@@ -99,8 +99,8 @@ test('anonymous proto', func() {
 
     var x = new X();
 
-    assert(x.value === 123);
-    assert(X.prototype.constructor.name === 'Anonymous');
+    assert(x.value == 123);
+    assert(X.prototype.constructor.name == 'Anonymous');
 });
 
 test('parent keyword', func() {
@@ -108,18 +108,18 @@ test('parent keyword', func() {
     // provide parameter
 
     var base = new Base(2);
-    assert(base.value === 2);
+    assert(base.value == 2);
 
     var sub = new Sub(2);
-    assert(sub.value === 4);
+    assert(sub.value == 4);
 
     // default parameter
 
     var baseD = new Base();
-    assert(baseD.value === 4);
+    assert(baseD.value == 4);
 
     var subD = new Sub();
-    assert(subD.value === 6);
+    assert(subD.value == 6);
 });
 
 test('self keyword', func() {
@@ -196,14 +196,14 @@ test('parent/self in proto body', func() {
         test6: self::test4,
     };
 
-    assert(Base::test1 === 1234);
-    assert(Base::test2() === 5678);
-    assert(Sub::test3 === Base::test1);
-    assert(Sub::test4 === Base::test2());
-    assert(SubSub::test5 === Sub::test3);
-    assert(SubSub::test6 === Sub::test4);
+    assert(Base::test1 == 1234);
+    assert(Base::test2() == 5678);
+    assert(Sub::test3 == Base::test1);
+    assert(Sub::test4 == Base::test2());
+    assert(SubSub::test5 == Sub::test3);
+    assert(SubSub::test6 == Sub::test4);
 });
 
-if (test.noSummary !== true) {
+if (test.noSummary != true) {
     test.summary();
 }

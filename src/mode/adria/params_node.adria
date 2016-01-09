@@ -41,7 +41,7 @@ module ParamsNode = proto (Node) {
         var result = 0;
 
         this.eachKey('opt_items', func(node) {
-            if (node.optionalIsActive === true) {
+            if (node.optionalIsActive == true) {
                 var items = 0;
                 node.eachKey('item', func() {
                     items++;
@@ -83,7 +83,7 @@ module ParamsNode = proto (Node) {
         var result = [ ];
 
         this.each(func(node) {
-            if (node.key === 'opt_items') {
+            if (node.key == 'opt_items') {
                 var nestedParameters = node.indexParameters();
                 if (nestedParameters.length > 0) {
                     result.push.apply(result, nestedParameters);
@@ -140,7 +140,7 @@ module ParamsNode = proto (Node) {
     applyOptionalPermutation: func(string permutation, Array optionals) {
 
         for (var id = 0; id < permutation.length; id++) {
-            optionals[id].optionalIsActive = (permutation.slice(id, id + 1) === '1');
+            optionals[id].optionalIsActive = (permutation.slice(id, id + 1) == '1');
         }
     },
 };

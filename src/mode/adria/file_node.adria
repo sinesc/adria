@@ -34,7 +34,7 @@ module FileNode = proto (Node) {
      * @param boolean true if path is a relative path
      */
     isRelativePath: func(string filename) {
-        return filename.slice(0, 2) === './' || filename.slice(0, 3) === '../';
+        return filename.slice(0, 2) == './' || filename.slice(0, 3) == '../';
     },
 
     /**
@@ -110,7 +110,7 @@ module FileNode = proto (Node) {
 
             if (fs.existsSync(nodeModules)) {
 
-                if (rootName + extension === filename) {
+                if (rootName + extension == filename) {
 
                     if (fs.existsSync(nodeModules + rootName + '/index.js')) {
                         return path.relative(basePath, nodeModules + rootName + '/index.js');
@@ -126,11 +126,11 @@ module FileNode = proto (Node) {
                 }
             }
 
-            if (currentLevel !== '/') {
+            if (currentLevel != '/') {
                 currentLevel = path.normalize(currentLevel + '../');
             }
 
-        } while (currentLevel !== '/');
+        } while (currentLevel != '/');
 
         return null;
     }

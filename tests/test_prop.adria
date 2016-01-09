@@ -109,27 +109,27 @@ var testProp = func(Type, propName, storageName, initialValue) {
     var testObj = new Type();
     var testValue = propName + 'Test';
 
-    assert(testObj[propName] === initialValue);
-    assert(testObj[storageName] === initialValue, 'storage was properly initialized');
+    assert(testObj[propName] == initialValue);
+    assert(testObj[storageName] == initialValue, 'storage was properly initialized');
 
     testObj[propName] = testValue;
-    assert(testObj[propName] === testValue);
-    assert(testObj[storageName] === testValue);
+    assert(testObj[propName] == testValue);
+    assert(testObj[storageName] == testValue);
 
     var descriptor = Object.getOwnPropertyDescriptor(testObj, propName);
-    assert(descriptor === undefined);
+    assert(descriptor == undefined);
 
     descriptor = Object.getOwnPropertyDescriptor(TestObj.prototype, propName);
-    assert(typeof descriptor.get === 'function');
-    assert(typeof descriptor.set === 'function');
-    assert(descriptor.enumerable === false);
-    assert(descriptor.configurable === false);
+    assert(typeof descriptor.get == 'function');
+    assert(typeof descriptor.set == 'function');
+    assert(descriptor.enumerable == false);
+    assert(descriptor.configurable == false);
 
     descriptor = Object.getOwnPropertyDescriptor(TestObj.prototype, storageName);
-    assert(descriptor.value === initialValue);
-    assert(descriptor.writable === true);
-    assert(descriptor.enumerable === false);
-    assert(descriptor.configurable === false);
+    assert(descriptor.value == initialValue);
+    assert(descriptor.writable == true);
+    assert(descriptor.enumerable == false);
+    assert(descriptor.configurable == false);
 };
 
 /*
@@ -153,48 +153,48 @@ test('direct object attachment', func() {
         }
     };
 
-    assert(obj.test === 123);
+    assert(obj.test == 123);
 
     obj.test = 2;
 
-    assert(obj.test === 246);
+    assert(obj.test == 246);
 });
 
 test('simple fields', func() {
 
     var testObj = new TestObj();
 
-    assert(testObj.stringField === 'stringFieldValue');
-    assert(testObj.plainField === 'plainFieldValue');
+    assert(testObj.stringField == 'stringFieldValue');
+    assert(testObj.plainField == 'plainFieldValue');
 
     testObj.stringField = 'writeTest';
-    assert(testObj.stringField === 'writeTest');
+    assert(testObj.stringField == 'writeTest');
 
     var descriptor = Object.getOwnPropertyDescriptor(testObj, 'stringField');
-    assert(descriptor.value === 'writeTest');
-    assert(descriptor.writable === true);
-    assert(descriptor.enumerable === true);
-    assert(descriptor.configurable === true);
+    assert(descriptor.value == 'writeTest');
+    assert(descriptor.writable == true);
+    assert(descriptor.enumerable == true);
+    assert(descriptor.configurable == true);
 });
 
 test('non-storage properties', func() {
 
     var testObj = new TestObj();
 
-    assert(testObj.nonStorageProp === 'testData');
-    assert(testObj._nonStorageProp === undefined, 'no storage was generated for non-storage property');
+    assert(testObj.nonStorageProp == 'testData');
+    assert(testObj._nonStorageProp == undefined, 'no storage was generated for non-storage property');
 
     testObj.nonStorageProp = 'writeTest';
-    assert(testObj.nonStorageProp === 'writeTest');
+    assert(testObj.nonStorageProp == 'writeTest');
 
     var descriptor = Object.getOwnPropertyDescriptor(testObj, 'nonStorageProp');
-    assert(descriptor === undefined);
+    assert(descriptor == undefined);
 
     descriptor = Object.getOwnPropertyDescriptor(TestObj.prototype, 'nonStorageProp');
-    assert(typeof descriptor.get === 'function');
-    assert(typeof descriptor.set === 'function');
-    assert(descriptor.enumerable === false);
-    assert(descriptor.configurable === false);
+    assert(typeof descriptor.get == 'function');
+    assert(typeof descriptor.set == 'function');
+    assert(descriptor.enumerable == false);
+    assert(descriptor.configurable == false);
 });
 
 test('storage properties', func() {
@@ -233,10 +233,10 @@ test('storage scope', func() {
     };
 
     var test = new ResObj();
-    assert(test.plainProp === null);
+    assert(test.plainProp == null);
 
     test.plainProp = 'test';
-    assert(test.plainProp === 'test');
+    assert(test.plainProp == 'test');
 });
 
 test('prototype extension', func() {
@@ -265,8 +265,8 @@ test('prototype extension', func() {
 
     var mytest = new MyTestObj();
 
-    assert(mytest.myAnonStorageProp === undefined);
-    assert(mytest.myDefaultStorageProp === 'my default value');
+    assert(mytest.myAnonStorageProp == undefined);
+    assert(mytest.myDefaultStorageProp == 'my default value');
 });
 
 test('property inheritance (get)', func() {
@@ -282,8 +282,8 @@ test('property inheritance (get)', func() {
 
     var ig = new InheritGet();
     ig.myProp = 3;
-    assert(ig.myProp === 6);
-    assert(ig.value === 6);
+    assert(ig.myProp == 6);
+    assert(ig.value == 6);
 });
 
 test('property inheritance (set)', func() {
@@ -299,8 +299,8 @@ test('property inheritance (set)', func() {
 
     var ig = new InheritSet();
     ig.myProp = 3;
-    assert(ig.myProp === 6);
-    assert(ig.value === 3);
+    assert(ig.myProp == 6);
+    assert(ig.value == 3);
 });
 
 test('deep property inheritance', func() {
@@ -327,8 +327,8 @@ test('deep property inheritance', func() {
 
     var ia = new InheritSet();
     ia.myProp = 3;
-    assert(ia.myProp === 8);
-    assert(ia.value === 4);
+    assert(ia.myProp == 8);
+    assert(ia.value == 4);
 
     var InheritGet = proto (InheritSet) {
         myProp: prop {
@@ -341,10 +341,10 @@ test('deep property inheritance', func() {
 
     var ib = new InheritGet();
     ib.myProp = 1.5;            // 1.5 * 8 * 8 = 96 in storage
-    assert(ib.myProp === 32);   // storage * 2 / 6  = 32
-    assert(ib.value === 16);    // storage / 6 = 16
+    assert(ib.myProp == 32);   // storage * 2 / 6  = 32
+    assert(ib.value == 16);    // storage / 6 = 16
 });
 
-if (test.noSummary !== true) {
+if (test.noSummary != true) {
     test.summary();
 }

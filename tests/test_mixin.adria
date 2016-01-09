@@ -53,16 +53,16 @@ test('simple mixin statement', func() {
         ownPropertyA: 'Base::ownPropertyA',
     }
 
-    assert(MixinA::ownPropertyA === 'MixinA::ownPropertyA');
-    assert(MixinA::mixinProperty === 'MixinA::mixinProperty');
+    assert(MixinA::ownPropertyA == 'MixinA::ownPropertyA');
+    assert(MixinA::mixinProperty == 'MixinA::mixinProperty');
 
-    assert(Base::ownPropertyA === 'Base::ownPropertyA');
-    assert(Base::mixinProperty === 'MixinA::mixinProperty');
+    assert(Base::ownPropertyA == 'Base::ownPropertyA');
+    assert(Base::mixinProperty == 'MixinA::mixinProperty');
 
     var instance = new Base();
 
-    assert(instance.ownPropertyA === 'Base::ownPropertyA');
-    assert(instance.mixinProperty === 'MixinA::mixinProperty');
+    assert(instance.ownPropertyA == 'Base::ownPropertyA');
+    assert(instance.mixinProperty == 'MixinA::mixinProperty');
 
     assert(instance instanceof Base);
 });
@@ -74,19 +74,19 @@ test('multi mixin statement', func() {
         ownPropertyB: 'Base::ownPropertyB',
     }
 
-    assert(Base::ownPropertyA === 'Base::ownPropertyA');
-    assert(Base::ownPropertyB === 'Base::ownPropertyB');
-    assert(Base::mixinProperty === 'MixinB::mixinProperty');
-    assert(Base::mixinPropertyA === 'MixinA::mixinPropertyA');
-    assert(Base::mixinPropertyB === 'MixinB::mixinPropertyB');
+    assert(Base::ownPropertyA == 'Base::ownPropertyA');
+    assert(Base::ownPropertyB == 'Base::ownPropertyB');
+    assert(Base::mixinProperty == 'MixinB::mixinProperty');
+    assert(Base::mixinPropertyA == 'MixinA::mixinPropertyA');
+    assert(Base::mixinPropertyB == 'MixinB::mixinPropertyB');
 
     var instance = new Base();
 
-    assert(instance.ownPropertyA === 'Base::ownPropertyA');
-    assert(instance.ownPropertyB === 'Base::ownPropertyB');
-    assert(instance.mixinProperty === 'MixinB::mixinProperty');
-    assert(instance.mixinPropertyA === 'MixinA::mixinPropertyA');
-    assert(instance.mixinPropertyB === 'MixinB::mixinPropertyB');
+    assert(instance.ownPropertyA == 'Base::ownPropertyA');
+    assert(instance.ownPropertyB == 'Base::ownPropertyB');
+    assert(instance.mixinProperty == 'MixinB::mixinProperty');
+    assert(instance.mixinPropertyA == 'MixinA::mixinPropertyA');
+    assert(instance.mixinPropertyB == 'MixinB::mixinPropertyB');
 
     assert(instance instanceof Base);
 });
@@ -111,23 +111,23 @@ test('inherit from mixin-proto', func() {
         ownPropertyA: 'Sub::ownPropertyA',
     }
 
-    assert(Sub::ownPropertyA === 'Sub::ownPropertyA');
-    assert(Sub::ownPropertyB === 'Base::ownPropertyB');
-    assert(Sub::ownPropertyC === 'MixinC::ownPropertyC');
-    assert(Sub::mixinProperty === 'MixinC::mixinProperty');
-    assert(Sub::mixinPropertyA === 'MixinA::mixinPropertyA');
-    assert(Sub::mixinPropertyB === 'MixinB::mixinPropertyB');
-    assert(Sub::mixinPropertyC === 'MixinC::mixinPropertyC');
+    assert(Sub::ownPropertyA == 'Sub::ownPropertyA');
+    assert(Sub::ownPropertyB == 'Base::ownPropertyB');
+    assert(Sub::ownPropertyC == 'MixinC::ownPropertyC');
+    assert(Sub::mixinProperty == 'MixinC::mixinProperty');
+    assert(Sub::mixinPropertyA == 'MixinA::mixinPropertyA');
+    assert(Sub::mixinPropertyB == 'MixinB::mixinPropertyB');
+    assert(Sub::mixinPropertyC == 'MixinC::mixinPropertyC');
 
     var instance = new Sub();
 
-    assert(instance.ownPropertyA === 'Sub::ownPropertyA');
-    assert(instance.ownPropertyB === 'Base::ownPropertyB');
-    assert(instance.ownPropertyC === 'MixinC::ownPropertyC');
-    assert(instance.mixinProperty === 'MixinC::mixinProperty');
-    assert(instance.mixinPropertyA === 'MixinA::mixinPropertyA');
-    assert(instance.mixinPropertyB === 'MixinB::mixinPropertyB');
-    assert(instance.mixinPropertyC === 'MixinC::mixinPropertyC');
+    assert(instance.ownPropertyA == 'Sub::ownPropertyA');
+    assert(instance.ownPropertyB == 'Base::ownPropertyB');
+    assert(instance.ownPropertyC == 'MixinC::ownPropertyC');
+    assert(instance.mixinProperty == 'MixinC::mixinProperty');
+    assert(instance.mixinPropertyA == 'MixinA::mixinPropertyA');
+    assert(instance.mixinPropertyB == 'MixinB::mixinPropertyB');
+    assert(instance.mixinPropertyC == 'MixinC::mixinPropertyC');
 
     assert(instance instanceof Base);
     assert(instance instanceof Sub);
@@ -141,10 +141,10 @@ test('literal syntax', func() {
         ownPropertyA: 'Base::ownPropertyA',
     };
 
-    assert(Base::ownPropertyA === 'Base::ownPropertyA');
-    assert(Base::mixinProperty === 'MixinB::mixinProperty');
-    assert(Base::mixinPropertyA === 'MixinA::mixinPropertyA');
-    assert(Base::mixinPropertyB === 'MixinB::mixinPropertyB');
+    assert(Base::ownPropertyA == 'Base::ownPropertyA');
+    assert(Base::mixinProperty == 'MixinB::mixinProperty');
+    assert(Base::mixinPropertyA == 'MixinA::mixinPropertyA');
+    assert(Base::mixinPropertyB == 'MixinB::mixinPropertyB');
 
     assert((new Base) instanceof Base);
 
@@ -152,10 +152,10 @@ test('literal syntax', func() {
         ownPropertyA: 'Base::ownPropertyA',
     };
 
-    assert(Base2::ownPropertyA === 'Base::ownPropertyA');
-    assert(Base2::mixinProperty === 'MixinB::mixinProperty');
-    assert(Base2::mixinPropertyA === 'MixinA::mixinPropertyA');
-    assert(Base2::mixinPropertyB === 'MixinB::mixinPropertyB');
+    assert(Base2::ownPropertyA == 'Base::ownPropertyA');
+    assert(Base2::mixinProperty == 'MixinB::mixinProperty');
+    assert(Base2::mixinPropertyA == 'MixinA::mixinPropertyA');
+    assert(Base2::mixinPropertyB == 'MixinB::mixinPropertyB');
 
     assert((new Base2) instanceof Base2);
 
@@ -163,16 +163,16 @@ test('literal syntax', func() {
         ownPropertyB: 'Sub::ownPropertyB',
     };
 
-    assert(Sub::ownPropertyA === 'Base::ownPropertyA');
-    assert(Sub::ownPropertyB === 'Sub::ownPropertyB');
-    assert(Sub::mixinProperty === 'MixinC::mixinProperty');
-    assert(Sub::mixinPropertyA === 'MixinA::mixinPropertyA');
-    assert(Sub::mixinPropertyB === 'MixinB::mixinPropertyB');
+    assert(Sub::ownPropertyA == 'Base::ownPropertyA');
+    assert(Sub::ownPropertyB == 'Sub::ownPropertyB');
+    assert(Sub::mixinProperty == 'MixinC::mixinProperty');
+    assert(Sub::mixinPropertyA == 'MixinA::mixinPropertyA');
+    assert(Sub::mixinPropertyB == 'MixinB::mixinPropertyB');
 
     assert((new Sub) instanceof Base2);
     assert((new Sub) instanceof Sub);
 });
 
-if (test.noSummary !== true) {
+if (test.noSummary != true) {
     test.summary();
 }

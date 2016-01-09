@@ -29,7 +29,7 @@ module ApplicationStatement = proto (Node) {
 
         // check if application was user-defined. if it is not, enable application support
 
-        if (this.findScope().getRef('application', false) === null) {
+        if (this.findScope().getRef('application', false) == null) {
             this.parser.transform.addApplication = true;
         }
 

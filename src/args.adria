@@ -47,12 +47,12 @@ module Args = proto {
      */
     add: func(object options) {
 
-        assert(typeof options.name === 'string');
-        assert(typeof options.param === 'string' || options.param instanceof Array);
+        assert(typeof options.name == 'string');
+        assert(typeof options.param == 'string' || options.param instanceof Array);
 
         this.definition[options.name] = options;
 
-        if (typeof options.param === 'string') {
+        if (typeof options.param == 'string') {
             this.paramMap[options.param] = options.name;
         } else if (options.param instanceof Array) {
             for (var i = 0; i < options.param.length; ++i) {
@@ -86,23 +86,23 @@ module Args = proto {
 
         for (var paramName, value in this.rawArgs) {
 
-            if (this.paramMap[paramName] === undefined) {
+            if (this.paramMap[paramName] == undefined) {
                 unknown[paramName] = value;
-            } else if (value instanceof Array === false || value.length > 0) {
+            } else if (value instanceof Array == false || value.length > 0) {
                 parsed[this.paramMap[paramName]] = value;
             }
         }
 
         for (var name, options in this.definition) {
 
-            var formatter = options.formatter !== undefined ? options.formatter : identity;
-            assert(typeof formatter === 'function');
+            var formatter = options.formatter != undefined ? options.formatter : identity;
+            assert(typeof formatter == 'function');
 
-            if (parsed[name] === undefined && nullDefaults) {
+            if (parsed[name] == undefined && nullDefaults) {
                 parsed[name] = null;
             } else {
-                var value = parsed[name] !== undefined ? parsed[name] : options.defaultValue;
-                parsed[name] = formatter.call(this, value !== undefined ? value : null);
+                var value = parsed[name] != undefined ? parsed[name] : options.defaultValue;
+                parsed[name] = formatter.call(this, value != undefined ? value : null);
             }
         }
 
@@ -132,10 +132,10 @@ module Args = proto {
 
         for (var name, options in this.definition) {
 
-            var formatter = options.formatter !== undefined ? options.formatter : identity;
-            assert(typeof formatter === 'function');
+            var formatter = options.formatter != undefined ? options.formatter : identity;
+            assert(typeof formatter == 'function');
 
-            parsed[name] = nullDefaults ? null : formatter.call(this, options.defaultValue !== undefined ? options.defaultValue : null);
+            parsed[name] = nullDefaults ? null : formatter.call(this, options.defaultValue != undefined ? options.defaultValue : null);
         }
 
         return parsed;
@@ -156,8 +156,8 @@ module Args = proto {
         // output argument summary behind processname
 
         for (var name, options in this.definition) {
-            var isPositional = options.param === '_' || (options.param.length === 1 && options.param[0] === '_');
-            if (options.help && isPositional === false) {
+            var isPositional = options.param == '_' || (options.param.length == 1 && options.param[0] == '_');
+            if (options.help && isPositional == false) {
                 var param = formatParams(options, true, true);
                 if (length + param.length > 80) {
                     result += "\n  " + param;
@@ -173,7 +173,7 @@ module Args = proto {
 
         // add positional argument
 
-        if (positional !== null && this.definition[positional].help) {
+        if (positional != null && this.definition[positional].help) {
             var options = this.definition[positional];
             result += ' ' + options.helpVar + ' [' + options.helpVar + ' ...]';
             result += "\n\nPositional arguments:";
@@ -185,7 +185,7 @@ module Args = proto {
         result += "\n\nOptional arguments:";
 
         for (var name, options in this.definition) {
-            if (options.help && options.param !== '_' && (options.param.length !== 1 || options.param[0] !== '_')) {
+            if (options.help && options.param != '_' && (options.param.length != 1 || options.param[0] != '_')) {
                 var fullParams = formatParams(options);
                 result += "\n  " + fullParams.padRight(20);
                 if (fullParams.length > 18) {
@@ -206,17 +206,17 @@ var formatDefault = func(options) {
     var invertParam = options.param instanceof Array ? options.param[options.param.length -1] : options.param;
     var stringValue = null;
 
-    if (typeof defaultValue === 'string') {
+    if (typeof defaultValue == 'string') {
         stringValue = defaultValue;
     } else if (defaultValue instanceof Array && defaultValue.length > 0) {
         stringValue = defaultValue.join(', ');
-    } else if (typeof defaultValue === 'object' && defaultValue !== null && defaultValue instanceof Array === false) {
+    } else if (typeof defaultValue == 'object' && defaultValue != null && defaultValue instanceof Array == false) {
         stringValue = '!todo';
-    } else if (defaultValue === true) {
+    } else if (defaultValue == true) {
         stringValue = 'enabled, --no-' + invertParam + ' to disable';
     }
 
-    if (stringValue !== null) {
+    if (stringValue != null) {
         return ' [ ' + stringValue + ' ]';
     } else {
         return '';
@@ -225,13 +225,13 @@ var formatDefault = func(options) {
 
 var formatParams = func(object options, first = false, brackets = false) {
 
-    var params = typeof options.param === 'string' ? [ options.param ] : (first ? [ options.param[0] ] : options.param);
+    var params = typeof options.param == 'string' ? [ options.param ] : (first ? [ options.param[0] ] : options.param);
     var result = [];
 
     for (var i, param in params) {
-        if (param !== '_') {
+        if (param != '_') {
 
-            var item = (param.length === 1 ? '-' : '--') + param;
+            var item = (param.length == 1 ? '-' : '--') + param;
 
             if (options.allowed) {
                 item += ' {' + options.allowed.join(',') + '}';

@@ -79,7 +79,7 @@ module FunctionLiteral = proto (Scope) {
 
             if (transform.globalReservations.has(plain)) {
                 var importedAs = transform.globalReferences.find(plain, null);
-                var message = '"$0" locally shadows external "$0"' + (importedAs !== null ? ' (imported as "$1")' : '');
+                var message = '"$0" locally shadows external "$0"' + (importedAs != null ? ' (imported as "$1")' : '');
                 application.notice(message + this.loc(), plain, importedAs);
             }
         }
@@ -237,7 +237,7 @@ module FunctionLiteral = proto (Scope) {
      */
     jsProtoLookup: func(string lookupName, string ownName = lookupName) {
 
-        if (lookupName === '') {
+        if (lookupName == '') {
             throw new ASTException('Unable to determine function name required by parent/self lookup', this);
         }
 
@@ -297,7 +297,7 @@ module FunctionLiteral = proto (Scope) {
 
             // register in function scope
 
-            if (name !== null && name.valid) {
+            if (name != null && name.valid) {
                 var mangledName = this.addLocal(name.getPlain(), false, true);
                 this.name = new Name(name.node, name.getPlain(), mangledName);
             } else {

@@ -32,6 +32,6 @@ module Ident = proto (ValueType) {
      */
     toSourceNode: func() {
         var name = this.findScope().getRef(this.value);
-        return this.csn(name !== null ? name : this.value);
+        return this.csn(name != null ? name : this.value);
     }
 };

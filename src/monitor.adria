@@ -92,7 +92,7 @@ module Monitor = proto (Listenable) {
      */
     stop: func() {
 
-        if (this.watcher !== null) {
+        if (this.watcher != null) {
             for (var _, watcher in this.watcher) {
                 this.removeWatcher(watcher);
             }
@@ -112,7 +112,7 @@ module Monitor = proto (Listenable) {
             var that = this;
 
             fs.watchFile(path, { persistent: true, interval: 507 }, func(curr, prev) {
-                if (curr.mtime !== prev.mtime) {
+                if (curr.mtime != prev.mtime) {
                     that.compounder(pathToFile, 'rename', file);
                 }
             });
@@ -152,7 +152,7 @@ module Monitor = proto (Listenable) {
 
         // deleting a folder returns "change" for path with file = the folder name, resulting in path/to/deleted folder/deleted folder
 
-        if (path.hasPostfix(file) && fs.existsSync(fullName) === false) {
+        if (path.hasPostfix(file) && fs.existsSync(fullName) == false) {
             return;
         }
 
@@ -166,7 +166,7 @@ module Monitor = proto (Listenable) {
 
         this.diff.add(fullName);
 
-        if (event === 'rename') {
+        if (event == 'rename') {
             this.rescan = true;
         }
 
@@ -201,13 +201,13 @@ var recursePath = func(string path = '.', boolean includeHidden = false, boolean
 
     path = path.replace(/\/$/, '');
 
-    if (grabFiles !== true) {
+    if (grabFiles != true) {
         result.push(path);
     }
 
     for (var file in files) {
 
-        if (includeHidden === true || files[file].substr(0, 1) !== '.') {
+        if (includeHidden == true || files[file].substr(0, 1) != '.') {
 
             var stat = fs.statSync(path + '/' + files[file]);
 

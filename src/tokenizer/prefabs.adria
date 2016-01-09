@@ -138,14 +138,14 @@ var regexFunc = func(string? name, RegExp regex, RegExp? lastRegex, func? callba
         func(data, start, lastMatch) {
             var result = regex.exec(data.substr(start));
 
-            if (result !== null && (lastRegex === null || lastRegex.exec(lastMatch) !== null)) {
+            if (result != null && (lastRegex == null || lastRegex.exec(lastMatch) != null)) {
                 var rows = result[0].occurances('\n');
                 var lastBreak = result[0].lastIndexOf('\n');
                 var lastRowLen = result[0].length - (lastBreak + 1);
 
                 var match = new Match(this.name, result[0], start + result[0].length, rows, lastRowLen);
 
-                if (callback !== null) {
+                if (callback != null) {
                     return callback(match);
                 } else {
                     return match;

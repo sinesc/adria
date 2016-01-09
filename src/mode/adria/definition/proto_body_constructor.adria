@@ -51,7 +51,7 @@ module ProtoBodyConstructor = proto (FunctionLiteral) {
             var name = this.name.valid ? this.name.getPlain() : 'Anonymous';
             var mangledName = this.name.valid ? this.name.getMangled() : 'Anonymous';
 
-            if (name !== mangledName) {
+            if (name != mangledName) {
                 this.requiresMangling = true;
                 result.add([ 'var ', this.name.getMangledNode(), ' = function ', this.name.getPlainNode() ]);
             } else {
@@ -69,6 +69,6 @@ module ProtoBodyConstructor = proto (FunctionLiteral) {
     },
 
     jsProtoLookup: func(string lookupName, string ownName = lookupName) {
-        return parent->jsProtoLookup('constructor', ownName !== '' ? ownName : 'Anonymous');
+        return parent->jsProtoLookup('constructor', ownName != '' ? ownName : 'Anonymous');
     },
 };

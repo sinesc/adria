@@ -67,7 +67,7 @@ test.group('test_async');
 test('async return', func#(done) {
 
     var result = await asyncReturn(#);
-    assert(result === 10);
+    assert(result == 10);
 
     done();
 });
@@ -79,7 +79,7 @@ test('async auto return', func#(done) {
     }, 100);
 
     var result = await asyncAutoReturn(#);
-    assert(result === undefined);
+    assert(result == undefined);
     clearTimeout(failover);
 
     done();
@@ -101,8 +101,8 @@ test('async auto catch', func#(done) {
         caught = true;
     }
 
-    assert(result === undefined);
-    assert(caught === true);
+    assert(result == undefined);
+    assert(caught == true);
 
     clearTimeout(failover);
     done();
@@ -114,13 +114,13 @@ test('wrap, then await', func#(#) {
 
     var wrap = sleep(10, #);
     var result = await wrap;
-    assert(result === 10);
+    assert(result == 10);
 });
 
 test('await wrap', func#(#) {
 
     var result = await sleep(11, #);
-    assert(result === 11);
+    assert(result == 11);
 });
 
 test('wrap throwing', func#(#) {
@@ -134,14 +134,14 @@ test('wrap throwing', func#(#) {
         assert(e instanceof TestException);
     }
 
-    assert(thrown === true);
+    assert(thrown == true);
 });
 
 test('wrap, then await', func#(#) {
 
     var wrap = sleep(10, #);
     var result = await wrap;
-    assert(result === 10);
+    assert(result == 10);
 });
 
 test('wrap throwing, await it', func#(#) {
@@ -160,7 +160,7 @@ test('wrap throwing, await it', func#(#) {
         thrown = e;
     }
 
-    assert(thrown instanceof TestException && thrown.message === 'expected error');
+    assert(thrown instanceof TestException && thrown.message == 'expected error');
 });
 
 test('wrap error, await it', func#(#) {
@@ -179,7 +179,7 @@ test('wrap error, await it', func#(#) {
         thrown = e;
     }
 
-    assert(thrown instanceof TestException && thrown.message === 'expected error');
+    assert(thrown instanceof TestException && thrown.message == 'expected error');
 });
 
 test('wrap and await multiple, array', func#(#) {
@@ -190,7 +190,7 @@ test('wrap and await multiple, array', func#(#) {
         sleep(10, #),
     ];
 
-    assert(result instanceof Array && result[0] === 15 && result[1] === 5 && result[2] === 10);
+    assert(result instanceof Array && result[0] == 15 && result[1] == 5 && result[2] == 10);
 });
 
 test('wrap and await multiple, object', func#(#) {
@@ -201,7 +201,7 @@ test('wrap and await multiple, object', func#(#) {
         c: sleep(10, #),
     };
 
-    assert(result instanceof Object && result.a === 15 && result.b === 5 && result.c === 10);
+    assert(result instanceof Object && result.a == 15 && result.b == 5 && result.c == 10);
 });
 
 test('wrap and await multiple, single invalid argument', func#(#) {
@@ -217,7 +217,7 @@ test('wrap and await multiple, single invalid argument', func#(#) {
         thrown = e;
     }
 
-    assert(result === undefined && thrown instanceof Async.AsyncException);
+    assert(result == undefined && thrown instanceof Async.AsyncException);
 });
 
 test('wrap and await multiple, single error', func#(#) {
@@ -233,7 +233,7 @@ test('wrap and await multiple, single error', func#(#) {
         thrown = e;
     }
 
-    assert(result === undefined && thrown instanceof TestException && thrown.message === 'expected error');
+    assert(result == undefined && thrown instanceof TestException && thrown.message == 'expected error');
 });
 
 test('wrap and await multiple, all error', func#(#) {
@@ -249,9 +249,9 @@ test('wrap and await multiple, all error', func#(#) {
         thrown = e;
     }
 
-    assert(result === undefined && thrown instanceof TestException && thrown.message === 'expected error');
+    assert(result == undefined && thrown instanceof TestException && thrown.message == 'expected error');
 });
 
-if (test.noSummary !== true) {
+if (test.noSummary != true) {
     test.summary();
 }

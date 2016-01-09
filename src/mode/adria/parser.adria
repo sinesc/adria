@@ -85,10 +85,10 @@ module AdriaParser = proto(LanguageParser) {
         var that = this;
 
         return data.replace(/\{\{([_a-zA-Z][_a-zA-Z_0-9]*)\}\}/g, func(matches, key) {
-            if (key.slice(0, 3) === '___') {
+            if (key.slice(0, 3) == '___') {
                 that.forceNoCache = true;
             }
-            return (defines[key] === undefined ? '' : defines[key]);
+            return (defines[key] == undefined ? '' : defines[key]);
         });
     },
 
@@ -155,7 +155,7 @@ module AdriaParser = proto(LanguageParser) {
 
         var typeName = blockName.snakeToCamel(true);
 
-        if (typeof definition[typeName] === 'function') {
+        if (typeof definition[typeName] == 'function') {
             return definition[typeName];
         }
 
@@ -175,21 +175,21 @@ module AdriaParser = proto(LanguageParser) {
 
         var node = LanguageParser->createNode(name, capture, label, condition);
 
-        if (name === 'ident') {
+        if (name == 'ident') {
 
             node.match          = '';
             node.type           = 0;
             node.tokenType      = this.tokenizer.Type.IDENT;
             node.description    = '<identifier>';
 
-        } else if (name === 'name') {
+        } else if (name == 'name') {
 
             node.match          = '';
             node.type           = 0;
             node.tokenType      = this.tokenizer.Type.IDENT | this.tokenizer.Type.KEYWORD;
             node.description    = '<name>';
 
-        } else if (name === 'regexp') {
+        } else if (name == 'regexp') {
 
             node.match          = '';
             node.type           = 0;
@@ -210,7 +210,7 @@ module AdriaParser = proto(LanguageParser) {
 
         LanguageParser->loadSourceFromCache(filename, cacheModifier);
 
-        if (this.cacheData !== null && this.transform.options['map']) {
+        if (this.cacheData != null && this.transform.options['map']) {
             this.sourceCode = fs.readFileSync(filename, 'UTF-8').replace('\r\n', '\n');
         }
     },

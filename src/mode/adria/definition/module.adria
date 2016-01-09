@@ -58,7 +58,7 @@ module Module = proto (Scope) {
 
     setInterface: func(string name) {
 
-        if (this.interfaceName !== null) {
+        if (this.interfaceName != null) {
             throw new ASTException('Duplicate interface declaration', this);
         }
 
@@ -94,7 +94,7 @@ module Module = proto (Scope) {
 
         var refName;
 
-        if ((refName = Scope->getOwnRef(name)) !== null) {
+        if ((refName = Scope->getOwnRef(name)) != null) {
             return refName;
         }
 
@@ -102,7 +102,7 @@ module Module = proto (Scope) {
 
         if (this.exports.has(name)) {
             return this.exports.get(name);
-        } else if (this.moduleExport === name) {
+        } else if (this.moduleExport == name) {
             return this.moduleExport;
         }
 
@@ -121,7 +121,7 @@ module Module = proto (Scope) {
 
         // module export
 
-        if (this.moduleExport !== null) {
+        if (this.moduleExport != null) {
             result.add([ 'module.exports = ', this.moduleExport, ';' + this.nl() ]);
         }
 
@@ -135,7 +135,7 @@ module Module = proto (Scope) {
 
         // publish as application interface
 
-        if (this.interfaceName !== null) {
+        if (this.interfaceName != null) {
             result.add('___module.exports = module.exports;' + this.nl());
         }
 

@@ -32,7 +32,7 @@ var Enumeration = func(Array options) {
     var bit = 0;
 
     for (var id in options) {
-        if (this[options[id]] === undefined) {
+        if (this[options[id]] == undefined) {
             this[options[id]] = 1 << bit;
             bit += 1;
         }
@@ -66,7 +66,7 @@ export dump = func(subject, number depth = 2, boolean showHidden = false) {
  * @return string
  */
 export home = func() {
-    return process.env[process.platform === 'win32' ? 'USERPROFILE' : 'HOME'];
+    return process.env[process.platform == 'win32' ? 'USERPROFILE' : 'HOME'];
 };
 
 /**

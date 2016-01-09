@@ -98,7 +98,7 @@ module GeneratorState = proto {
 
         var state = this.generator.next();
 
-        if (state.done === false) {
+        if (state.done == false) {
             this.node = state.value.node;
             this.stack = state.value.stack;
             this.minStack = state.value.minStack;

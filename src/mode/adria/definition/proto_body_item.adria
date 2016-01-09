@@ -34,7 +34,7 @@ module ProtoBodyItem = proto (Node) {
 
         // set constructor attributes in ProtoLiteral, do the rest ourselves
 
-        if (keyNode.value === 'constructor') {
+        if (keyNode.value == 'constructor') {
 
             protoNode.constructorSN = this.get('value').toSourceNode();
             return this.csn();
@@ -44,15 +44,15 @@ module ProtoBodyItem = proto (Node) {
             var valueNode = this.get('value');
             var result;
 
-            if  (valueNode.value === 'property_literal') {
+            if  (valueNode.value == 'property_literal') {
 
-                var name = (keyNode instanceof Ident === false ? keyNode.value : '"' + keyNode.value + '"');    //!todo quotes suck
+                var name = (keyNode instanceof Ident == false ? keyNode.value : '"' + keyNode.value + '"');    //!todo quotes suck
 
                 return this.csn([ valueNode.assignmentToSourceNode(name, mangledName + '.prototype'), ';' + this.nl() ]);
 
             } else {
 
-                var name = (keyNode instanceof Ident === false ? '[' + keyNode.value + ']' : '.' + keyNode.value);
+                var name = (keyNode instanceof Ident == false ? '[' + keyNode.value + ']' : '.' + keyNode.value);
 
                 result = this.csn(mangledName + '.prototype' + name + ' = ');
                 result.add(valueNode.toSourceNode());

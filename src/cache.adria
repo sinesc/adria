@@ -39,7 +39,7 @@ module Cache = proto {
      */
     checkBaseDir: func() {
 
-        if (this.baseDir.slice(0, 1) !== '/' || this.baseDir.slice(-1) !== '/') {
+        if (this.baseDir.slice(0, 1) != '/' || this.baseDir.slice(-1) != '/') {
             throw new Exception('cache.baseDir needs to be an absolute path');
         }
 
@@ -55,7 +55,7 @@ module Cache = proto {
                     throw new Exception(path + ' is a file');
                 }
             } else {
-                fs.mkdirSync(path, (parseInt(id) === parts.length -1 ? 511 /*0777*/ : 493 /*0755*/));
+                fs.mkdirSync(path, (parseInt(id) == parts.length -1 ? 511 /*0777*/ : 493 /*0755*/));
             }
 
             path += '/';
@@ -91,12 +91,12 @@ module Cache = proto {
             var inputStat = fs.statSync(file);
             var cacheStat = fs.statSync(cacheFile);
 
-            if (cacheStat.isFile() && inputStat.mtime.toString() === cacheStat.mtime.toString()) {
+            if (cacheStat.isFile() && inputStat.mtime.toString() == cacheStat.mtime.toString()) {
 
                 var resultData = { };
 
                 for (var id, variant in variants) {
-                    if (variant === 'base') {
+                    if (variant == 'base') {
                         application.log('Cache', 'reading from ' + cacheFile, 0);
                         resultData['base'] = JSON.parse(fs.readFileSync(cacheFile, 'UTF-8'));
                     } else {
@@ -137,7 +137,7 @@ module Cache = proto {
 
         for (var ext, variant in variants) {
 
-            if (ext === 'base') {
+            if (ext == 'base') {
                 application.log('Cache', 'writing to ' + cacheFile, 0);
                 fs.writeFileSync(cacheFile, JSON.stringify(variant));
                 fs.utimesSync(cacheFile, inputStat.atime, inputStat.mtime);
