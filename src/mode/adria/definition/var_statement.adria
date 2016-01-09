@@ -89,9 +89,13 @@ module VarStatement = proto (Node) {
 
                 var localName = scope.addLocal(nameNode.value);
 
+                result.add([ 'let ' + nameNode.csn(localName) ]);
+
                 if (valueNode.isNode()) {
-                    result.add([ nameNode.csn(localName), ' = ', valueNode.toSourceNode(), ';' + (last ? '' : nl) ]);
+                    result.add([ ' = ', valueNode.toSourceNode() ]);
                 }
+
+                result.add([ ';' + (last ? '' : nl) ]);
             }
         });
 

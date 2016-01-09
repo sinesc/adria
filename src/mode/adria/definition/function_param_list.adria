@@ -226,6 +226,8 @@ module FunctionParamList = proto (ParamsNode) {
 
         // map optional-group for each parameter and count ungrouped parameters
 
+        var parametersSN = this.csn();
+
         for (var id, parameter in parameters) {
             var optionalGroup = parameter.findProto(FunctionParamsOptional, FunctionParamList);
             if (optionalGroup instanceof FunctionParamsOptional) {
@@ -234,7 +236,10 @@ module FunctionParamList = proto (ParamsNode) {
                 parameterGroups[id] = null;
                 numUngrouped++;
             }
+            parametersSN.add(parameter.get('name').toSourceNode());
         }
+
+        result.add([ 'let ', parametersSN.join(', '), ';' + this.nl() ]);
 
         // generate code
 
@@ -245,12 +250,16 @@ module FunctionParamList = proto (ParamsNode) {
             var argId = 0;
             this.applyOptionalPermutation(permutation, this.optionalGroups);
 
-            // either get parameter value from arguments or default values
+            // either get parameter value from arguments or default values (get from arguments first as those have no dependencies)
 
             for (var id, parameter in parameters) {
                 if (parameterGroups[id] === null || parameterGroups[id].optionalIsActive) {
                     result.add([ parameter.get('name').toSourceNode(), ' = arguments[' + (argId++) + '];' + this.nl() ]);
-                } else {
+                }
+            }
+
+            for (var id, parameter in parameters) {
+                if (parameterGroups[id] !== null && parameterGroups[id].optionalIsActive !== true) {
                     result.add([ parameter.get('name').toSourceNode(), ' = ', parameter.get('value').toSourceNode(), ';' + this.nl() ]);
                 }
             }

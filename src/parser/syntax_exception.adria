@@ -22,7 +22,6 @@
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 var BaseException = require('../base_exception');
-//var Node = require('../parser/definition/node');
 var Token = require('../tokenizer/token');
 var path = require('path');
 

@@ -32,6 +32,6 @@ module ModuleStatement = proto (Node) {
         var moduleNode = this.findProto(Module);
         var mangledName = moduleNode.setModuleExport(name);
 
-        return this.csn([ mangledName, ' = ', this.get('value').toSourceNode(), ';' ]);
+        return this.csn([ 'let ', mangledName, ' = ', this.get('value').toSourceNode(), ';' ]);
     },
 };

@@ -178,15 +178,13 @@ module AdriaTransform = proto (Transform) {
         this.protoParser.trainSelf();
         this.time('Setup $0.ms');
 
-        // optionally set up file monitoring mode
+        // start monitoring or compile once
 
         if (this.options['monitor']) {
             this.startMonitoring();
+        } else {
+            this.compile();
         }
-
-        // (initial) compile
-
-        this.compile();
     },
 
     /**
@@ -201,10 +199,10 @@ module AdriaTransform = proto (Transform) {
 
         // additional monitor mode output
 
-        if (forceReload !== null) {
+        /*if (forceReload !== null) {
             console.log((new Date()).format('Monitor: [%H:%M:%S] recompiling changed files...'));
             this.time();
-        }
+        }*/
 
         // recursively preprocess data from stdin and initial files, assemble list of modules
 
@@ -243,7 +241,7 @@ module AdriaTransform = proto (Transform) {
         // only write if files changed
 
         if (this.options['monitor'] && this.numCompiled === 0 && resourceChanges === false) {
-            console.log((new Date()).format('Monitor: [%H:%M:%S] no changes. ready.'));
+            //console.log((new Date()).format('Monitor: [%H:%M:%S] no changes. ready.'));
             return;
         }
 
@@ -258,7 +256,7 @@ module AdriaTransform = proto (Transform) {
         // additional monitor mode output
 
         if (this.options['monitor']) {
-            console.log((new Date()).format('Monitor: [%H:%M:%S] ready.'));
+            console.log((new Date()).format('Monitor: [%H:%M:%S] Compiled to ' + path.normalize(this.options['basePath'] + this.options['outFile'])));
         }
     },
 
@@ -420,7 +418,6 @@ module AdriaTransform = proto (Transform) {
 
         args.addSwitch('monitor', 'Don\'t exit after compilation, watch for and rebuild on file changes', false);
         args.addSwitch('poll', 'Use polling instead of inotify to monitor file changes (has issues)', false);
-        args.addSwitch('strict', 'Compile strict Javascript', true);
         args.addSwitch('assert', 'Add assert() support', false);
         args.addSwitch('scan', 'Perform basic logic checks', true);
         args.addSwitch('map', 'Generate source map', false);
@@ -467,7 +464,7 @@ module AdriaTransform = proto (Transform) {
         } else {
 
             if (forceReload !== null) {
-                console.log('Monitor: updating ' + moduleName);
+                //console.log((new Date()).format('Monitor: [%H:%M:%S] updating ' + moduleName));
             }
 
             parser = this.protoParser.clone();
@@ -526,9 +523,7 @@ module AdriaTransform = proto (Transform) {
 
         // make sure javascript reserved words get mangled
 
-        if (this.options['strict']) {
-            this.globalReservations.add('implements', 'interface', 'let', 'package', 'private', 'protected', 'public', 'static');
-        }
+        this.globalReservations.add('implements', 'interface', 'let', 'package', 'private', 'protected', 'public', 'static');
 
         this.globalReservations.add('function', 'class', 'enum', 'extends', 'super');
     },
@@ -584,13 +579,7 @@ module AdriaTransform = proto (Transform) {
             }
         }
 
-        node.add(';(function(' + closureParams.values().join(', ') + ') {\n');
-
-        // apply strict mode
-
-        if (options['strict']) {
-            node.add('"use strict";\n');
-        }
+        node.add(';(function(' + closureParams.values().join(', ') + ') {\n"use strict";\n');
 
         var fw = tpl.fetch(resource('../../../templates/adria/framework.tpl'));
         node.add(new SourceNode(1, 1, 'adria-framework.js', fw))
@@ -700,11 +689,15 @@ module AdriaTransform = proto (Transform) {
      */
     startMonitoring: func() {
 
+        // collect monitored paths
+
         var paths = [ this.options['basePath'] ];
 
         for (var _, path in this.options['paths']) {
             paths.push(this.options['basePath'] + path);
         }
+
+        // populate ignore list
 
         var ignore = [ ];
 
@@ -718,16 +711,37 @@ module AdriaTransform = proto (Transform) {
             }
         }
 
+        // initialize monitor
+
         var monitor = new Monitor(paths, ignore, 250, this.options['poll']);
 
         monitor.on('change', this, func(forceReload) {
             try {
                 this.compile(forceReload, forceReload.intersect(this.resources).empty === false);
             } catch (BaseException e) {
-                process.stderr.write('Error: ' + e.message + '\n');
+                this.monitorError(e.message);
             }
         });
 
+        // initial compile and start monitoring !todo cleanup
+
+        try {
+            this.compile();
+        } catch (BaseException e) {
+            this.monitorError(e.message);
+        }
+
         monitor.start();
+    },
+
+    monitorError: func(message) {
+
+        try {
+            var jsFile = this.options['basePath'] + this.options['outFile'];
+            fs.unlinkSync(jsFile);
+            fs.unlinkSync(jsFile.stripPostfix('.js') + '.map');
+        } catch (e) {}
+
+        process.stderr.write('Error: ' + message + '\n');
     },
 };

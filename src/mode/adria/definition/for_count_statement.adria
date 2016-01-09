@@ -50,7 +50,7 @@ module ForCountStatement = proto (Scope) {
             });
 
             init = this.csn();
-            init.add([ varDefs.join(', ') ]);
+            init.add([ 'let ', varDefs.join(', ') ]);
 
         } else {
 

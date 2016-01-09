@@ -171,7 +171,7 @@ module CaptureNode = proto {
      */
     add: func(CaptureNode child) {
 
-        if (this.children == null) {
+        if (this.children === null) {
             this.children = [ ];
         }
 
@@ -350,7 +350,7 @@ module CaptureNode = proto {
             for (var id in this.children) {
                 var child = this.children[id];
 
-                if (child.key == key && index-- == 0) {
+                if (child.key === key && index-- === 0) {
                     return child;
                 }
             }
@@ -371,7 +371,7 @@ module CaptureNode = proto {
 
             for (var id, child in this.children) {
 
-                if (child.key == key) {
+                if (child.key === key) {
                     return true;
                 }
             }

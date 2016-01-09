@@ -33,9 +33,11 @@ module ForInStatement = proto (Scope) {
         // declare locals, create SourceNodes for possibly mangled names
 
         var keySN, valueSN;
+        var isVar = false;
 
         if (this.get('var').isNode()) {
 
+            isVar = true;
             keySN = keyNode.csn(this.addLocal(keyNode.value));
 
             if (valueNode.isNode()) {
@@ -60,10 +62,10 @@ module ForInStatement = proto (Scope) {
 
         var result = this.csn();
         result.add(this.refsToSourceNode());
-        result.add(['for (', keySN, ' in ', source, ') {' + this.nl(1) ]);
+        result.add(['for (' + (isVar ? 'let ' : ''), keySN, ' in ', source, ') {' + this.nl(1) ]);
 
         if (valueNode.isNode()) {
-            result.add([ valueSN, ' = ', source, '[', keySN, '];', this.nl() ]);
+            result.add([ 'let ', valueSN, ' = ', source, '[', keySN, '];', this.nl() ]);
         }
 
         result.add([ body, this.nl(-1, body), '}' ]);

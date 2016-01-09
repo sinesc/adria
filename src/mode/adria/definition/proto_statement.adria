@@ -31,7 +31,7 @@ module ProtoStatement = proto (ProtoLiteral) {
         // statement is achieved by assigning wrapper to reference
 
         assert(this.name.valid);
-        result.add(this.findScope().addLocal(name) + ' = ');
+        result.add([ 'let ', this.findScope().addLocal(name) + ' = ' ]);
     },
 
     postBody: func(SourceNode result) {
