@@ -36,7 +36,7 @@ module Application = proto {
     constructor: func() {
 
         this.log = log;
-        this.args = new Args();
+        this.args = new Args('adria', 'Adria transcompiler v{{version}}');
 
         this.args.add({
             name: 'mode',

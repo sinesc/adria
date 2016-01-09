@@ -433,7 +433,7 @@ module AdriaTransform = proto (Transform) {
         parent->processOptions();
 
         if (this.options['files'].length < 1 || this.options['!'].length > 0) {
-            console.log(application.args.getHelp('adria'));
+            console.log(application.args.getHelp());
             process.exit(1);
         }
 

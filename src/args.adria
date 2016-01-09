@@ -32,11 +32,15 @@ module Args = proto {
     rawArgs     : null,
     definition  : { },
     paramMap    : { },
+    processName : '',
+    title       : '',
 
     /**
      * construct instance, parse to raw argument object
      */
-    constructor: func() {
+    constructor: func(string processName, string title = '') {
+        this.processName = processName;
+        this.title = title;
         this.rawArgs = parseArgs(process.argv.slice(2));
     },
 
@@ -144,16 +148,22 @@ module Args = proto {
     /**
      * returns help message for defined parameters
      *
-     * @param string processName displayed within helpmessage
      * @return string
      */
-    getHelp: func(string processName) {
+    getHelp: func() {
 
-        var result = 'usage: ' + processName;
-        var length = result.length;
-        var positional = null;
+        var result = '';
+
+        if (this.title != '') {
+            result += this.title + '\n\n';
+        }
+
+        result += 'usage: ' + this.processName;
 
         // output argument summary behind processname
+
+        var length = result.length;
+        var positional = null;
 
         for (var name, options in this.definition) {
             var isPositional = options.param == '_' || (options.param.length == 1 && options.param[0] == '_');

@@ -204,7 +204,7 @@ module Transform = proto {
         }
 
         if (options['help']) {
-            console.log(application.args.getHelp('adria'));
+            console.log(application.args.getHelp());
             process.exit(0);
         }
 
