@@ -48,35 +48,32 @@ module AdriaDebugTransform = proto(AdriaTransform) {
 
         this.protoParser = new AdriaDebugParser(this);
         this.protoParser.trainSelf();
-
-        var options = this.options;
+        this.reset();
 
         // process data from stdin and initial files
 
         if (this.stdin !== null) {
-            this.preprocessModule('main' + options['extension'], this.stdin);
+            this.recurseDependencies('main' + this.options['extension'], this.stdin);
         }
 
-        var files = options['files'];
+        var files = this.options['files'];
 
         for (var id in files) {
-            this.preprocessModule(util.normalizeExtension(files[id], options['extension']));
+            this.recurseDependencies(util.normalizeExtension(files[id], this.options['extension']));
         }
 
-        this.process();
-
-        // extract result for join
+        // generate module code
 
         var result = [];
 
-        for (var id, mod in this.modules) {
-            result.push(mod.result);
+        for (var id, currentModule in this.modules) {
+            result.push(currentModule.parser.process());
         }
 
         // merge and return
 
-        if (options['outFile'] !== null) {
-            fs.writeFileSync(options['basePath'] + options['outFile'], result.join('\n'));
+        if (this.options['outFile'] !== null) {
+            fs.writeFileSync(this.options['basePath'] + this.options['outFile'], result.join('\n'));
         } else {
             process.stdout.write(result.join('\n'));
         }

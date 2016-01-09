@@ -744,7 +744,7 @@ module('util.adria', function(module, resource) {
         console.log(sysutil.inspect(subject, ___showHidden$27, ___depth$26));
     };
     let home = function home() {
-        return process.env[process.platform == 'win32' ? 'USERPROFILE' : 'HOME'];
+        return process.env[process.platform === 'win32' ? 'USERPROFILE' : 'HOME'];
     };
     let normalizeExtension = function normalizeExtension(fullname, defaultExtension) {
         let slash = fullname.lastIndexOf('/');
@@ -1217,7 +1217,7 @@ module('cache.adria', function(module, resource) {
         function Cache() {
             this.checkBaseDir();
         }
-        Cache.prototype.version = "dpy8x94s99jpiefvm3x7bt47yop3pcbfy7hjiyfjh0kb573hmqptyyqcotf3rlle";
+        Cache.prototype.version = "2bqfpm7kmfuaw8pgg8a317wm5s6k3by7wzxrtyznjkcrcyd7bfpvrycwzfb5c5hq";
         Cache.prototype.baseDir = util.home() + '/.adria/cache/';
         Cache.prototype.checkBaseDir = function checkBaseDir() {
             if (this.baseDir.slice(0, 1) !== '/' || this.baseDir.slice(-1) !== '/') {
@@ -2104,36 +2104,36 @@ module('definition_parser.adria', function(module, resource) {
         DefinitionParser.prototype.constructor = DefinitionParser;
         DefinitionParser.prototype.capture = function capture(name, value) {
             let currentPath = this.currentPath;
-            if (name == 'block_name') {
+            if (name === 'block_name') {
                 this.block_name = value;
                 this.pathBlocks[this.block_name] = [  ];
                 return ;
             }
-            if ((name == 'path' || name == 'source_name' || name == 'block_done') && currentPath.source.name != '' && currentPath.target.name != '') {
+            if ((name === 'path' || name === 'source_name' || name === 'block_done') && currentPath.source.name != '' && currentPath.target.name != '') {
                 this.pathBlocks[this.block_name].push(currentPath.clone());
                 currentPath.reset();
             }
-            if (name == 'source_name') {
+            if (name === 'source_name') {
                 currentPath.source.name = value;
                 currentPath.source.capture = '';
                 currentPath.source.label = '';
                 currentPath.source.condition = '';
-            } else if (name == 'target_name') {
+            } else if (name === 'target_name') {
                 currentPath.target.name = value;
                 currentPath.target.capture = '';
                 currentPath.target.label = '';
                 currentPath.target.condition = '';
-            } else if (name == 'source_capture') {
+            } else if (name === 'source_capture') {
                 currentPath.source.capture = value;
-            } else if (name == 'target_capture') {
+            } else if (name === 'target_capture') {
                 currentPath.target.capture = value;
-            } else if (name == 'source_label') {
+            } else if (name === 'source_label') {
                 currentPath.source.label = value;
-            } else if (name == 'target_label') {
+            } else if (name === 'target_label') {
                 currentPath.target.label = value;
-            } else if (name == 'source_condition') {
+            } else if (name === 'source_condition') {
                 currentPath.source.condition = value.slice(1, -1);
-            } else if (name == 'target_condition') {
+            } else if (name === 'target_condition') {
                 currentPath.target.condition = value.slice(1, -1);
             }
         };
@@ -2299,7 +2299,7 @@ module('language_parser/capture_node.adria', function(module, resource) {
             return root;
         };
         CaptureNode.prototype.add = function add(child) {
-            if (this.children == null) {
+            if (this.children === null) {
                 this.children = [  ];
             }
             child.parser = this.parser;
@@ -2391,7 +2391,7 @@ module('language_parser/capture_node.adria', function(module, resource) {
             if (this.children instanceof Array) {
                 for (let id in this.children) {
                     let child = this.children[id];
-                    if (child.key == key && ___index$6w-- == 0) {
+                    if (child.key === key && ___index$6w-- === 0) {
                         return child;
                     }
                 }
@@ -2402,7 +2402,7 @@ module('language_parser/capture_node.adria', function(module, resource) {
             if (this.children instanceof Array) {
                 for (let id in this.children) {
                     let child = this.children[id];
-                    if (child.key == key) {
+                    if (child.key === key) {
                         return true;
                     }
                 }
@@ -2663,7 +2663,7 @@ module('language_parser.adria', function(module, resource) {
         };
         LanguageParser.prototype.setDefinition = function setDefinition(data, filename) {
             application.log('LanguageParser', 'setting definition file ' + filename);
-            if (this.trainer == null) {
+            if (this.trainer === null) {
                 this.trainer = new DefinitionParser();
             }
             application.log('LanguageParser', 'processing definition', 2);
@@ -2691,7 +2691,7 @@ module('language_parser.adria', function(module, resource) {
                 case 'return':
                     node.match = '';
                     node.tokenType = -1;
-                    node.type = (name == 'entry' ? Node.Type.BLOCK : Node.Type.RETURN);
+                    node.type = (name === 'entry' ? Node.Type.BLOCK : Node.Type.RETURN);
                     node.description = '<Please file a bug-report if you ever see this message (' + name + ')>';
                     break ;
                 case 'string':
@@ -2708,12 +2708,12 @@ module('language_parser.adria', function(module, resource) {
                     break ;
                 default:
                     let numChars = name.length;
-                    if (name[0] == '\"') {
+                    if (name[0] === '\"') {
                         node.match = new RegExp('^' + RegExp.escape(name.slice(1, numChars - 1)) + '$');
                         node.tokenType = -1;
                         node.type = Node.Type.NONE;
                         node.description = name.slice(1, numChars - 1);
-                    } else if (name[0] == '\'') {
+                    } else if (name[0] === '\'') {
                         node.match = new RegExp(name.slice(1, numChars - 1));
                         node.tokenType = -1;
                         node.type = Node.Type.NONE;
@@ -2730,7 +2730,7 @@ module('language_parser.adria', function(module, resource) {
         };
         LanguageParser.prototype.integrateNodePair = function integrateNodePair(pair, blockName) {
             pair[0].add(pair[1], Parser.Definition.Node.Type.RETURN & pair[1].type);
-            if (pair[0].type == Parser.Definition.Node.Type.BLOCK && this.definition.haveBlock(blockName) == false) {
+            if (pair[0].type === Parser.Definition.Node.Type.BLOCK && this.definition.haveBlock(blockName) === false) {
                 this.definition.createBlock(pair[0], blockName);
             }
         };
@@ -7102,22 +7102,21 @@ module('mode/adriadebug/transform.adria', function(module, resource) {
         AdriaDebugTransform.prototype.run = function run() {
             this.protoParser = new AdriaDebugParser(this);
             this.protoParser.trainSelf();
-            let options = this.options;
+            this.reset();
             if (this.stdin !== null) {
-                this.preprocessModule('main' + options['extension'], this.stdin);
+                this.recurseDependencies('main' + this.options['extension'], this.stdin);
             }
-            let files = options['files'];
+            let files = this.options['files'];
             for (let id in files) {
-                this.preprocessModule(util.normalizeExtension(files[id], options['extension']));
+                this.recurseDependencies(util.normalizeExtension(files[id], this.options['extension']));
             }
-            this.process();
             let result = [  ];
             for (let id in this.modules) {
-                let mod = this.modules[id];
-                result.push(mod.result);
+                let currentModule = this.modules[id];
+                result.push(currentModule.parser.process());
             }
-            if (options['outFile'] !== null) {
-                fs.writeFileSync(options['basePath'] + options['outFile'], result.join('\n'));
+            if (this.options['outFile'] !== null) {
+                fs.writeFileSync(this.options['basePath'] + this.options['outFile'], result.join('\n'));
             } else {
                 process.stdout.write(result.join('\n'));
             }
