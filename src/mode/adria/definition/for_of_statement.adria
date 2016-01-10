@@ -28,11 +28,13 @@ module ForOfStatement = proto (Scope) {
     toSourceNode: func() {
 
         var keySN, keyNode = this.get('key');
+        var isVar = false;
 
         // declare local, create SourceNodes for possibly mangled name
 
         if (this.get('var').isNode()) {
-            keySN = keyNode.csn(this.addLocal(keyNode.value));
+            isVar = true;
+            keySN = keyNode.csn(this.addLocal(keyNode.value, false));
         } else {
             keySN = keyNode.toSourceNode();
         }
@@ -49,7 +51,7 @@ module ForOfStatement = proto (Scope) {
 
         var result = this.csn();
         result.add(this.refsToSourceNode());
-        result.add(['for (', keySN, ' of ', source, ') {' + this.nl(1) ]);
+        result.add(['for (' + (isVar ? 'let ' : ''), keySN, ' of ', source, ') {' + this.nl(1) ]);
         result.add([ body, this.nl(-1, body), '}' ]);
 
         return result;

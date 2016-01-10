@@ -38,10 +38,10 @@ module ForInStatement = proto (Scope) {
         if (this.get('var').isNode()) {
 
             isVar = true;
-            keySN = keyNode.csn(this.addLocal(keyNode.value));
+            keySN = keyNode.csn(this.addLocal(keyNode.value, false));
 
             if (valueNode.isNode()) {
-                valueSN = valueNode.csn(this.addLocal(valueNode.value));
+                valueSN = valueNode.csn(this.addLocal(valueNode.value, false));
             }
 
         } else {

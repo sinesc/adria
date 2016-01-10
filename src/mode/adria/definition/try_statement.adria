@@ -84,10 +84,10 @@ export CatchAll = proto (Scope) {
 
         var catchNode = this.findProto(Catch);
         var valueNode = this.get('value');
-        var localName = this.addLocal(valueNode.value);
+        var localName = this.addLocal(valueNode.value, false);
 
         var result = this.csn();
-        result.add([ 'var ', valueNode.csn(localName), ' = ' + catchNode.exceptionName + ';' + this.nl() ]);
+        result.add([ 'let ', valueNode.csn(localName), ' = ' + catchNode.exceptionName + ';' + this.nl() ]);
         result.add(this.get('body').toSourceNode());
         return result;
     },
@@ -100,11 +100,11 @@ export CatchSpecific = proto (Scope) {
 
         var catchNode = this.findProto(Catch);
         var valueNode = this.get('value');
-        var localName = this.addLocal(valueNode.value);
+        var localName = this.addLocal(valueNode.value, false);
 
         var result = this.csn();
         result.add([ 'if (' + catchNode.exceptionName + ' instanceof ', this.get('type').toSourceNode(), ') {' + this.nl(1) ]);
-        result.add([ 'var ', valueNode.csn(localName), ' = ' + catchNode.exceptionName + ';' + this.nl() ]);
+        result.add([ 'let ', valueNode.csn(localName), ' = ' + catchNode.exceptionName + ';' + this.nl() ]);
         result.add(this.get('body').toSourceNode());
         result.add(this.nl(-1, result) + '}');
         return result;

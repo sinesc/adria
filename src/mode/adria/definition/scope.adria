@@ -138,14 +138,11 @@ module Scope = proto (Node) {
      */
     refsToSourceNode: func() {
 
-        return this.csn();
-
-        //!todo not required since switch to let statement
-        /*if (this.localDeclarations.empty) {
+        if (this.localDeclarations.empty) {
             return this.csn();
         } else {
             return this.csn([ 'var ', this.localDeclarations.toArray().join(', '), ';' + this.nl() ]);
-        }*/
+        }
     },
 
     /**

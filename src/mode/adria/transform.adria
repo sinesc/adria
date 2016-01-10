@@ -221,6 +221,9 @@ module AdriaTransform = proto (Transform) {
         // generate module code
 
         for (var id, currentModule in this.modules) {
+            currentModule.result = currentModule.parser.preprocess({ });
+        }
+        for (var id, currentModule in this.modules) {
             currentModule.result = currentModule.parser.process();
         }
 

@@ -28,6 +28,23 @@ var ASTException = require('../../../language_parser/ast_exception');
 
 module StorageLiteral = proto (Node) {
 
+    preprocess: func(state) {
+
+        if (this.children instanceof Array) {
+            for (var id, child in this.children) {
+                child.preprocess(state);
+            }
+        }
+
+        // set useStorage flag in property
+
+        var propertyItem = this.ancestor(null, 'property_accessor_item');
+
+        if (propertyItem.parent instanceof PropertyLiteral) {
+            propertyItem.parent.useStorage = true;
+        }
+    },
+    
     toSourceNode: func() {
 
         var propertyItem = this.ancestor(null, 'property_accessor_item');
@@ -35,10 +52,7 @@ module StorageLiteral = proto (Node) {
         var propertyFunction = propertyItem.get('value').get('function');
 
         if (propertySelf instanceof PropertyLiteral && propertyFunction instanceof FunctionLiteral) {
-
-            propertySelf.useStorage = true;
-            var contextName = propertyFunction.storeContext();
-            return this.csn(contextName + '[' + propertySelf.storageName + ']');
+            return this.csn(propertyFunction.storeContext() + '[___storage]');
         }
 
         throw new ASTException('Invalid use of "storage" literal', this);

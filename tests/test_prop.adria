@@ -42,8 +42,7 @@ var TestObj = proto {
         },
     },
 
-    plainProp: prop {
-        storage: 'plainPropStorage',
+    defaultProp: prop {
         default: null,
         get: func() {
             return storage;
@@ -54,7 +53,6 @@ var TestObj = proto {
     },
 
     'stringProp': prop {
-        storage: 'stringPropStorage',
         default: null,
         get: func() {
             return storage;
@@ -64,7 +62,7 @@ var TestObj = proto {
         },
     },
 
-    anonStorageProp: prop {
+    plainProp: prop {
         get: func() {
             return storage;
         },
@@ -72,16 +70,6 @@ var TestObj = proto {
             storage = value;
         },
     },
-
-    anonDefaultStorageProp: prop {
-        default: 'anonStorageDefault',
-        get: func() {
-            return storage;
-        },
-        set: func(value) {
-            storage = value;
-        },
-    }
 };
 
 var TestPropObj = proto {
@@ -101,20 +89,17 @@ var TestPropObj = proto {
  *
  * @param Type prototype constructor
  * @param propName property to test
- * @param storageName name of storage property for given property
  * @aram initialValue expected initial value in storage
  */
-var testProp = func(Type, propName, storageName, initialValue) {
+var testProp = func(Type, propName, initialValue) {
 
     var testObj = new Type();
     var testValue = propName + 'Test';
 
     assert(testObj[propName] == initialValue);
-    assert(testObj[storageName] == initialValue, 'storage was properly initialized');
 
     testObj[propName] = testValue;
     assert(testObj[propName] == testValue);
-    assert(testObj[storageName] == testValue);
 
     var descriptor = Object.getOwnPropertyDescriptor(testObj, propName);
     assert(descriptor == undefined);
@@ -122,12 +107,6 @@ var testProp = func(Type, propName, storageName, initialValue) {
     descriptor = Object.getOwnPropertyDescriptor(TestObj.prototype, propName);
     assert(typeof descriptor.get == 'function');
     assert(typeof descriptor.set == 'function');
-    assert(descriptor.enumerable == false);
-    assert(descriptor.configurable == false);
-
-    descriptor = Object.getOwnPropertyDescriptor(TestObj.prototype, storageName);
-    assert(descriptor.value == initialValue);
-    assert(descriptor.writable == true);
     assert(descriptor.enumerable == false);
     assert(descriptor.configurable == false);
 };
@@ -198,26 +177,21 @@ test('non-storage properties', func() {
 });
 
 test('storage properties', func() {
-    testProp(TestObj, 'plainProp', 'plainPropStorage', null);
+    testProp(TestObj, 'defaultProp', null);
 });
 
 test('string named storage properties', func() {
-    testProp(TestObj, 'stringProp', 'stringPropStorage', null);
+    testProp(TestObj, 'stringProp', null);
 });
 
-test('anon nodefault storage properties', func() {
-    testProp(TestObj, 'anonStorageProp', '_anonStorageProp', undefined);
-});
-
-test('anon default storage properties', func() {
-    testProp(TestObj, 'anonDefaultStorageProp', '_anonDefaultStorageProp', 'anonStorageDefault');
+test('nodefault storage properties', func() {
+    testProp(TestObj, 'plainProp', undefined);
 });
 
 test('storage scope', func() {
 
     var ResObj = proto {
         plainProp: prop {
-            storage: 'plainPropStorage',
             default: null,
             get: func() {
                 return (func() {
@@ -254,7 +228,6 @@ test('prototype extension', func() {
 
     MyTestObj::myDefaultStorageProp = prop {
         default: 'my default value',
-        storage: 'myDefaultStorage',
         get: func() {
             return storage;
         },

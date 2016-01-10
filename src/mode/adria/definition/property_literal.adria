@@ -27,52 +27,17 @@ var SourceNode = require('../../../source_node');
 module PropertyLiteral = proto (ObjectLiteral) {
 
     useStorage          : false,
-    storageName         : null, //!todo probably shouldn't contain the quotes
     defaultValueNode    : 'undefined', //!todo should be sourcenode, but returning sourcenodes also needs to be refactored. eventually should be Node
     target              : 'undefined',
     name                : 'undefined',
 
-    assignmentToSourceNode: func(name, target) { //!todo sn/string mix
+    preprocess: func(state) {
 
-        // set target for inheritance lookup code
-
-        this.target = target;
-        this.name = name;
-
-        // let object parent class build the output using our assembleItemList
-
-        var propertyBody = ObjectLiteral->toSourceNode();
-        var result = this.csn();
-
-        if (this.useStorage) {
-            result.add('(');
-            this.getStorageCode(result);
+        if (this.children instanceof Array) {
+            for (var id, child in this.children) {
+                child.preprocess(state);
+            }
         }
-
-        result.add([ 'Object.defineProperty(', target, ', ', name, ', ' ]);
-        result.add(propertyBody);
-        result.add(this.useStorage ? '))' : ')');
-        return result;
-    },
-
-    getStorageCode: func(SourceNode result) {
-
-        result.add('Object.defineProperty(' + this.target + ', ' + this.storageName + ', {' + this.nl(1));
-        result.add([ 'value: ', this.defaultValueNode, ',' + this.nl() ]);
-        result.add('writable: true' + this.nl(-1));
-        result.add('}),' + this.nl());
-    },
-
-    getLookupCode: func(SourceNode result, string type) {
-
-        result.add('(function() {' + this.nl(1));
-        result.add([ 'var descriptor, level = ', this.target, ';' + this.nl() ]);
-        result.add([ 'while ((level = Object.getPrototypeOf(level)) !== null && (descriptor = Object.getOwnPropertyDescriptor(level, ', this.name, ')) === undefined);' + this.nl() ]);
-        result.add('return descriptor.' + type + ';' + this.nl(-1));
-        result.add('})()');
-    },
-
-    assembleItemList: func() {
 
         // fetch storage and default settings in advance
 
@@ -85,23 +50,57 @@ module PropertyLiteral = proto (ObjectLiteral) {
                 this.defaultValueNode = childValue.toSourceNode();
                 this.useStorage = true;
             } else if (childKey.value == 'storage') {
-                this.storageName = childValue.value;
                 this.useStorage = true;
             }
         });
+    },
 
-        // find name for property storage field
+    assignmentToSourceNode: func(name, target) { //!todo sn/string mix
 
-        if (this.storageName == null) {
+        // set target for inheritance lookup code
 
-            var name = this.findName();
+        this.target = target;
+        this.name = name;
 
-            if (name == null) {
-                this.storageName = '\'___psf$' + this.parser.transform.makeUID() + '\'';
-            } else {
-                this.storageName = '\'_' + name.getPlain() + '\'';
-            }
+        // let object parent class build the output using our assembleItemList
+
+        var result = this.csn();
+var initial = this.useStorage;
+        if (this.useStorage) {
+            result.add('((function() {' + this.nl(1));
+            this.getStorageCode(result);
         }
+
+        result.add([ 'Object.defineProperty(', target, ', ', name, ', ' ]);
+        result.add([ ObjectLiteral->toSourceNode(), ')' ]);
+if (initial != this.useStorage) { throw new Exception(); }
+        if (this.useStorage) {
+            result.add(';' + this.nl(-1));
+            result.add('})())');
+        }
+
+        return result;
+    },
+
+    getStorageCode: func(SourceNode result) {
+
+        result.add([ 'let ___storage = Symbol();' + this.nl() ]);
+        result.add('Object.defineProperty(' + this.target + ', ___storage, {' + this.nl(1));
+        result.add([ 'value: ', this.defaultValueNode, ',' + this.nl() ]);
+        result.add('writable: true' + this.nl(-1));
+        result.add('});' + this.nl());
+    },
+
+    getLookupCode: func(SourceNode result, string type) {
+
+        result.add('(function() {' + this.nl(1));
+        result.add([ 'var descriptor, level = ', this.target, ';' + this.nl() ]);
+        result.add([ 'while ((level = Object.getPrototypeOf(level)) !== null && (descriptor = Object.getOwnPropertyDescriptor(level, ', this.name, ')) === undefined);' + this.nl() ]);
+        result.add('return descriptor.' + type + ';' + this.nl(-1));
+        result.add('})()');
+    },
+
+    assembleItemList: func() {
 
         // process property fields
 

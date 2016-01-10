@@ -257,12 +257,11 @@ var Test = proto {
 };
 ```
 
-By default, the use of `storage` results in the creation of an additional, hidden object property with a name dervied from the original property name, in this case _testProperty. The property's object literal's `storage` property can be set to a custom name. Additionally, it is possible to define a default value using the `default` property.
+Additionally, it is possible to define a default value using the `default` property.
 
 ```javascript
 var Test = proto {
     testProperty: prop {
-        storage: 'hiddenTestStorage',
         default: null,
         get: func() {
             return storage;

@@ -45,7 +45,6 @@ property_accessor_item {
     "inherit":inherit -> "set":key[inherited] -> return
 
     entry -> "default":key -> ":"
-    entry -> "storage":key -> ":"[storage] -> string:value -> return
     entry -> "get":key -> ":"
     entry -> "set":key -> ":"
     entry -> "configurable":key -> ":"

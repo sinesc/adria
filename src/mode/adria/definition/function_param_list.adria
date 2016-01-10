@@ -100,7 +100,7 @@ module FunctionParamList = proto (ParamsNode) {
 
             } else {
 
-                localName = scope.addLocal(nameSN.toString());
+                localName = scope.addLocal(nameSN.toString(), true);
             }
 
             // check for basic default args, push those to FunctionLiteral's specialArgs property
@@ -226,7 +226,7 @@ module FunctionParamList = proto (ParamsNode) {
 
         // map optional-group for each parameter and count ungrouped parameters
 
-        var parametersSN = this.csn();
+        //var parametersSN = this.csn();
 
         for (var id, parameter in parameters) {
             var optionalGroup = parameter.findProto(FunctionParamsOptional, FunctionParamList);
@@ -236,10 +236,10 @@ module FunctionParamList = proto (ParamsNode) {
                 parameterGroups[id] = null;
                 numUngrouped++;
             }
-            parametersSN.add(parameter.get('name').toSourceNode());
+            //parametersSN.add(parameter.get('name').toSourceNode());
         }
 
-        result.add([ 'let ', parametersSN.join(', '), ';' + this.nl() ]);
+        //result.add([ 'let ', parametersSN.join(', '), ';' + this.nl() ]);
 
         // generate code
 

@@ -74,7 +74,7 @@ module Module = proto (Scope) {
             throw new ASTException('Reference "' + name + '" already defined in local scope', this);
         }
 
-        var localName = this.addLocal(name);
+        var localName = this.addLocal(name, false);
         this.moduleExport = localName;
         return localName;
     },
@@ -85,7 +85,7 @@ module Module = proto (Scope) {
             throw new ASTException('Reference "' + name + '" already defined in local scope', this);
         }
 
-        var localName = this.addLocal(name);
+        var localName = this.addLocal(name, false);
         this.exports.set(name, localName);
         return localName;
     },
